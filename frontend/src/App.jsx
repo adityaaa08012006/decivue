@@ -5,6 +5,7 @@ import DecisionHealthOverview from './components/DecisionHealthOverview';
 import DecisionLogTable from './components/DecisionLogTable';
 import OrganisationOverview from './components/OrganisationOverview';
 import DecisionMonitoring from './components/DecisionMonitoring';
+import AssumptionsPage from './components/AssumptionsPage';
 
 function App() {
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
@@ -54,6 +55,7 @@ function App() {
           )}
 
           {currentView === 'monitoring' && <DecisionMonitoring />}
+          {currentView === 'assumptions' && <AssumptionsPage />}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 /**
  * Main Server Entry Point
  * Initializes the Express server, middleware, and routes
+ * (Restart trigger)
  */
 
 import express, { Application, Request, Response, NextFunction } from 'express';

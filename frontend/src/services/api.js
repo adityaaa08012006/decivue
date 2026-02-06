@@ -15,12 +15,12 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: response.statusText }));
         throw new Error(error.message || `HTTP error! status: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
@@ -64,14 +64,23 @@ class ApiService {
   }
 
   // Assumptions endpoints
+  // Assumptions endpoints
   async getAssumptions(decisionId) {
-    return this.request(`/assumptions?decisionId=${decisionId}`);
+    const query = decisionId ? `?decisionId=${decisionId}` : '';
+    return this.request(`/assumptions${query}`);
   }
 
   async createAssumption(data) {
     return this.request('/assumptions', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async linkAssumptionToDecision(assumptionId, decisionId) {
+    return this.request(`/assumptions/${assumptionId}/link`, {
+      method: 'POST',
+      body: JSON.stringify({ decisionId }),
     });
   }
 

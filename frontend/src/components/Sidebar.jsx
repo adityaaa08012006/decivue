@@ -9,7 +9,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
 
   const analyticsItems = [
     { id: 'monitoring', label: 'Decision Monitoring', icon: 'trending', active: currentView === 'monitoring' },
-    { id: 'assumptions', label: 'Assumptions Section', icon: 'pen', active: false },
+    { id: 'assumptions', label: 'Assumptions Section', icon: 'pen', active: currentView === 'assumptions' },
   ];
 
   const otherItems = [
@@ -49,11 +49,10 @@ const Sidebar = ({ currentView, onNavigate }) => {
   const MenuItem = ({ item }) => (
     <div
       onClick={() => onNavigate && onNavigate(item.id)}
-      className={`flex items-center justify-between px-4 py-2 rounded-lg cursor-pointer transition-all ${
-        item.active
-          ? 'bg-primary-blue text-white'
-          : 'text-neutral-gray-700 hover:bg-neutral-gray-100'
-      }`}
+      className={`flex items-center justify-between px-4 py-2 rounded-lg cursor-pointer transition-all ${item.active
+        ? 'bg-primary-blue text-white'
+        : 'text-neutral-gray-700 hover:bg-neutral-gray-100'
+        }`}
     >
       <div className="flex items-center gap-3">
         <div className={item.active ? 'text-white' : 'text-neutral-gray-600'}>
@@ -81,7 +80,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
       {/* Logo */}
       <div className="flex items-center gap-2 mb-6 px-2 flex-shrink-0">
         <div className="w-8 h-8 flex items-center justify-center">
-          <img src="/assets/decivue.png" alt="Decivue" className="w-8 h-8" />
+          <img src="/assets/logo.png" alt="Decivue" className="w-8 h-8" />
         </div>
         <span className="text-xl font-bold text-neutral-black">Decivue</span>
       </div>
