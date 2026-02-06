@@ -35,8 +35,9 @@ export interface EvaluationStep {
 export interface EvaluationOutput {
   decisionId: string;
   newLifecycle: string;
-  newHealth: number;               // Internal signal only (never authoritative)
-  trace: EvaluationStep[];         // Step-by-step explanation
+  newHealthSignal: number;         // Internal signal only (never authoritative, not exposed in UI)
+  invalidatedReason?: string;      // If INVALIDATED: constraint_violation | broken_assumptions | manual
+  trace: EvaluationStep[];         // Step-by-step explanation (full explainability)
   changesDetected: boolean;
 }
 

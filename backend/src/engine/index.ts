@@ -32,23 +32,23 @@ export class DeterministicEngine implements IDecisionEngine {
   evaluate(input: EvaluationInput): EvaluationOutput {
     const trace: EvaluationStep[] = [];
     let lifecycle = input.decision.lifecycle;
-    let health = input.decision.health;
-    let invalidationReason: string | null = null;
+    let healthSignal = input.decision.healthSignal;
+    let invalidatedReason: string | undefined = undefined;
 
     // Step 1: Validate constraints
     const constraintResult = this.validateConstraints(input, trace);
     if (!constraintResult.passed) {
       // Hard fail - immediately invalidate
       lifecycle = DecisionLifecycle.INVALIDATED;
-      health = 0;
-      invalidationReason = 'constraint_violation';
+      healthSignal = 0;
+      invalidatedReason = 'constraint_violation';
     }
 
     // Step 2: Evaluate dependency health (only if constraints passed)
     if (constraintResult.passed) {
       const dependencyResult = this.evaluateDependencies(input, trace);
       // Dependencies propagate risk but don't auto-fail
-      health = Math.min(health, dependencyResult.adjustedHealth);
+      healthSignal = Math.min(healthSignal, dependencyResult.adjustedHealthSignal);
     }
 
     // Step 3: Check assumptions (only if not already invalidated)
@@ -56,31 +56,32 @@ export class DeterministicEngine implements IDecisionEngine {
       const assumptionResult = this.checkAssumptions(input, trace);
       if (!assumptionResult.passed) {
         lifecycle = DecisionLifecycle.INVALIDATED;
-        health = 0;
-        invalidationReason = 'broken_assumptions';
+        healthSignal = 0;
+        invalidatedReason = 'broken_assumptions';
       }
     }
 
     // Step 4: Apply time-based health decay (only if not already invalidated)
     if (lifecycle !== DecisionLifecycle.INVALIDATED) {
       const decayResult = this.applyHealthDecay(input, trace);
-      health = Math.max(0, health - decayResult.decayAmount);
+      healthSignal = Math.max(0, healthSignal - decayResult.decayAmount);
     }
 
     // Step 5: Update lifecycle state (skip if already invalidated by constraints/assumptions)
-    const updatedLifecycle = invalidationReason
+    const updatedLifecycle = invalidatedReason
       ? lifecycle
-      : this.determineLifecycleState(health, lifecycle, trace, invalidationReason !== null);
+      : this.determineLifecycleState(healthSignal, lifecycle, trace);
 
     // Detect if state changed
     const changesDetected =
       updatedLifecycle !== input.decision.lifecycle ||
-      health !== input.decision.health;
+      healthSignal !== input.decision.healthSignal;
 
     return {
       decisionId: input.decision.id,
       newLifecycle: updatedLifecycle,
-      newHealth: health,
+      newHealthSignal: healthSignal,
+      invalidatedReason,
       trace,
       changesDetected
     };
@@ -114,8 +115,8 @@ export class DeterministicEngine implements IDecisionEngine {
   private evaluateDependencies(
     input: EvaluationInput,
     trace: EvaluationStep[]
-  ): { adjustedHealth: number } {
-    let lowestDependencyHealth = 100;
+  ): { adjustedHealthSignal: number } {
+    let lowestDependencyHealthSignal = 100;
 
     if (input.dependencies.length === 0) {
       trace.push({
@@ -124,28 +125,29 @@ export class DeterministicEngine implements IDecisionEngine {
         details: 'No dependencies to evaluate',
         timestamp: new Date()
       });
-      return { adjustedHealth: 100 };
+      return { adjustedHealthSignal: 100 };
     }
 
-    // Find the lowest health among dependencies
+    // Find the lowest healthSignal among dependencies
     for (const dep of input.dependencies) {
-      if (dep.health < lowestDependencyHealth) {
-        lowestDependencyHealth = dep.health;
+      if (dep.healthSignal < lowestDependencyHealthSignal) {
+        lowestDependencyHealthSignal = dep.healthSignal;
       }
     }
 
     trace.push({
       step: 'dependency_evaluation',
       passed: true,
-      details: `Evaluated ${input.dependencies.length} dependencies. Health signal from dependencies: ${lowestDependencyHealth}`,
+      details: `Evaluated ${input.dependencies.length} dependencies. Health signal from dependencies: ${lowestDependencyHealthSignal}`,
       timestamp: new Date()
     });
 
-    return { adjustedHealth: lowestDependencyHealth };
+    return { adjustedHealthSignal: lowestDependencyHealthSignal };
   }
 
   /**
    * Phase 3: Check assumptions
+   * Status represents drift: HOLDING (stable), SHAKY (deteriorating), BROKEN (invalidated)
    */
   private checkAssumptions(
     input: EvaluationInput,
@@ -158,8 +160,8 @@ export class DeterministicEngine implements IDecisionEngine {
       passed: brokenAssumptions.length === 0,
       details:
         brokenAssumptions.length === 0
-          ? `All ${input.assumptions.length} assumptions are valid`
-          : `${brokenAssumptions.length} broken assumptions detected`,
+          ? `All ${input.assumptions.length} assumptions are holding`
+          : `${brokenAssumptions.length} broken assumptions detected (drift invalidates decision)`,
       timestamp: new Date()
     };
 
@@ -197,14 +199,13 @@ export class DeterministicEngine implements IDecisionEngine {
    * Phase 5: Determine lifecycle state
    * State reflects need for human judgment, not system authority
    *
-   * CRITICAL: Health alone cannot cause INVALIDATED.
+   * CRITICAL: healthSignal alone cannot cause INVALIDATED.
    * Only broken assumptions or violated constraints can invalidate a decision.
    */
   private determineLifecycleState(
-    health: number,
+    healthSignal: number,
     currentLifecycle: DecisionLifecycle,
-    trace: EvaluationStep[],
-    _wasInvalidated: boolean
+    trace: EvaluationStep[]
   ): DecisionLifecycle {
     // Don't change terminal states
     if (
@@ -222,24 +223,24 @@ export class DeterministicEngine implements IDecisionEngine {
 
     let newLifecycle: DecisionLifecycle = currentLifecycle;
 
-    // Health thresholds (internal signals only)
-    if (health >= 80) {
+    // Health signal thresholds (internal signals only)
+    if (healthSignal >= 80) {
       newLifecycle = DecisionLifecycle.STABLE;
-    } else if (health >= 60) {
+    } else if (healthSignal >= 60) {
       newLifecycle = DecisionLifecycle.UNDER_REVIEW;  // Signal: "please review this"
-    } else if (health >= 40) {
+    } else if (healthSignal >= 40) {
       newLifecycle = DecisionLifecycle.AT_RISK;  // Signal: "urgent attention needed"
     } else {
-      // Health < 40: Still AT_RISK (never INVALIDATED from health alone)
+      // healthSignal < 40: Still AT_RISK (never INVALIDATED from healthSignal alone)
       newLifecycle = DecisionLifecycle.AT_RISK;
     }
 
     const explanation =
       newLifecycle === DecisionLifecycle.STABLE
-        ? `Health ${health} → STABLE (all good, no action needed)`
+        ? `Health signal ${healthSignal} → STABLE (all good, no action needed)`
         : newLifecycle === DecisionLifecycle.UNDER_REVIEW
-        ? `Health ${health} → UNDER_REVIEW (system signals: please review this)`
-        : `Health ${health} → AT_RISK (system signals: urgent attention needed)`;
+        ? `Health signal ${healthSignal} → UNDER_REVIEW (system signals: please review this)`
+        : `Health signal ${healthSignal} → AT_RISK (system signals: urgent attention needed)`;
 
     trace.push({
       step: 'lifecycle_determination',

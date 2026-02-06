@@ -16,13 +16,13 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { decisionId } = req.query;
-    
+
     if (!decisionId) {
       return res.status(400).json({ error: 'decisionId is required' });
     }
 
     const db = getDatabase();
-    
+
     // Get decisions this one depends on
     const { data: dependsOn, error: error1 } = await db
       .from('dependencies')
@@ -55,12 +55,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error2) throw error2;
 
-    res.json({
+    return res.json({
       dependsOn: dependsOn || [],
       blocks: blocks || []
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -88,9 +88,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw error;
 
-    res.status(201).json(data);
+    return res.status(201).json(data);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 

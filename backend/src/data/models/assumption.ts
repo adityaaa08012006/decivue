@@ -1,18 +1,25 @@
 /**
- * Assumption Model
- * Represents an explicit assumption underlying a decision
+ * Assumption Model (GLOBAL & REUSABLE)
+ *
+ * PHILOSOPHY:
+ * - Assumptions are NOT tied to single decisions - they are global and reusable
+ * - Status represents DRIFT from the original state, not absolute truth
+ * - HOLDING: assumption is stable
+ * - SHAKY: assumption is deteriorating but not yet broken
+ * - BROKEN: assumption no longer holds, invalidates dependent decisions
+ *
+ * When an assumption status changes, ALL linked decisions must be re-evaluated.
  */
 
 export enum AssumptionStatus {
-  VALID = 'VALID',
-  BROKEN = 'BROKEN',
-  UNKNOWN = 'UNKNOWN'
+  HOLDING = 'HOLDING',   // Stable, assumptions holds true
+  SHAKY = 'SHAKY',       // Deteriorating, needs attention
+  BROKEN = 'BROKEN'      // No longer valid, invalidates decisions
 }
 
 export interface Assumption {
   id: string;
-  decisionId: string;
-  description: string;             // Human-defined assumption
+  description: string;             // Must be unique - assumptions are global
   status: AssumptionStatus;
   validatedAt?: Date;
   metadata?: Record<string, any>;
@@ -20,8 +27,7 @@ export interface Assumption {
 }
 
 export interface AssumptionCreate {
-  decisionId: string;
-  description: string;
+  description: string;             // No decisionId - assumptions are global
   status?: AssumptionStatus;
   metadata?: Record<string, any>;
 }

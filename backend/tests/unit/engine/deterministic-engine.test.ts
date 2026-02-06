@@ -21,10 +21,10 @@ describe('DeterministicEngine', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 100
+          healthSignal: 100
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [],
         constraints: [],
@@ -34,7 +34,8 @@ describe('DeterministicEngine', () => {
       const result = engine.evaluate(input);
 
       expect(result.newLifecycle).toBe(DecisionLifecycle.STABLE);
-      expect(result.newHealth).toBeGreaterThanOrEqual(80);
+      expect(result.newHealthSignal).toBeGreaterThanOrEqual(80);
+      expect(result.invalidatedReason).toBeUndefined();
       expect(result.trace).toHaveLength(5); // 5 evaluation steps
     });
 
@@ -42,7 +43,7 @@ describe('DeterministicEngine', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 100
+          healthSignal: 100
         }),
         assumptions: [
           createTestAssumption({ status: AssumptionStatus.BROKEN })
@@ -55,22 +56,23 @@ describe('DeterministicEngine', () => {
       const result = engine.evaluate(input);
 
       expect(result.newLifecycle).toBe(DecisionLifecycle.INVALIDATED);
-      expect(result.newHealth).toBe(0);
+      expect(result.newHealthSignal).toBe(0);
+      expect(result.invalidatedReason).toBe('broken_assumptions');
       expect(result.changesDetected).toBe(true);
     });
 
     it('should propagate risk from dependencies but not invalidate', () => {
       const lowHealthDependency = createTestDecision({
-        health: 30
+        healthSignal: 30
       });
 
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 100
+          healthSignal: 100
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [lowHealthDependency],
         constraints: [],
@@ -79,10 +81,11 @@ describe('DeterministicEngine', () => {
 
       const result = engine.evaluate(input);
 
-      // Health should be affected by dependency
-      expect(result.newHealth).toBeLessThanOrEqual(30);
-      // But health alone never causes INVALIDATED - should be AT_RISK
+      // healthSignal should be affected by dependency
+      expect(result.newHealthSignal).toBeLessThanOrEqual(30);
+      // But healthSignal alone never causes INVALIDATED - should be AT_RISK
       expect(result.newLifecycle).toBe(DecisionLifecycle.AT_RISK);
+      expect(result.invalidatedReason).toBeUndefined();
     });
 
     it('should apply time-based health decay and trigger UNDER_REVIEW', () => {
@@ -92,11 +95,11 @@ describe('DeterministicEngine', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 100,
+          healthSignal: 100,
           lastReviewedAt: thirtyDaysAgo
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [],
         constraints: [],
@@ -105,7 +108,7 @@ describe('DeterministicEngine', () => {
 
       const result = engine.evaluate(input);
 
-      expect(result.newHealth).toBeLessThan(100);
+      expect(result.newHealthSignal).toBeLessThan(100);
       expect(result.changesDetected).toBe(true);
     });
 
@@ -113,10 +116,10 @@ describe('DeterministicEngine', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 70
+          healthSignal: 70
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [],
         constraints: [],
@@ -126,17 +129,17 @@ describe('DeterministicEngine', () => {
       const result = engine.evaluate(input);
 
       expect(result.newLifecycle).toBe(DecisionLifecycle.UNDER_REVIEW);
-      expect(result.newHealth).toBe(70);
+      expect(result.newHealthSignal).toBe(70);
     });
 
     it('should transition to AT_RISK when health drops below 60', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 50
+          healthSignal: 50
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [],
         constraints: [],
@@ -146,17 +149,17 @@ describe('DeterministicEngine', () => {
       const result = engine.evaluate(input);
 
       expect(result.newLifecycle).toBe(DecisionLifecycle.AT_RISK);
-      expect(result.newHealth).toBe(50);
+      expect(result.newHealthSignal).toBe(50);
     });
 
-    it('should remain AT_RISK even when health drops below 40 (health alone never invalidates)', () => {
+    it('should remain AT_RISK even when health drops below 40 (healthSignal alone never invalidates)', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 20
+          healthSignal: 20
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [],
         constraints: [],
@@ -165,19 +168,20 @@ describe('DeterministicEngine', () => {
 
       const result = engine.evaluate(input);
 
-      // Health is low but assumptions are valid - should be AT_RISK, not INVALIDATED
+      // healthSignal is low but assumptions are holding - should be AT_RISK, not INVALIDATED
       expect(result.newLifecycle).toBe(DecisionLifecycle.AT_RISK);
-      expect(result.newHealth).toBe(20);
+      expect(result.newHealthSignal).toBe(20);
+      expect(result.invalidatedReason).toBeUndefined();
     });
 
     it('should be deterministic - same input produces same output', () => {
       const input: EvaluationInput = {
         decision: createTestDecision({
           lifecycle: DecisionLifecycle.STABLE,
-          health: 80
+          healthSignal: 80
         }),
         assumptions: [
-          createTestAssumption({ status: AssumptionStatus.VALID })
+          createTestAssumption({ status: AssumptionStatus.HOLDING })
         ],
         dependencies: [],
         constraints: [],
@@ -188,7 +192,7 @@ describe('DeterministicEngine', () => {
       const result2 = engine.evaluate(input);
 
       expect(result1.newLifecycle).toBe(result2.newLifecycle);
-      expect(result1.newHealth).toBe(result2.newHealth);
+      expect(result1.newHealthSignal).toBe(result2.newHealthSignal);
       expect(result1.trace.length).toBe(result2.trace.length);
     });
 
@@ -220,7 +224,7 @@ function createTestDecision(overrides?: Partial<Decision>): Decision {
     title: 'Test Decision',
     description: 'A test decision',
     lifecycle: DecisionLifecycle.STABLE,
-    health: 100,
+    healthSignal: 100,
     createdAt: new Date(),
     lastReviewedAt: new Date(),
     ...overrides
@@ -230,9 +234,8 @@ function createTestDecision(overrides?: Partial<Decision>): Decision {
 function createTestAssumption(overrides?: Partial<Assumption>): Assumption {
   return {
     id: 'test-assumption-1',
-    decisionId: 'test-decision-1',
     description: 'Test assumption',
-    status: AssumptionStatus.VALID,
+    status: AssumptionStatus.HOLDING,
     createdAt: new Date(),
     ...overrides
   };

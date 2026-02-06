@@ -2,7 +2,11 @@
  * Decision Model
  * Core entity representing a business decision under monitoring
  *
- * Philosophy: The system does not replace human judgment — it highlights when judgment is needed.
+ * PHILOSOPHY:
+ * - The system does not replace human judgment — it highlights when judgment is needed
+ * - healthSignal is an INTERNAL signal only, never authoritative
+ * - Only broken assumptions or violated constraints can cause INVALIDATED
+ * - last_reviewed_at is updated ONLY by explicit human review, never automatically
  */
 
 export enum DecisionLifecycle {
@@ -18,9 +22,10 @@ export interface Decision {
   title: string;
   description: string;
   lifecycle: DecisionLifecycle;
-  health: number;                  // 0-100, internal signal only (never authoritative, not exposed in UI)
+  healthSignal: number;            // 0-100, INTERNAL signal only (never authoritative, not exposed in UI)
+  invalidatedReason?: string;      // Why was this invalidated? (constraint_violation | broken_assumptions | manual)
   createdAt: Date;
-  lastReviewedAt: Date;
+  lastReviewedAt: Date;            // Updated ONLY by explicit human review action
   metadata?: Record<string, any>; // Additional context
 }
 

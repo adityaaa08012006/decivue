@@ -16,7 +16,7 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { decisionId } = req.query;
-    
+
     if (!decisionId) {
       return res.status(400).json({ error: 'decisionId is required' });
     }
@@ -30,9 +30,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw error;
 
-    res.json(data || []);
+    return res.json(data || []);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -63,9 +63,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw error;
 
-    res.status(201).json(data);
+    return res.status(201).json(data);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 

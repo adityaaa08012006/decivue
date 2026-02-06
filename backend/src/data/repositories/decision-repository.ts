@@ -20,7 +20,8 @@ export class DecisionRepository {
         title: data.title,
         description: data.description,
         lifecycle: DecisionLifecycle.STABLE,
-        health: 100,
+        health_signal: 100,
+        invalidated_reason: null,
         metadata: data.metadata
       })
       .select()
@@ -80,20 +81,23 @@ export class DecisionRepository {
   }
 
   /**
-   * Update decision lifecycle and health (used after evaluation)
-   * Health is an internal signal only, never authoritative
+   * Update decision lifecycle and health signal (used after evaluation)
+   *
+   * CRITICAL: Does NOT update last_reviewed_at - that's only for explicit human review
+   * healthSignal is an internal signal only, never authoritative
    */
   async updateEvaluation(
     id: string,
     lifecycle: DecisionLifecycle,
-    health: number
+    healthSignal: number,
+    invalidatedReason?: string
   ): Promise<Decision> {
     const { data: updated, error } = await this.db
       .from('decisions')
       .update({
         lifecycle,
-        health,
-        last_reviewed_at: new Date().toISOString()
+        health_signal: healthSignal,
+        invalidated_reason: invalidatedReason || null
       })
       .eq('id', id)
       .select()
@@ -126,7 +130,8 @@ export class DecisionRepository {
       title: row.title,
       description: row.description,
       lifecycle: row.lifecycle as DecisionLifecycle,
-      health: row.health,
+      healthSignal: row.health_signal,
+      invalidatedReason: row.invalidated_reason,
       createdAt: new Date(row.created_at),
       lastReviewedAt: new Date(row.last_reviewed_at),
       metadata: row.metadata

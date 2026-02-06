@@ -16,7 +16,7 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { decisionId } = req.query;
-    
+
     if (!decisionId) {
       return res.status(400).json({ error: 'decisionId is required' });
     }
@@ -41,9 +41,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     // Extract constraints from nested structure
     const constraints = (data || []).map((dc: any) => dc.constraints);
 
-    res.json(constraints);
+    return res.json(constraints);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -51,19 +51,19 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * GET /api/constraints/all
  * Get all organizational constraints
  */
-router.get('/all', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/all', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
-    const { data, error } = await db
+    const { data, error} = await db
       .from('constraints')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    res.json(data || []);
+    return res.json(data || []);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 

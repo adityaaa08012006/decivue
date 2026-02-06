@@ -7,3 +7,4 @@ export * from './decision';
 export * from './assumption';
 export * from './constraint';
 export * from './dependency';
+export * from './decision-tension';
