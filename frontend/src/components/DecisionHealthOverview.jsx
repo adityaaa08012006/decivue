@@ -1,31 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import CircularProgressCard from './CircularProgressCard';
+import api from '../services/api';
 
 const DecisionHealthOverview = () => {
-  const healthData = [
-    {
-      id: 1,
-      title: 'Major Insight needed:',
-      value: 3,
-      total: 10,
-      status: 'danger',
-    },
-    {
-      id: 2,
-      title: 'In good health:',
-      value: 10,
-      total: 10,
-      status: 'success',
-    },
-    {
-      id: 3,
-      title: 'Review Pending:',
-      value: 7,
-      total: 10,
-      status: 'warning',
-    },
-  ];
+  const [decisions, setDecisions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDecisions();
+  }, []);
+
+  const fetchDecisions = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getDecisions();
+      setDecisions(data);
+    } catch (err) {
+      console.error('Failed to fetch decisions:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate health statistics from real data
+  const calculateHealthStats = () => {
+    const total = decisions.length;
+    const atRisk = decisions.filter(d => d.lifecycle === 'AT_RISK' || d.lifecycle === 'INVALIDATED').length;
+    const stable = decisions.filter(d => d.lifecycle === 'STABLE').length;
+    const underReview = decisions.filter(d => d.lifecycle === 'UNDER_REVIEW').length;
+
+    return [
+      {
+        id: 1,
+        title: 'Major Insight needed:',
+        value: atRisk,
+        total: total || 10,
+        status: 'danger',
+      },
+      {
+        id: 2,
+        title: 'In good health:',
+        value: stable,
+        total: total || 10,
+        status: 'success',
+      },
+      {
+        id: 3,
+        title: 'Review Pending:',
+        value: underReview,
+        total: total || 10,
+        status: 'warning',
+      },
+    ];
+  };
+
+  const healthData = calculateHealthStats();
 
   return (
     <div className="mb-8">

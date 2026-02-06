@@ -12,6 +12,9 @@ import { registerReEvaluationHandlers } from '@events/handlers/re-evaluation-han
 import { logger } from '@utils/logger';
 import { AppError } from '@utils/errors';
 import decisionRoutes from '@api/routes/decisions';
+import assumptionRoutes from '@api/routes/assumptions';
+import dependencyRoutes from '@api/routes/dependencies';
+import constraintRoutes from '@api/routes/constraints';
 
 // Load environment variables
 dotenv.config();
@@ -54,12 +57,11 @@ app.get('/api', (_req: Request, res: Response) => {
   });
 });
 
-// Decision routes
+// API routes
 app.use('/api/decisions', decisionRoutes);
-
-// TODO: Add remaining API routes
-// app.use('/api/assumptions', assumptionRoutes);
-// app.use('/api/constraints', constraintRoutes);
+app.use('/api/assumptions', assumptionRoutes);
+app.use('/api/dependencies', dependencyRoutes);
+app.use('/api/constraints', constraintRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
