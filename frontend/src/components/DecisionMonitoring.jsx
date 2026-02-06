@@ -89,6 +89,24 @@ const DecisionMonitoring = () => {
     return 'text-red-500';
   };
 
+  const getHealthBand = (health) => {
+    if (health >= 85) return { label: 'Good', color: 'bg-teal-500', textColor: 'text-teal-700' };
+    if (health >= 65) return { label: 'Needs review', color: 'bg-amber-400', textColor: 'text-amber-700' };
+    return { label: 'At risk', color: 'bg-rose-500', textColor: 'text-rose-700' };
+  };
+
+  const getFreshnessBand = (freshness) => {
+    if (freshness >= 85) return { label: 'Fresh', color: 'bg-teal-500', textColor: 'text-teal-700' };
+    if (freshness >= 65) return { label: 'Needs review', color: 'bg-amber-400', textColor: 'text-amber-700' };
+    return { label: 'Stale', color: 'bg-rose-500', textColor: 'text-rose-700' };
+  };
+
+  const getConsistencyBand = (consistency) => {
+    if (consistency >= 85) return { label: 'On track', color: 'bg-teal-500', textColor: 'text-teal-700' };
+    if (consistency >= 65) return { label: 'Minor drift', color: 'bg-amber-400', textColor: 'text-amber-700' };
+    return { label: 'Needs attention', color: 'bg-rose-500', textColor: 'text-rose-700' };
+  };
+
   const getDecayScore = (lastReviewedAt) => {
     const now = new Date();
     const lastReview = new Date(lastReviewedAt);
@@ -121,6 +139,15 @@ const DecisionMonitoring = () => {
         if (filterStatus === 'deprecated') return d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED';
         return true;
       });
+
+  // Calculate counts for each filter status
+  const getCountForStatus = (status) => {
+    if (status === 'all') return decisions.length;
+    if (status === 'active') return decisions.filter(d => d.lifecycle === 'STABLE').length;
+    if (status === 'at-risk') return decisions.filter(d => d.lifecycle === 'AT_RISK' || d.lifecycle === 'UNDER_REVIEW').length;
+    if (status === 'deprecated') return decisions.filter(d => d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED').length;
+    return 0;
+  };
 
   const toggleExpand = (id) => {
     setExpandedDecision(expandedDecision === id ? null : id);
@@ -159,7 +186,7 @@ const DecisionMonitoring = () => {
           >
             {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
             <span className="ml-2 text-sm opacity-80">
-              ({status === 'all' ? decisions.length : filteredDecisions.length})
+              ({getCountForStatus(status)})
             </span>
           </button>
         ))}
@@ -211,29 +238,54 @@ const DecisionMonitoring = () => {
                       
                       {/* Key Metrics - Feature 1, 5, 7 */}
                       <div className="flex gap-4 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Activity size={16} className="text-teal-600" />
+                        {/* Health Metric */}
+                        <div 
+                          className="flex items-center gap-2 cursor-help"
+                          title={`Health: ${decision.health}%`}
+                          aria-label={`Health ${decision.health}%`}
+                        >
+                          <Activity size={16} className={getHealthBand(decision.health).textColor} />
                           <span className="text-sm text-gray-700">
-                            Health: <span className="font-semibold text-teal-600">{decision.health}%</span>
+                            Health: <span className={`font-semibold ${getHealthBand(decision.health).textColor}`}>
+                              {getHealthBand(decision.health).label}
+                            </span>
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingDown size={16} className={getHealthColor(decayScore)} />
+
+                        {/* Freshness Metric */}
+                        <div 
+                          className="flex items-center gap-2 cursor-help"
+                          title={`Freshness: ${decayScore}%`}
+                          aria-label={`Freshness ${decayScore}%`}
+                        >
+                          <TrendingDown size={16} className={getFreshnessBand(decayScore).textColor} />
                           <span className="text-sm text-gray-700">
-                            Decay: <span className={`font-semibold ${getHealthColor(decayScore)}`}>{decayScore}%</span>
+                            Freshness: <span className={`font-semibold ${getFreshnessBand(decayScore).textColor}`}>
+                              {getFreshnessBand(decayScore).label}
+                            </span>
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Target size={16} className="text-blue-600" />
+
+                        {/* Consistency Metric */}
+                        <div 
+                          className="flex items-center gap-2 cursor-help"
+                          title={`Consistency: ${consistencyScore}%`}
+                          aria-label={`Consistency ${consistencyScore}%`}
+                        >
+                          <Target size={16} className={getConsistencyBand(consistencyScore).textColor} />
                           <span className="text-sm text-gray-700">
-                            Consistency: <span className="font-semibold text-blue-600">{consistencyScore}%</span>
+                            Consistency: <span className={`font-semibold ${getConsistencyBand(consistencyScore).textColor}`}>
+                              {getConsistencyBand(consistencyScore).label}
+                            </span>
                           </span>
                         </div>
+
+                        {/* Drift Warning */}
                         {drift > 10 && (
                           <div className="flex items-center gap-2">
                             <AlertCircle size={16} className="text-orange-500" />
                             <span className="text-sm text-orange-600 font-semibold">
-                              Drift: {drift}%
+                              Drifting
                             </span>
                           </div>
                         )}
@@ -437,10 +489,23 @@ const DecisionMonitoring = () => {
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">Freshness:</span>
-                          <span className={`text-sm font-semibold ${getHealthColor(decayScore)}`}>{decayScore}%</span>
+                          <span className="text-sm text-slate-600">Status:</span>
+                          <span 
+                            className={`text-sm font-semibold ${getFreshnessBand(decayScore).textColor} cursor-help`}
+                            title={`${decayScore}% fresh`}
+                          >
+                            {getFreshnessBand(decayScore).label}
+                          </span>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="w-full bg-slate-100 rounded-full h-3 overflow-hidden cursor-help"
+                          title={`Freshness: ${decayScore}%`}
+                          role="progressbar"
+                          aria-label={`Freshness ${decayScore}%`}
+                          aria-valuenow={decayScore}
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                        >
                           <div
                             className={`h-3 rounded-full transition-all ${
                               decayScore >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 
@@ -490,13 +555,21 @@ const DecisionMonitoring = () => {
                       </h4>
                       <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">Overall health:</span>
-                          <span className="text-sm font-semibold text-purple-700">{consistencyScore}%</span>
+                          <span className="text-sm text-slate-600">Status:</span>
+                          <span 
+                            className={`text-sm font-semibold ${getConsistencyBand(consistencyScore).textColor} cursor-help`}
+                            title={`Consistency: ${consistencyScore}%`}
+                          >
+                            {getConsistencyBand(consistencyScore).label}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">Drift from expected:</span>
-                          <span className={`text-sm font-semibold ${drift > 10 ? 'text-amber-700' : 'text-emerald-700'}`}>
-                            {drift}%
+                          <span className="text-sm text-slate-600">Drift:</span>
+                          <span 
+                            className={`text-sm font-semibold ${drift > 10 ? 'text-amber-700' : 'text-emerald-700'} cursor-help`}
+                            title={`${drift}% drift from expected`}
+                          >
+                            {drift > 10 ? 'Drifting' : 'Stable'}
                           </span>
                         </div>
                         {drift > 10 && (
