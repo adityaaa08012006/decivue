@@ -72,6 +72,21 @@ const DecisionMonitoring = () => {
     }
   };
 
+  // Derive effective lifecycle from health score to keep them in sync
+  const getEffectiveLifecycle = (decision) => {
+    const { health, lifecycle } = decision;
+    
+    // If manually set to RETIRED or INVALIDATED, respect that
+    if (lifecycle === 'RETIRED' || lifecycle === 'INVALIDATED') {
+      return lifecycle;
+    }
+    
+    // Otherwise, sync with health
+    if (health < 65) return 'AT_RISK';
+    if (health < 85) return 'UNDER_REVIEW';
+    return 'STABLE';
+  };
+
   const getStatusColor = (lifecycle) => {
     switch (lifecycle) {
       case 'STABLE': return 'bg-teal-500 text-white';
@@ -211,6 +226,7 @@ const DecisionMonitoring = () => {
       {!loading && !error && (
         <div className="space-y-4">
           {filteredDecisions.map((decision) => {
+            const effectiveLifecycle = getEffectiveLifecycle(decision);
             const decayScore = getDecayScore(decision.lastReviewedAt);
             const consistencyScore = getConsistencyScore(decision.health, decision.lifecycle);
             const drift = calculateDrift(decision.health, decayScore);
@@ -229,10 +245,10 @@ const DecisionMonitoring = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-sm font-mono text-gray-500">{decision.id.slice(0, 8)}</span>
-                        <span className={`px-3 py-1 rounded-md text-xs font-semibold ${getStatusColor(decision.lifecycle)}`}>
-                          {decision.lifecycle.replace('_', ' ')}
+                        <span className={`px-3 py-1 rounded-md text-xs font-semibold ${getStatusColor(effectiveLifecycle)}`}>
+                          {effectiveLifecycle.replace('_', ' ')}
                         </span>
-                        <span className="text-xs text-gray-500">{decision.lifecycle === 'STABLE' ? 'active' : decision.lifecycle === 'RETIRED' ? 'deprecated' : 'planning'}</span>
+                        <span className="text-xs text-gray-500">{effectiveLifecycle === 'STABLE' ? 'active' : effectiveLifecycle === 'RETIRED' ? 'deprecated' : 'planning'}</span>
                       </div>
                       <h3 className="text-xl font-semibold text-black mb-3">{decision.title}</h3>
                       
@@ -397,53 +413,160 @@ const DecisionMonitoring = () => {
                     <div>
                       <h4 className="font-semibold text-black mb-3 flex items-center gap-2">
                         <Shield size={18} className="text-blue-600" />
-                        Assumptions Tracking
+                        Assumptions
                       </h4>
-                      {decisionData[decision.id]?.assumptions?.length > 0 ? (
-                        <div className="space-y-2">
-                          {decisionData[decision.id].assumptions.map(assumption => {
-                            const confidence = assumption.metadata?.confidence || 0;
-                            const isValid = assumption.status === 'VALID';
-                            const isUnknown = assumption.status === 'UNKNOWN';
-                            
-                            return (
-                              <div key={assumption.id} className="bg-white border border-gray-200 p-3 rounded-lg">
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex items-start gap-2 flex-1">
-                                    {isValid ? (
-                                      <CheckCircle size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
-                                    ) : isUnknown ? (
-                                      <AlertCircle size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
-                                    ) : (
-                                      <XCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                      
+                      {/* Organizational Rules (Universal Assumptions) */}
+                      {decisionData[decision.id]?.assumptions?.filter(a => a.scope === 'UNIVERSAL').length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Shield size={14} className="text-purple-600" />
+                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">🌐 Universal Rules (Apply to all decisions)</p>
+                          </div>
+                          <div className="space-y-2">
+                            {decisionData[decision.id].assumptions.filter(a => a.scope === 'UNIVERSAL').map(assumption => {
+                              const isHolding = assumption.status === 'HOLDING';
+                              const isShaky = assumption.status === 'SHAKY';
+                              const isBroken = assumption.status === 'BROKEN';
+                              const hasConflicts = assumption.conflicts && assumption.conflicts.length > 0;
+                              
+                              return (
+                                <div key={assumption.id}>
+                                  <div className={`border p-3 rounded-lg ${
+                                    isBroken ? 'border-red-200 bg-red-50' : 
+                                    isShaky ? 'border-orange-200 bg-orange-50' : 
+                                    'bg-purple-50 border-purple-200'
+                                  }`}>
+                                    <div className="flex items-start gap-2">
+                                      {isHolding ? (
+                                        <CheckCircle size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                                      ) : isShaky ? (
+                                        <AlertCircle size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
+                                      ) : (
+                                        <XCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium text-gray-800">{assumption.description}</p>
+                                        <div className="flex items-center gap-3 mt-1">
+                                          <span className={`text-xs font-semibold ${
+                                            isHolding ? 'text-purple-600' : isShaky ? 'text-orange-600' : 'text-red-600'
+                                          }`}>
+                                            {isHolding ? '✓ Holding' : isShaky ? '⚠ Shaky' : '✗ Broken'}
+                                          </span>
+                                          <span className="text-xs text-purple-600 font-medium">🔒 Universal</span>
+                                          {assumption.validated_at && (
+                                            <span className="text-xs text-gray-500">
+                                              Checked: {new Date(assumption.validated_at).toLocaleDateString()}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Show conflicts */}
+                                    {hasConflicts && (
+                                      <div className="mt-2 pt-2 border-t border-red-300">
+                                        <div className="flex items-start gap-2 bg-red-100 p-2 rounded">
+                                          <AlertCircle size={14} className="text-red-600 mt-0.5 flex-shrink-0" />
+                                          <div className="flex-1">
+                                            <p className="text-xs font-semibold text-red-700">⚠️ Conflicts detected:</p>
+                                            {assumption.conflicts.map(conflict => (
+                                              <p key={conflict.conflict_id} className="text-xs text-red-600 mt-1">
+                                                • Contradicts: "{conflict.conflicting_description}"
+                                                <br />
+                                                <span className="text-red-500 text-xs">Reason: {conflict.conflict_reason}</span>
+                                              </p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
                                     )}
-                                    <p className="text-sm text-gray-800">{assumption.description}</p>
                                   </div>
-                                  {assumption.validated_at && (
-                                    <span className="text-xs text-gray-500">
-                                      Checked: {new Date(assumption.validated_at).toLocaleDateString()}
-                                    </span>
-                                  )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className={`h-2 rounded-full ${
-                                        isValid ? 'bg-teal-500' : isUnknown ? 'bg-orange-500' : 'bg-red-500'
-                                      }`}
-                                      style={{ width: `${confidence}%` }}
-                                    />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Decision-Specific Assumptions */}
+                      {decisionData[decision.id]?.assumptions?.filter(a => a.scope === 'DECISION_SPECIFIC' || !a.scope).length > 0 ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Activity size={14} className="text-blue-600" />
+                            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">📌 Decision-Specific</p>
+                          </div>
+                          <div className="space-y-2">
+                            {decisionData[decision.id].assumptions
+                              .filter(a => a.scope === 'DECISION_SPECIFIC' || !a.scope)
+                              .map(assumption => {
+                              const isHolding = assumption.status === 'HOLDING';
+                              const isShaky = assumption.status === 'SHAKY';
+                              const isBroken = assumption.status === 'BROKEN';
+                              const hasConflicts = assumption.conflicts && assumption.conflicts.length > 0;
+                              
+                              return (
+                                <div key={assumption.id}>
+                                  <div className={`bg-white border p-3 rounded-lg ${
+                                    isBroken ? 'border-red-200 bg-red-50' : 
+                                    isShaky ? 'border-orange-200 bg-orange-50' : 
+                                    'border-gray-200'
+                                  }`}>
+                                    <div className="flex items-start gap-2">
+                                      {isHolding ? (
+                                        <CheckCircle size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
+                                      ) : isShaky ? (
+                                        <AlertCircle size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
+                                      ) : (
+                                        <XCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1">
+                                        <p className="text-sm text-gray-800">{assumption.description}</p>
+                                        <div className="flex items-center gap-3 mt-1">
+                                          <span className={`text-xs font-semibold ${
+                                            isHolding ? 'text-teal-600' : isShaky ? 'text-orange-600' : 'text-red-600'
+                                          }`}>
+                                            {isHolding ? '✓ Holding' : isShaky ? '⚠ Shaky' : '✗ Broken'}
+                                          </span>
+                                          {assumption.validated_at && (
+                                            <span className="text-xs text-gray-500">
+                                              Checked: {new Date(assumption.validated_at).toLocaleDateString()}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Show conflicts */}
+                                    {hasConflicts && (
+                                      <div className="mt-2 pt-2 border-t border-red-300">
+                                        <div className="flex items-start gap-2 bg-red-100 p-2 rounded">
+                                          <AlertCircle size={14} className="text-red-600 mt-0.5 flex-shrink-0" />
+                                          <div className="flex-1">
+                                            <p className="text-xs font-semibold text-red-700">⚠️ Conflicts detected:</p>
+                                            {assumption.conflicts.map(conflict => (
+                                              <p key={conflict.conflict_id} className="text-xs text-red-600 mt-1">
+                                                • Contradicts: "{conflict.conflicting_description}"
+                                                <br />
+                                                <span className="text-red-500 text-xs">Reason: {conflict.conflict_reason}</span>
+                                              </p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-xs font-semibold text-gray-600">{confidence}% confidence</span>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       ) : (
-                        <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">No assumptions tracked yet</p>
-                        </div>
+                        !decisionData[decision.id]?.assumptions?.filter(a => a.scope === 'UNIVERSAL').length && (
+                          <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                            <p className="text-sm text-gray-600">No assumptions tracked yet</p>
+                          </div>
+                        )
                       )}
                     </div>
 
@@ -453,7 +576,7 @@ const DecisionMonitoring = () => {
                         <AlertCircle size={18} className="text-orange-500" />
                         Any conflicts?
                       </h4>
-                      {decision.lifecycle === 'AT_RISK' ? (
+                      {effectiveLifecycle === 'AT_RISK' ? (
                         <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
                           <div className="flex items-start gap-2 text-orange-700">
                             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
@@ -528,7 +651,7 @@ const DecisionMonitoring = () => {
                         Is this part of a bigger issue?
                       </h4>
                       <div className="bg-white border border-slate-200 p-4 rounded-xl">
-                        {decision.lifecycle === 'AT_RISK' || decision.lifecycle === 'INVALIDATED' ? (
+                        {effectiveLifecycle === 'AT_RISK' || effectiveLifecycle === 'INVALIDATED' ? (
                           <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
                             <p className="text-sm text-amber-800 font-medium flex items-center gap-2">
                               <AlertCircle size={16} />
@@ -579,32 +702,6 @@ const DecisionMonitoring = () => {
                               Things are drifting a bit. Might want to take another look!
                             </p>
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Feature 8: Organizational Facts */}
-                    <div>
-                      <h4 className="font-semibold text-black mb-3 flex items-center gap-2">
-                        <Shield size={18} className="text-blue-600" />
-                        Organizational Facts Compliance
-                      </h4>
-                      <div className="bg-white border border-gray-200 p-4 rounded-lg space-y-2">
-                        {decisionData[decision.id]?.constraints?.length > 0 ? (
-                          decisionData[decision.id].constraints.map(constraint => (
-                            <div key={constraint.id} className="flex items-start gap-2 bg-teal-50 p-3 rounded-lg">
-                              <CheckCircle size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <p className="text-sm font-medium text-teal-700">{constraint.name}</p>
-                                <p className="text-sm text-gray-800">{constraint.description}</p>
-                                {constraint.is_immutable && (
-                                  <span className="text-xs text-gray-500 italic mt-1 block">Immutable</span>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-600">No organizational constraints defined</p>
                         )}
                       </div>
                     </div>
