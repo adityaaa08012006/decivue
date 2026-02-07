@@ -67,4 +67,48 @@ router.get('/all', async (_req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+/**
+ * POST /api/constraints/link
+ * Link an existing constraint to a decision
+ */
+router.post('/link', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { constraintId, decisionId } = req.body;
+
+    if (!constraintId || !decisionId) {
+      return res.status(400).json({ error: 'constraintId and decisionId are required' });
+    }
+
+    const db = getDatabase();
+
+    // Check if link already exists
+    const { data: existing } = await db
+      .from('decision_constraints')
+      .select('*')
+      .eq('constraint_id', constraintId)
+      .eq('decision_id', decisionId)
+      .single();
+
+    if (existing) {
+      return res.status(200).json({ message: 'Already linked', data: existing });
+    }
+
+    // Create the link
+    const { data, error } = await db
+      .from('decision_constraints')
+      .insert({
+        constraint_id: constraintId,
+        decision_id: decisionId
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json(data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 export default router;

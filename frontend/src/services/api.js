@@ -21,6 +21,11 @@ class ApiService {
         throw new Error(error.message || `HTTP error! status: ${response.status}`);
       }
 
+      // Handle 204 No Content (DELETE operations)
+      if (response.status === 204) {
+        return null;
+      }
+
       return await response.json();
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
@@ -57,6 +62,12 @@ class ApiService {
     });
   }
 
+  async markDecisionReviewed(id) {
+    return this.request(`/decisions/${id}/mark-reviewed`, {
+      method: 'PUT',
+    });
+  }
+
   async evaluateDecision(id) {
     return this.request(`/decisions/${id}/evaluate`, {
       method: 'POST',
@@ -79,6 +90,19 @@ class ApiService {
     return this.request('/assumptions', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async updateAssumption(id, data) {
+    return this.request(`/assumptions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAssumption(id) {
+    return this.request(`/assumptions/${id}`, {
+      method: 'DELETE',
     });
   }
 
@@ -123,6 +147,13 @@ class ApiService {
     return this.request('/constraints/all');
   }
 
+  async linkConstraintToDecision(constraintId, decisionId) {
+    return this.request('/constraints/link', {
+      method: 'POST',
+      body: JSON.stringify({ constraintId, decisionId }),
+    });
+  }
+
   // Evaluation history endpoints
   async getEvaluationHistory(decisionId) {
     return this.request(`/decisions/${decisionId}/history`);
@@ -142,6 +173,46 @@ class ApiService {
 
   async getTimeline(limit = 50) {
     return this.request(`/timeline?limit=${limit}`);
+  }
+
+  // Notification endpoints
+  async getNotifications(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.unreadOnly) params.append('unreadOnly', 'true');
+    if (filters.severity) params.append('severity', filters.severity);
+    if (filters.type) params.append('type', filters.type);
+    if (filters.limit) params.append('limit', filters.limit);
+
+    const query = params.toString();
+    return this.request(`/notifications${query ? `?${query}` : ''}`);
+  }
+
+  async getUnreadNotificationCount() {
+    return this.request('/notifications/unread-count');
+  }
+
+  async markNotificationRead(id) {
+    return this.request(`/notifications/${id}/mark-read`, {
+      method: 'PUT',
+    });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/notifications/mark-all-read', {
+      method: 'PUT',
+    });
+  }
+
+  async dismissNotification(id) {
+    return this.request(`/notifications/${id}/dismiss`, {
+      method: 'PUT',
+    });
+  }
+
+  async deleteNotification(id) {
+    return this.request(`/notifications/${id}`, {
+      method: 'DELETE',
+    });
   }
 
   // Health check

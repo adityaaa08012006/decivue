@@ -7,14 +7,23 @@ import OrganisationOverview from './components/OrganisationOverview';
 import DecisionMonitoring from './components/DecisionMonitoring';
 import AssumptionsPage from './components/AssumptionsPage';
 import OrganizationProfile from './components/OrganizationProfile';
+import NotificationsPage from './components/NotificationsPage';
 import DecisionFlow from './components/DecisionFlow';
+import AddDecisionModal from './components/AddDecisionModal';
 
 function App() {
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [showAddDecisionModal, setShowAddDecisionModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleNavigate = (viewId) => {
     setCurrentView(viewId);
+  };
+
+  const handleDecisionCreated = () => {
+    // Trigger refresh by changing key
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
@@ -30,41 +39,47 @@ function App() {
               {/* Header with Add Decision Input */}
               <div className="mb-8 flex items-center gap-4">
                 <div className="flex-1 max-w-2xl">
-                  <button className="w-full flex items-center gap-3 px-6 py-3 bg-white border-2 border-neutral-gray-300 rounded-xl hover:border-primary-blue transition-colors text-left group">
+                  <button
+                    onClick={() => setShowAddDecisionModal(true)}
+                    className="w-full flex items-center gap-3 px-6 py-3 bg-white border-2 border-neutral-gray-300 rounded-xl hover:border-primary-blue transition-colors text-left group"
+                  >
                     <Plus size={20} className="text-neutral-gray-500 group-hover:text-primary-blue transition-colors" />
                     <span className="text-neutral-gray-600 font-medium">Add a decision</span>
                     <ArrowRight size={20} className="text-neutral-gray-400 ml-auto group-hover:text-primary-blue transition-colors" />
                   </button>
                 </div>
-                <button className="px-6 py-3 bg-status-green text-white font-semibold rounded-xl hover:bg-green-600 transition-colors">
-                  Add entry
-                </button>
-                <button
-                  onClick={() => setIsOverviewOpen(true)}
-                  className="px-4 py-3 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors flex items-center gap-2"
-                >
-                  <PanelRightOpen size={20} />
-                  Overview
-                </button>
               </div>
 
               {/* Decision Health Overview */}
-              <DecisionHealthOverview />
+              <DecisionHealthOverview key={`health-${refreshKey}`} />
 
               {/* Decision Log Table */}
-              <DecisionLogTable />
+              <DecisionLogTable key={`log-${refreshKey}`} />
             </div>
           )}
 
-          {currentView === 'monitoring' && <DecisionMonitoring />}
+          {currentView === 'monitoring' && (
+            <DecisionMonitoring
+              key={`monitoring-${refreshKey}`}
+              onAddDecision={() => setShowAddDecisionModal(true)}
+            />
+          )}
           {currentView === 'assumptions' && <AssumptionsPage />}
+          {currentView === 'notifications' && <NotificationsPage />}
           {currentView === 'profile' && <OrganizationProfile />}
-          {currentView === 'flow' && <DecisionFlow />}
+          {currentView === 'flow' && <DecisionFlow key={`flow-${refreshKey}`} />}
         </div>
       </div>
 
       {/* Right Sidebar - Sliding Window */}
       <OrganisationOverview isOpen={isOverviewOpen} onClose={() => setIsOverviewOpen(false)} />
+
+      {/* Add Decision Modal */}
+      <AddDecisionModal
+        isOpen={showAddDecisionModal}
+        onClose={() => setShowAddDecisionModal(false)}
+        onSuccess={handleDecisionCreated}
+      />
     </div>
   );
 }

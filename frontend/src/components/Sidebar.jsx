@@ -1,7 +1,26 @@
-import React from 'react';
-import { Users, TrendingUp, Pen, FileText, Bell, Settings, FileText as FileIcon, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, TrendingUp, Pen, FileText, Bell, Settings, FileText as FileIcon, LogOut, LayoutDashboard } from 'lucide-react';
+import api from '../services/api';
 
 const Sidebar = ({ currentView, onNavigate }) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const data = await api.getUnreadNotificationCount();
+      setUnreadCount(data.count || 0);
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
+  };
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', active: currentView === 'dashboard' },
     { id: 'team', label: 'Your Team', icon: 'users', active: false },
@@ -14,7 +33,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
 
   const otherItems = [
     { id: 'flow', label: 'Decision Flow', icon: 'file', active: currentView === 'flow', avatars: 3 },
-    { id: 'notifications', label: 'Notifications', icon: 'bell', active: false, badge: 2 },
+    { id: 'notifications', label: 'Notifications', icon: 'bell', active: currentView === 'notifications', badge: unreadCount },
   ];
 
   const helpItems = [
@@ -26,7 +45,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
     const iconProps = { size: 20, strokeWidth: 2 };
     switch (iconName) {
       case 'dashboard':
-        return <img src="/assets/Dashboard.png" alt="Dashboard" className="w-5 h-5" />;
+        return <LayoutDashboard {...iconProps} />;
       case 'users':
         return <Users {...iconProps} />;
       case 'trending':
@@ -38,9 +57,9 @@ const Sidebar = ({ currentView, onNavigate }) => {
       case 'bell':
         return <Bell {...iconProps} />;
       case 'settings':
-        return <img src="/assets/Settings.png" alt="Settings" className="w-5 h-5" />;
+        return <Settings {...iconProps} />;
       case 'doc':
-        return <img src="/assets/Documentation.png" alt="Documentation" className="w-5 h-5" />;
+        return <FileText {...iconProps} />;
       default:
         return <FileIcon {...iconProps} />;
     }

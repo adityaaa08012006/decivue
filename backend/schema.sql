@@ -305,13 +305,7 @@ BEGIN
   END IF;
 END $$;
 
--- Insert sample constraints
-INSERT INTO constraints (name, description, constraint_type, rule_expression, is_immutable)
-VALUES
-  ('GDPR Compliance', 'All systems must comply with GDPR regulations', 'LEGAL', NULL, true),
-  ('Budget Limit', 'Total infrastructure cost must not exceed $10,000/month', 'BUDGET', NULL, true),
-  ('Open Source Policy', 'All core technologies must be open source', 'POLICY', NULL, true)
-ON CONFLICT (name) DO NOTHING;
+-- Sample constraints removed - use Organization Profile to define constraints
 
 -- Insert sample decision tension
 DO $$

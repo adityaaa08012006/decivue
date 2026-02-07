@@ -137,4 +137,42 @@ export class DecisionController {
       next(error);
     }
   }
+
+  /**
+   * PUT /api/decisions/:id/mark-reviewed
+   * Mark a decision as reviewed (updates last_reviewed_at to now)
+   */
+  async markReviewed(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const db = getDatabase();
+
+      // Update last_reviewed_at to current timestamp
+      const { data: decision, error } = await db
+        .from('decisions')
+        .update({ last_reviewed_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (!decision) {
+        return res.status(404).json({ error: 'Decision not found' });
+      }
+
+      // Dismiss any "NEEDS_REVIEW" notifications for this decision
+      await db
+        .from('notifications')
+        .update({ is_dismissed: true, dismissed_at: new Date().toISOString() })
+        .eq('decision_id', id)
+        .eq('type', 'NEEDS_REVIEW')
+        .eq('is_dismissed', false);
+
+      logger.info(`Decision marked as reviewed: ${id}`);
+      res.json(decision);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

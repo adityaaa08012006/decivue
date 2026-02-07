@@ -1,27 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle, 
-  XCircle, 
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
   TrendingDown,
   Link2,
   Target,
   Shield,
   Activity,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Edit,
+  Trash2,
+  X,
+  Check
 } from 'lucide-react';
 import api from '../services/api';
 
-const DecisionMonitoring = () => {
+const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [decisions, setDecisions] = useState([]);
   const [expandedDecision, setExpandedDecision] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, title }
+
   // Store related data for each decision
   const [decisionData, setDecisionData] = useState({});
 
@@ -35,6 +42,20 @@ const DecisionMonitoring = () => {
       fetchDecisionDetails(expandedDecision);
     }
   }, [expandedDecision]);
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const showToast = (type, message) => {
+    setToast({ type, message });
+  };
 
   const fetchDecisions = async () => {
     try {
@@ -74,16 +95,16 @@ const DecisionMonitoring = () => {
 
   // Derive effective lifecycle from health score to keep them in sync
   const getEffectiveLifecycle = (decision) => {
-    const { health, lifecycle } = decision;
-    
+    const { healthSignal, lifecycle } = decision;
+
     // If manually set to RETIRED or INVALIDATED, respect that
     if (lifecycle === 'RETIRED' || lifecycle === 'INVALIDATED') {
       return lifecycle;
     }
-    
+
     // Otherwise, sync with health
-    if (health < 65) return 'AT_RISK';
-    if (health < 85) return 'UNDER_REVIEW';
+    if (healthSignal < 65) return 'AT_RISK';
+    if (healthSignal < 85) return 'UNDER_REVIEW';
     return 'STABLE';
   };
 
@@ -132,18 +153,18 @@ const DecisionMonitoring = () => {
     return decay;
   };
 
-  const getConsistencyScore = (health, lifecycle) => {
+  const getConsistencyScore = (healthSignal, lifecycle) => {
     // Simple consistency calculation based on health-lifecycle alignment
-    if (lifecycle === 'STABLE' && health >= 80) return 95;
-    if (lifecycle === 'UNDER_REVIEW' && health >= 60) return 80;
-    if (lifecycle === 'AT_RISK' && health >= 40) return 65;
+    if (lifecycle === 'STABLE' && healthSignal >= 80) return 95;
+    if (lifecycle === 'UNDER_REVIEW' && healthSignal >= 60) return 80;
+    if (lifecycle === 'AT_RISK' && healthSignal >= 40) return 65;
     return 50;
   };
 
   const getLifecycleStages = () => ['STABLE', 'UNDER_REVIEW', 'AT_RISK', 'INVALIDATED', 'RETIRED'];
 
-  const calculateDrift = (health, decayScore) => {
-    return Math.abs(health - decayScore);
+  const calculateDrift = (healthSignal, decayScore) => {
+    return Math.abs(healthSignal - decayScore);
   };
 
   const filteredDecisions = filterStatus === 'all' 
@@ -168,8 +189,98 @@ const DecisionMonitoring = () => {
     setExpandedDecision(expandedDecision === id ? null : id);
   };
 
+  const handleDeleteDecision = (decisionId, decisionTitle) => {
+    setDeleteConfirmation({ id: decisionId, title: decisionTitle });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation) return;
+
+    try {
+      await api.deleteDecision(deleteConfirmation.id);
+      await fetchDecisions(); // Refresh the list
+      showToast('success', `Decision "${deleteConfirmation.title}" deleted successfully`);
+      setDeleteConfirmation(null);
+    } catch (err) {
+      console.error('Failed to delete decision:', err);
+      showToast('error', 'Failed to delete decision. Please try again.');
+      setDeleteConfirmation(null);
+    }
+  };
+
+  const handleMarkReviewed = async (decisionId, decisionTitle) => {
+    try {
+      await api.markDecisionReviewed(decisionId);
+      await fetchDecisions(); // Refresh the list
+      showToast('success', `"${decisionTitle}" marked as reviewed`);
+    } catch (err) {
+      console.error('Failed to mark decision as reviewed:', err);
+      showToast('error', 'Failed to mark as reviewed. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-white p-8">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 transition-all duration-300 ease-out">
+          <div
+            className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg max-w-md ${
+              toast.type === 'success'
+                ? 'bg-teal-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle size={20} className="flex-shrink-0" />
+            ) : (
+              <XCircle size={20} className="flex-shrink-0" />
+            )}
+            <span className="flex-1 font-medium">{toast.message}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="flex-shrink-0 hover:opacity-80 transition-opacity"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto mb-4">
+              <AlertCircle className="text-red-600" size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-neutral-black mb-2 text-center">Delete Decision?</h2>
+            <p className="text-neutral-gray-600 mb-6 text-center">
+              Are you sure you want to delete <span className="font-semibold">"{deleteConfirmation.title}"</span>?
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-orange-800">
+                <strong>Warning:</strong> This action cannot be undone. All related assumptions, dependencies, and constraints will be unlinked.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmation(null)}
+                className="flex-1 px-6 py-3 bg-neutral-gray-100 text-neutral-gray-700 font-semibold rounded-xl hover:bg-neutral-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -177,13 +288,22 @@ const DecisionMonitoring = () => {
             <h1 className="text-3xl font-bold text-black mb-2">Decision Monitoring</h1>
             <p className="text-gray-600">Keep track of how your decisions are doing</p>
           </div>
-          <button
-            onClick={fetchDecisions}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm"
-          >
-            <RefreshCw size={18} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onAddDecision}
+              className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm font-medium"
+            >
+              <Plus size={18} />
+              Add Decision
+            </button>
+            <button
+              onClick={fetchDecisions}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm"
+            >
+              <RefreshCw size={18} />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -228,8 +348,8 @@ const DecisionMonitoring = () => {
           {filteredDecisions.map((decision) => {
             const effectiveLifecycle = getEffectiveLifecycle(decision);
             const decayScore = getDecayScore(decision.lastReviewedAt);
-            const consistencyScore = getConsistencyScore(decision.health, decision.lifecycle);
-            const drift = calculateDrift(decision.health, decayScore);
+            const consistencyScore = getConsistencyScore(decision.healthSignal, decision.lifecycle);
+            const drift = calculateDrift(decision.healthSignal, decayScore);
             
             return (
               <div
@@ -237,12 +357,9 @@ const DecisionMonitoring = () => {
                 className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all"
               >
                 {/* Decision Header */}
-                <div
-                  className="p-6 cursor-pointer"
-                  onClick={() => toggleExpand(decision.id)}
-                >
+                <div className="p-6">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <div className="flex-1 cursor-pointer" onClick={() => toggleExpand(decision.id)}>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-sm font-mono text-gray-500">{decision.id.slice(0, 8)}</span>
                         <span className={`px-3 py-1 rounded-md text-xs font-semibold ${getStatusColor(effectiveLifecycle)}`}>
@@ -251,25 +368,25 @@ const DecisionMonitoring = () => {
                         <span className="text-xs text-gray-500">{effectiveLifecycle === 'STABLE' ? 'active' : effectiveLifecycle === 'RETIRED' ? 'deprecated' : 'planning'}</span>
                       </div>
                       <h3 className="text-xl font-semibold text-black mb-3">{decision.title}</h3>
-                      
+
                       {/* Key Metrics - Feature 1, 5, 7 */}
                       <div className="flex gap-4 flex-wrap">
                         {/* Health Metric */}
-                        <div 
+                        <div
                           className="flex items-center gap-2 cursor-help"
-                          title={`Health: ${decision.health}%`}
-                          aria-label={`Health ${decision.health}%`}
+                          title={`Health: ${decision.healthSignal}%`}
+                          aria-label={`Health ${decision.healthSignal}%`}
                         >
-                          <Activity size={16} className={getHealthBand(decision.health).textColor} />
+                          <Activity size={16} className={getHealthBand(decision.healthSignal).textColor} />
                           <span className="text-sm text-gray-700">
-                            Health: <span className={`font-semibold ${getHealthBand(decision.health).textColor}`}>
-                              {getHealthBand(decision.health).label}
+                            Health: <span className={`font-semibold ${getHealthBand(decision.healthSignal).textColor}`}>
+                              {getHealthBand(decision.healthSignal).label}
                             </span>
                           </span>
                         </div>
 
                         {/* Freshness Metric */}
-                        <div 
+                        <div
                           className="flex items-center gap-2 cursor-help"
                           title={`Freshness: ${decayScore}%`}
                           aria-label={`Freshness ${decayScore}%`}
@@ -283,7 +400,7 @@ const DecisionMonitoring = () => {
                         </div>
 
                         {/* Consistency Metric */}
-                        <div 
+                        <div
                           className="flex items-center gap-2 cursor-help"
                           title={`Consistency: ${consistencyScore}%`}
                           aria-label={`Consistency ${consistencyScore}%`}
@@ -307,10 +424,35 @@ const DecisionMonitoring = () => {
                         )}
                       </div>
                     </div>
-                    
-                    <button className="text-gray-400 hover:text-blue-500 transition-colors">
-                      {expandedDecision === decision.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkReviewed(decision.id, decision.title);
+                        }}
+                        className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Mark as reviewed"
+                      >
+                        <Check size={18} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDecision(decision.id, decision.title);
+                        }}
+                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete decision"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => toggleExpand(decision.id)}
+                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                      >
+                        {expandedDecision === decision.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Quick Info */}

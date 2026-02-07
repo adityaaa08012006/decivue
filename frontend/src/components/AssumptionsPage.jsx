@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2 } from 'lucide-react';
+import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X } from 'lucide-react';
 import api from '../services/api';
 
 const AssumptionsPage = () => {
     const [activeTab, setActiveTab] = useState('all'); // all, organizational, decision
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
+    const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, description, type }
 
     // Data State
     const [assumptions, setAssumptions] = useState([]);
@@ -19,6 +21,20 @@ const AssumptionsPage = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Auto-dismiss toast after 4 seconds
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => {
+                setToast(null);
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
+
+    const showToast = (type, message) => {
+        setToast({ type, message });
+    };
 
     const fetchData = async () => {
         try {
@@ -49,6 +65,33 @@ const AssumptionsPage = () => {
             fetchData(); // Refresh list
         } catch (error) {
             console.error("Failed to create assumption:", error);
+        }
+    };
+
+    const handleDeleteAssumption = (assumptionId, assumptionDescription) => {
+        const assumptionType = assumptions.find(a => a.id === assumptionId)?.scope === 'UNIVERSAL'
+            ? 'organizational'
+            : 'decision-specific';
+
+        setDeleteConfirmation({
+            id: assumptionId,
+            description: assumptionDescription,
+            type: assumptionType
+        });
+    };
+
+    const confirmDeleteAssumption = async () => {
+        if (!deleteConfirmation) return;
+
+        try {
+            await api.deleteAssumption(deleteConfirmation.id);
+            await fetchData(); // Refresh the list
+            showToast('success', `Assumption deleted successfully`);
+            setDeleteConfirmation(null);
+        } catch (err) {
+            console.error('Failed to delete assumption:', err);
+            showToast('error', 'Failed to delete assumption. Please try again.');
+            setDeleteConfirmation(null);
         }
     };
 
@@ -99,6 +142,68 @@ const AssumptionsPage = () => {
 
     return (
         <div className="flex h-screen bg-neutral-white overflow-hidden">
+            {/* Toast Notification */}
+            {toast && (
+                <div className="fixed top-4 right-4 z-50 transition-all duration-300 ease-out">
+                    <div
+                        className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg max-w-md ${toast.type === 'success'
+                                ? 'bg-teal-500 text-white'
+                                : 'bg-red-500 text-white'
+                            }`}
+                    >
+                        {toast.type === 'success' ? (
+                            <CheckCircle size={20} className="flex-shrink-0" />
+                        ) : (
+                            <XCircle size={20} className="flex-shrink-0" />
+                        )}
+                        <span className="flex-1 font-medium">{toast.message}</span>
+                        <button
+                            onClick={() => setToast(null)}
+                            className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmation && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto mb-4">
+                            <AlertCircle className="text-red-600" size={32} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-neutral-black mb-2 text-center">Delete Assumption?</h2>
+                        <p className="text-neutral-gray-600 mb-2 text-center">
+                            Are you sure you want to delete this <span className="font-semibold">{deleteConfirmation.type}</span> assumption?
+                        </p>
+                        <p className="text-neutral-gray-700 mb-6 text-center italic">
+                            "{deleteConfirmation.description}"
+                        </p>
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                            <p className="text-sm text-orange-800">
+                                <strong>Warning:</strong> This action cannot be undone. The assumption will be unlinked from all decisions.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDeleteConfirmation(null)}
+                                className="flex-1 px-6 py-3 bg-neutral-gray-100 text-neutral-gray-700 font-semibold rounded-xl hover:bg-neutral-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteAssumption}
+                                className="flex-1 px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex-1 flex flex-col h-full overflow-hidden">
                 <div className="flex-1 overflow-y-auto">
                     <div className="p-8 max-w-7xl mx-auto">
@@ -172,15 +277,22 @@ const AssumptionsPage = () => {
                                         </h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {orgAssumptions.map((assumption) => (
-                                                <div key={assumption.id} className="bg-white p-6 rounded-2xl border border-neutral-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                                                <div key={assumption.id} className="bg-white p-6 rounded-2xl border border-neutral-gray-200 shadow-sm hover:shadow-md transition-shadow group relative">
+                                                    {/* Delete Button */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteAssumption(assumption.id, assumption.description);
+                                                        }}
+                                                        className="absolute top-4 right-4 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                        title="Delete assumption"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+
                                                     <div className="flex justify-between items-start mb-4">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusBadge(assumption.status)} border`}>
                                                             {getStatusLabel(assumption.status)}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-neutral-gray-500 bg-neutral-gray-100 px-2 py-1 rounded">
-                                                            Blast Radius: <span className={assumption.decisionCount > 5 ? 'text-status-red' : 'text-neutral-black'}>
-                                                                {assumption.decisionCount > 5 ? 'High' : 'Medium'}
-                                                            </span>
                                                         </span>
                                                     </div>
 
@@ -232,22 +344,35 @@ const AssumptionsPage = () => {
                                         <div className="bg-white rounded-2xl border border-neutral-gray-200 overflow-hidden shadow-sm">
                                             <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-neutral-gray-50 border-b border-neutral-gray-200 text-xs font-bold text-neutral-gray-500 uppercase tracking-wider">
                                                 <div className="col-span-6">Assumption</div>
-                                                <div className="col-span-4">Linked Decision</div>
+                                                <div className="col-span-3">Linked Decision</div>
                                                 <div className="col-span-2">Health</div>
+                                                <div className="col-span-1">Actions</div>
                                             </div>
                                             <div className="divide-y divide-neutral-gray-100">
                                                 {decisionAssumptions.map((assumption) => (
-                                                    <div key={assumption.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-neutral-gray-50 transition-colors cursor-pointer group">
+                                                    <div key={assumption.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-neutral-gray-50 transition-colors group">
                                                         <div className="col-span-6 font-medium text-neutral-black group-hover:text-primary-blue transition-colors">
                                                             {assumption.description}
                                                         </div>
-                                                        <div className="col-span-4 text-sm text-neutral-gray-600">
+                                                        <div className="col-span-3 text-sm text-neutral-gray-600">
                                                             {assumption.linkedDecisionTitle || assumption.impactedDecisions?.[0]?.title || 'Unlinked'}
                                                         </div>
                                                         <div className="col-span-2">
                                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadge(assumption.status)}`}>
                                                                 {getStatusLabel(assumption.status)}
                                                             </span>
+                                                        </div>
+                                                        <div className="col-span-1 flex justify-end">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteAssumption(assumption.id, assumption.description);
+                                                                }}
+                                                                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                title="Delete assumption"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}

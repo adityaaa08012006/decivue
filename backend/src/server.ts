@@ -19,6 +19,7 @@ import dependencyRoutes from '@api/routes/dependencies';
 import constraintRoutes from '@api/routes/constraints';
 import profileRoutes from '@api/routes/profile';
 import timelineRoutes from '@api/routes/timeline';
+import notificationRoutes from '@api/routes/notifications';
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +69,7 @@ app.use('/api/dependencies', dependencyRoutes);
 app.use('/api/constraints', constraintRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/timeline', timelineRoutes); // Added timeline route
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

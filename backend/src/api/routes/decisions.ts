@@ -16,5 +16,6 @@ router.post('/', controller.create.bind(controller));
 router.put('/:id', controller.update.bind(controller));
 router.delete('/:id', controller.delete.bind(controller));
 router.post('/:id/evaluate', controller.evaluate.bind(controller));
+router.put('/:id/mark-reviewed', controller.markReviewed.bind(controller));
 
 export default router;

@@ -18,7 +18,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const db = getDatabase();
 
     if (decisionId) {
-      // Get assumptions for a specific decision (universal + linked decision-specific)
+      // Get assumptions for a specific decision (only explicitly linked via decision_assumptions)
       const { data, error } = await db
         .from('decision_assumptions')
         .select(`
@@ -37,25 +37,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
       if (error) throw error;
 
-      let assumptions = (data || []).map((da: any) => da.assumptions);
-
-      // Also get universal assumptions (apply to all decisions)
-      const { data: universalData, error: universalError } = await db
-        .from('assumptions')
-        .select('*')
-        .eq('scope', 'UNIVERSAL');
-
-      if (universalError) throw universalError;
-
-      // Merge and deduplicate
-      const allAssumptions = [...(universalData || []), ...assumptions];
-      const uniqueAssumptions = allAssumptions.filter((a, index, self) => 
-        index === self.findIndex((t) => t.id === a.id)
-      );
+      const assumptions = (data || []).map((da: any) => da.assumptions);
 
       // Optionally fetch conflicts
       if (includeConflicts === 'true') {
-        for (const assumption of uniqueAssumptions) {
+        for (const assumption of assumptions) {
           const { data: conflicts } = await db.rpc('get_assumption_conflicts', {
             p_assumption_id: assumption.id
           });
@@ -63,7 +49,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         }
       }
 
-      return res.json(uniqueAssumptions);
+      return res.json(assumptions);
     } else {
       // Get all assumptions with their linked decisions
       const { data: assumptions, error: assumptionsError } = await db
@@ -273,6 +259,70 @@ router.get('/:id/conflicts', async (req: Request, res: Response, next: NextFunct
     if (error) throw error;
 
     return res.json(data || []);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * PUT /api/assumptions/:id
+ * Update an existing assumption
+ * Body: { description?, status?, scope?, metadata? }
+ */
+router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { description, status, scope, metadata } = req.body;
+
+    const db = getDatabase();
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (description !== undefined) updateData.description = description;
+    if (status !== undefined) updateData.status = status;
+    if (scope !== undefined) updateData.scope = scope;
+    if (metadata !== undefined) updateData.metadata = metadata;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const { data, error } = await db
+      .from('assumptions')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ error: 'Assumption not found' });
+    }
+
+    return res.json(data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * DELETE /api/assumptions/:id
+ * Delete an assumption
+ * Note: This will also delete all decision_assumptions links (CASCADE)
+ */
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const { error } = await db
+      .from('assumptions')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return res.status(204).send();
   } catch (error) {
     return next(error);
   }

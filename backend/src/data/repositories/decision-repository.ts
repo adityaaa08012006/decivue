@@ -111,8 +111,47 @@ export class DecisionRepository {
 
   /**
    * Delete a decision
+   * Also cascades to delete assumptions that are ONLY linked to this decision
    */
   async delete(id: string): Promise<void> {
+    // Step 1: Find all assumptions linked to this decision
+    const { data: linkedAssumptions, error: fetchError } = await this.db
+      .from('decision_assumptions')
+      .select('assumption_id')
+      .eq('decision_id', id);
+
+    if (fetchError) throw fetchError;
+
+    // Step 2: For each assumption, check if it's linked to other decisions
+    const assumptionIds = (linkedAssumptions || []).map(da => da.assumption_id);
+    const assumptionsToDelete: string[] = [];
+
+    for (const assumptionId of assumptionIds) {
+      // Count how many decisions this assumption is linked to
+      const { data: links, error: countError } = await this.db
+        .from('decision_assumptions')
+        .select('decision_id')
+        .eq('assumption_id', assumptionId);
+
+      if (countError) throw countError;
+
+      // If this assumption is ONLY linked to this decision (count = 1), mark for deletion
+      if (links && links.length === 1) {
+        assumptionsToDelete.push(assumptionId);
+      }
+    }
+
+    // Step 3: Delete assumptions that are only linked to this decision
+    if (assumptionsToDelete.length > 0) {
+      const { error: deleteAssumptionsError } = await this.db
+        .from('assumptions')
+        .delete()
+        .in('id', assumptionsToDelete);
+
+      if (deleteAssumptionsError) throw deleteAssumptionsError;
+    }
+
+    // Step 4: Delete the decision (CASCADE will handle decision_assumptions, dependencies, etc.)
     const { error } = await this.db
       .from('decisions')
       .delete()
