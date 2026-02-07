@@ -6,37 +6,119 @@ const router = Router();
 
 /**
  * GET /api/assumptions
- * Get all global assumptions with their linked decision counts (Blast Radius)
- * Optional query: ?decisionId=uuid (to get assumptions for a specific decision)
+ * Get assumptions - supports filtering by decision and scope
+ * Query params:
+ *   - decisionId: Get assumptions for specific decision (includes universal + decision-specific)
+ *   - scope: Filter by UNIVERSAL or DECISION_SPECIFIC
+ *   - includeConflicts: If true, includes conflict information
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { decisionId } = req.query;
+    const { decisionId, scope, includeConflicts } = req.query;
     const db = getDatabase();
 
-    let query = db
-      .from('assumptions')
-      .select(`
-        *,
-        decisions:decision_assumptions(count),
-        decision_details:decision_assumptions(
-          decision:decisions(id, title)
-        )
-      `)
-      .order('created_at', { ascending: false });
+    if (decisionId) {
+      // Get assumptions for a specific decision (universal + linked decision-specific)
+      const { data, error } = await db
+        .from('decision_assumptions')
+        .select(`
+          assumption_id,
+          assumptions (
+            id,
+            description,
+            status,
+            scope,
+            validated_at,
+            metadata,
+            created_at
+          )
+        `)
+        .eq('decision_id', decisionId);
 
-    const { data, error } = await query;
+      if (error) throw error;
 
-    if (error) throw error;
+      let assumptions = (data || []).map((da: any) => da.assumptions);
 
-    // Transform data to include friendly "blast radius" count
-    const enrichedData = data?.map((a: any) => ({
-      ...a,
-      decisionCount: a.decisions?.[0]?.count || 0,
-      impactedDecisions: a.decision_details?.map((d: any) => d.decision) || []
-    }));
+      // Also get universal assumptions (apply to all decisions)
+      const { data: universalData, error: universalError } = await db
+        .from('assumptions')
+        .select('*')
+        .eq('scope', 'UNIVERSAL');
 
-    return res.json(enrichedData || []);
+      if (universalError) throw universalError;
+
+      // Merge and deduplicate
+      const allAssumptions = [...(universalData || []), ...assumptions];
+      const uniqueAssumptions = allAssumptions.filter((a, index, self) => 
+        index === self.findIndex((t) => t.id === a.id)
+      );
+
+      // Optionally fetch conflicts
+      if (includeConflicts === 'true') {
+        for (const assumption of uniqueAssumptions) {
+          const { data: conflicts } = await db.rpc('get_assumption_conflicts', {
+            p_assumption_id: assumption.id
+          });
+          assumption.conflicts = conflicts || [];
+        }
+      }
+
+      return res.json(uniqueAssumptions);
+    } else {
+      // Get all assumptions with their linked decisions
+      const { data: assumptions, error: assumptionsError } = await db
+        .from('assumptions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (assumptionsError) throw assumptionsError;
+
+      // Get all decision links
+      const { data: links, error: linksError } = await db
+        .from('decision_assumptions')
+        .select(`
+          assumption_id,
+          decisions (
+            id,
+            title
+          )
+        `);
+
+      if (linksError) throw linksError;
+
+      // Filter by scope if requested
+      let filteredAssumptions = assumptions || [];
+      if (scope) {
+        filteredAssumptions = filteredAssumptions.filter((a: any) => a.scope === scope);
+      }
+
+      // Build a map of assumption_id -> decision titles
+      const linkMap = new Map<string, string[]>();
+      (links || []).forEach((link: any) => {
+        if (link.decisions) {
+          const existing = linkMap.get(link.assumption_id) || [];
+          existing.push(link.decisions.title);
+          linkMap.set(link.assumption_id, existing);
+        }
+      });
+
+      // Transform data to include decision count and titles
+      const enrichedData = filteredAssumptions.map((a: any) => {
+        const decisionTitles = linkMap.get(a.id) || [];
+        
+        return {
+          ...a,
+          decisionCount: decisionTitles.length,
+          linkedDecisionTitle: a.scope === 'UNIVERSAL' 
+            ? 'All Decisions' 
+            : decisionTitles.length > 0 
+              ? decisionTitles.join(', ')
+              : 'Unlinked'
+        };
+      });
+
+      return res.json(enrichedData);
+    }
   } catch (error) {
     return next(error);
   }
@@ -44,12 +126,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * POST /api/assumptions
- * Create a new global assumption
- * Optional: link to a decisionId immediately
+ * Create a new assumption (universal or decision-specific)
+ * Body: { description, status?, scope?, linkToDecisionId?, metadata? }
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { description, status, linkToDecisionId, metadata } = req.body;
+    const { description, status, scope, linkToDecisionId, metadata } = req.body;
 
     if (!description) {
       return res.status(400).json({ error: 'Description is required' });
@@ -57,12 +139,13 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const db = getDatabase();
 
-    // Upsert assumption by description to effectively "get or create"
+    // Create or get existing assumption
     const { data: assumption, error: createError } = await db
       .from('assumptions')
       .upsert({
         description,
         status: status || 'HOLDING',
+        scope: scope || 'DECISION_SPECIFIC',
         metadata: metadata || {}
       }, { onConflict: 'description' })
       .select()
@@ -123,6 +206,73 @@ router.post('/:id/link', async (req: Request, res: Response, next: NextFunction)
     }
 
     return res.status(201).json(data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * POST /api/assumptions/:id/conflicts
+ * Report a conflict between two assumptions
+ * Body: { conflictingAssumptionId: string, reason: string }
+ */
+router.post('/:id/conflicts', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { conflictingAssumptionId, reason } = req.body;
+
+    if (!conflictingAssumptionId) {
+      return res.status(400).json({ error: 'conflictingAssumptionId is required' });
+    }
+
+    if (!reason) {
+      return res.status(400).json({ error: 'conflict reason is required' });
+    }
+
+    const db = getDatabase();
+
+    // Ensure IDs are ordered to prevent duplicates
+    const [aId, bId] = [id, conflictingAssumptionId].sort();
+
+    const { data, error } = await db
+      .from('assumption_conflicts')
+      .insert({
+        assumption_a_id: aId,
+        assumption_b_id: bId,
+        conflict_reason: reason
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') { // Unique violation - conflict already reported
+        return res.status(200).json({ message: 'Conflict already reported' });
+      }
+      throw error;
+    }
+
+    return res.status(201).json(data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * GET /api/assumptions/:id/conflicts
+ * Get all conflicts for a specific assumption
+ */
+router.get('/:id/conflicts', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const { data, error } = await db.rpc('get_assumption_conflicts', {
+      p_assumption_id: id
+    });
+
+    if (error) throw error;
+
+    return res.json(data || []);
   } catch (error) {
     return next(error);
   }

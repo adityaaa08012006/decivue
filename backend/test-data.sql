@@ -23,7 +23,23 @@ INSERT INTO assumptions (decision_id, description, status, validated_at, metadat
     'UNKNOWN',
     NOW() - INTERVAL '10 days',
     '{"confidence": 60}'::jsonb
+  ),
+  (
+    (SELECT id FROM decisions WHERE title LIKE '%Microservices%' LIMIT 1),
+    'Current monolithic architecture must be maintained',
+    'VALID',
+    NOW(),
+    '{"confidence": 75, "conflictsWith": []}'::jsonb
   );
+
+-- Update first assumption to mark conflict with third assumption
+UPDATE assumptions 
+SET metadata = jsonb_set(
+  metadata, 
+  '{conflictsWith}', 
+  jsonb_build_array((SELECT id FROM assumptions WHERE description LIKE '%monolithic%' LIMIT 1))
+)
+WHERE description LIKE '%microservices expertise%';
 
 -- Insert sample constraints (organizational facts)
 INSERT INTO constraints (name, description, rule_expression, is_immutable) VALUES

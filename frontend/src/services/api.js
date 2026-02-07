@@ -64,9 +64,14 @@ class ApiService {
   }
 
   // Assumptions endpoints
-  // Assumptions endpoints
-  async getAssumptions(decisionId) {
-    const query = decisionId ? `?decisionId=${decisionId}` : '';
+  async getAssumptions(decisionId, includeConflicts = true) {
+    let query = '';
+    if (decisionId) {
+      query = `?decisionId=${decisionId}`;
+      if (includeConflicts) {
+        query += '&includeConflicts=true';
+      }
+    }
     return this.request(`/assumptions${query}`);
   }
 
@@ -81,6 +86,13 @@ class ApiService {
     return this.request(`/assumptions/${assumptionId}/link`, {
       method: 'POST',
       body: JSON.stringify({ decisionId }),
+    });
+  }
+
+  async reportConflict(assumptionId, conflictingAssumptionId, reason) {
+    return this.request(`/assumptions/${assumptionId}/conflicts`, {
+      method: 'POST',
+      body: JSON.stringify({ conflictingAssumptionId, reason }),
     });
   }
 
