@@ -33,6 +33,7 @@ export interface Decision {
 export interface DecisionCreate {
   title: string;
   description: string;
+  expiry_date?: string; // ISO date string
   metadata?: Record<string, any>;
 }
 

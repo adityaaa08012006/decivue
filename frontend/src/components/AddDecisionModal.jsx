@@ -20,6 +20,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    expiryDate: '', // New field for expiry date
     selectedAssumptions: [], // Existing assumption IDs
     newAssumptions: [], // New assumptions to create
     dependsOn: [], // Decision IDs this decision depends on
@@ -61,6 +62,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
     setFormData({
       title: '',
       description: '',
+      expiryDate: '',
       selectedAssumptions: [],
       newAssumptions: [],
       dependsOn: [],
@@ -127,10 +129,17 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
 
     try {
       // Step 1: Create the decision
-      const decision = await api.createDecision({
+      const decisionData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-      });
+      };
+
+      // Add expiry_date if provided
+      if (formData.expiryDate) {
+        decisionData.expiry_date = new Date(formData.expiryDate).toISOString();
+      }
+
+      const decision = await api.createDecision(decisionData);
 
       const decisionId = decision.id;
 
@@ -280,6 +289,23 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                   setFormData({ ...formData, description: e.target.value })
                 }
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                Expiry Date (Optional)
+              </label>
+              <input
+                type="date"
+                className="w-full p-4 border border-neutral-gray-300 rounded-xl focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all"
+                value={formData.expiryDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, expiryDate: e.target.value })
+                }
+              />
+              <p className="text-xs text-neutral-gray-500 mt-2">
+                When set, health will decay faster as this date approaches and passes
+              </p>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

@@ -14,16 +14,23 @@ export class DecisionRepository {
    * Create a new decision
    */
   async create(data: DecisionCreate): Promise<Decision> {
+    const insertData: any = {
+      title: data.title,
+      description: data.description,
+      lifecycle: DecisionLifecycle.STABLE,
+      health_signal: 100,
+      invalidated_reason: null,
+      metadata: data.metadata
+    };
+
+    // Add expiry_date if provided
+    if (data.expiry_date) {
+      insertData.expiry_date = data.expiry_date;
+    }
+
     const { data: decision, error } = await this.db
       .from('decisions')
-      .insert({
-        title: data.title,
-        description: data.description,
-        lifecycle: DecisionLifecycle.STABLE,
-        health_signal: 100,
-        invalidated_reason: null,
-        metadata: data.metadata
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -173,6 +180,7 @@ export class DecisionRepository {
       invalidatedReason: row.invalidated_reason,
       createdAt: new Date(row.created_at),
       lastReviewedAt: new Date(row.last_reviewed_at),
+      expiryDate: row.expiry_date ? new Date(row.expiry_date) : undefined,
       metadata: row.metadata
     };
   }

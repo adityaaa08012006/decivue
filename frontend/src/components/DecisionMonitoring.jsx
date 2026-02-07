@@ -380,6 +380,28 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         <span className={`px-3 py-1 rounded-md text-xs font-semibold ${getStatusColor(effectiveLifecycle)}`}>
                           {effectiveLifecycle.replace('_', ' ')}
                         </span>
+                        {/* Expiry Badge */}
+                        {decision.expiryDate && (() => {
+                          const expiryDate = new Date(decision.expiryDate);
+                          const now = new Date();
+                          const daysUntilExpiry = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
+                          const isExpired = daysUntilExpiry < 0;
+
+                          if (isExpired) {
+                            return (
+                              <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-300 animate-pulse">
+                                ⚠️ EXPIRED
+                              </span>
+                            );
+                          } else if (daysUntilExpiry <= 30) {
+                            return (
+                              <span className="px-3 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-300">
+                                ⏰ {daysUntilExpiry}d to expiry
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                         <span className="text-xs text-gray-500">{effectiveLifecycle === 'STABLE' ? 'active' : effectiveLifecycle === 'RETIRED' ? 'deprecated' : 'planning'}</span>
                       </div>
                       <h3 className="text-xl font-semibold text-black mb-3">{decision.title}</h3>
@@ -841,6 +863,51 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         How fresh is this?
                       </h4>
                       <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-3">
+                        {/* Expiry Date Display */}
+                        {decision.expiryDate && (() => {
+                          const expiryDate = new Date(decision.expiryDate);
+                          const now = new Date();
+                          const daysUntilExpiry = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
+                          const isExpired = daysUntilExpiry < 0;
+                          const daysPastExpiry = Math.abs(daysUntilExpiry);
+
+                          return (
+                            <>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">Expiry Date:</span>
+                                <span className="text-sm font-semibold text-slate-800">
+                                  {expiryDate.toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">
+                                  {isExpired ? 'Days Past Expiry:' : 'Days Until Expiry:'}
+                                </span>
+                                <span className={`text-sm font-bold ${
+                                  isExpired
+                                    ? 'text-red-600'
+                                    : daysUntilExpiry <= 30
+                                      ? 'text-orange-600'
+                                      : daysUntilExpiry <= 90
+                                        ? 'text-yellow-600'
+                                        : 'text-green-600'
+                                }`}>
+                                  {isExpired ? daysPastExpiry : daysUntilExpiry} days
+                                </span>
+                              </div>
+                              {isExpired && (
+                                <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                                  <div className="flex items-center gap-2 text-red-700">
+                                    <AlertCircle size={16} />
+                                    <span className="text-sm font-semibold">⚠️ EXPIRED - Decision is past deadline</span>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="border-t border-slate-200 my-2"></div>
+                            </>
+                          );
+                        })()}
+
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-slate-600">Days since last check:</span>
                           <span className="text-sm font-semibold text-slate-800">
@@ -849,14 +916,14 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-slate-600">Status:</span>
-                          <span 
+                          <span
                             className={`text-sm font-semibold ${getFreshnessBand(decayScore).textColor} cursor-help`}
                             title={`${decayScore}% fresh`}
                           >
                             {getFreshnessBand(decayScore).label}
                           </span>
                         </div>
-                        <div 
+                        <div
                           className="w-full bg-slate-100 rounded-full h-3 overflow-hidden cursor-help"
                           title={`Freshness: ${decayScore}%`}
                           role="progressbar"
@@ -867,8 +934,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         >
                           <div
                             className={`h-3 rounded-full transition-all ${
-                              decayScore >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 
-                              decayScore >= 60 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 
+                              decayScore >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
+                              decayScore >= 60 ? 'bg-gradient-to-r from-amber-400 to-amber-500' :
                               'bg-gradient-to-r from-rose-400 to-rose-500'
                             }`}
                             style={{ width: `${decayScore}%` }}
