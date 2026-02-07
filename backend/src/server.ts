@@ -1,7 +1,8 @@
 /**
  * Main Server Entry Point
  * Initializes the Express server, middleware, and routes
- * (Restart trigger)
+ * Initializes the Express server, middleware, and routes
+ * (Restart trigger 2)
  */
 
 import express, { Application, Request, Response, NextFunction } from 'express';
@@ -16,6 +17,7 @@ import decisionRoutes from '@api/routes/decisions';
 import assumptionRoutes from '@api/routes/assumptions';
 import dependencyRoutes from '@api/routes/dependencies';
 import constraintRoutes from '@api/routes/constraints';
+import profileRoutes from '@api/routes/profile';
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +65,7 @@ app.use('/api/decisions', decisionRoutes);
 app.use('/api/assumptions', assumptionRoutes);
 app.use('/api/dependencies', dependencyRoutes);
 app.use('/api/constraints', constraintRoutes);
+app.use('/api/profile', profileRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

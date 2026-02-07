@@ -19,7 +19,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
 
   const helpItems = [
     { id: 'settings', label: 'Settings', icon: 'settings', active: false },
-    { id: 'org-info', label: 'Organisation Information', icon: 'doc', active: false },
+    { id: 'profile', label: 'Organisation Information', icon: 'doc', active: currentView === 'profile' },
   ];
 
   const getIcon = (iconName) => {

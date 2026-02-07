@@ -110,6 +110,18 @@ class ApiService {
     return this.request(`/decisions/${decisionId}/history`);
   }
 
+  // Organization Profile endpoints
+  async getProfile() {
+    return this.request('/profile');
+  }
+
+  async updateProfile(data) {
+    return this.request('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Health check
   async checkHealth() {
     return this.request('/health', { baseUrl: 'http://localhost:3001' });

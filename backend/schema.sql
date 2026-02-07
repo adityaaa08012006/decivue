@@ -344,12 +344,36 @@ END $$;
 -- last_reviewed_at is updated ONLY by explicit human review actions.
 
 -- ============================================================================
+-- ORGANIZATION PROFILE (CONTEXT LAYER)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS organization_profile (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  industry TEXT,
+  size TEXT, -- '1-10', '10-50', '50-200', '200+'
+  decision_style TEXT, -- 'Data-driven', 'Consensus', 'Fast-moving', etc.
+  risk_tolerance INTEGER CHECK (risk_tolerance BETWEEN 0 AND 100), -- 0=Cautious, 100=Aggressive
+  strategic_priorities TEXT[], -- Array of strings e.g. ['Growth', 'Innovation']
+  constraints JSONB DEFAULT '{}'::JSONB, -- Flexible key-value pairs
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE organization_profile IS 'Singleton table storing organizational context (The "Brain" context).';
+COMMENT ON COLUMN organization_profile.risk_tolerance IS '0 (Highly Cautious) to 100 (Aggressive)';
+
+-- RLS for Profile
+ALTER TABLE organization_profile ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "profile_select_policy" ON organization_profile FOR SELECT USING (true);
+CREATE POLICY "profile_insert_policy" ON organization_profile FOR INSERT WITH CHECK (true);
+CREATE POLICY "profile_update_policy" ON organization_profile FOR UPDATE USING (true);
+
+-- ============================================================================
 -- COMPLETION MESSAGE
 -- ============================================================================
 DO $$
 BEGIN
   RAISE NOTICE '✅ DECIVUE database schema created successfully!';
-  RAISE NOTICE 'Tables created: decisions, assumptions, decision_assumptions, constraints, decision_constraints, dependencies, decision_tensions, evaluation_history';
+  RAISE NOTICE 'Tables created: decisions, assumptions, decision_assumptions, constraints, decision_constraints, dependencies, decision_tensions, evaluation_history, organization_profile';
   RAISE NOTICE 'Philosophy: Assumptions are global. Status = drift (HOLDING/SHAKY/BROKEN). No auto-triggers. Conflicts surfaced.';
   RAISE NOTICE 'Sample data inserted for testing';
 END $$;
