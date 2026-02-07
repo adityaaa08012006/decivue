@@ -18,6 +18,7 @@ import assumptionRoutes from '@api/routes/assumptions';
 import dependencyRoutes from '@api/routes/dependencies';
 import constraintRoutes from '@api/routes/constraints';
 import profileRoutes from '@api/routes/profile';
+import timelineRoutes from '@api/routes/timeline';
 
 // Load environment variables
 dotenv.config();
@@ -66,6 +67,7 @@ app.use('/api/assumptions', assumptionRoutes);
 app.use('/api/dependencies', dependencyRoutes);
 app.use('/api/constraints', constraintRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/timeline', timelineRoutes); // Added timeline route
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

@@ -13,7 +13,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
   ];
 
   const otherItems = [
-    { id: 'flow', label: 'Decision Flow', icon: 'file', active: false, avatars: 3 },
+    { id: 'flow', label: 'Decision Flow', icon: 'file', active: currentView === 'flow', avatars: 3 },
     { id: 'notifications', label: 'Notifications', icon: 'bell', active: false, badge: 2 },
   ];
 

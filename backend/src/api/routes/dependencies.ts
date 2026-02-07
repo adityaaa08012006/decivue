@@ -23,8 +23,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const db = getDatabase();
 
-    // Get decisions this one depends on
-    const { data: dependsOn, error: error1 } = await db
+    // 1. Get decisions I BLOCK (I am the Source)
+    const { data: blocking, error: error1 } = await db
       .from('dependencies')
       .select(`
         id,
@@ -39,8 +39,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error1) throw error1;
 
-    // Get decisions blocked by this one
-    const { data: blocks, error: error2 } = await db
+    // 2. Get decisions I am BLOCKED BY (I am the Target)
+    const { data: blockedBy, error: error2 } = await db
       .from('dependencies')
       .select(`
         id,
@@ -56,8 +56,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (error2) throw error2;
 
     return res.json({
-      dependsOn: dependsOn || [],
-      blocks: blocks || []
+      blocking: blocking || [], // Downstream
+      blockedBy: blockedBy || [] // Upstream
     });
   } catch (error) {
     return next(error);
@@ -89,6 +89,28 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     if (error) throw error;
 
     return res.status(201).json(data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * DELETE /api/dependencies/:id
+ * Remove a dependency
+ */
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const { error } = await db
+      .from('dependencies')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return res.status(204).send();
   } catch (error) {
     return next(error);
   }

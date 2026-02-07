@@ -368,6 +368,33 @@ CREATE POLICY "profile_insert_policy" ON organization_profile FOR INSERT WITH CH
 CREATE POLICY "profile_update_policy" ON organization_profile FOR UPDATE USING (true);
 
 -- ============================================================================
+-- DECISION SIGNALS (MANUAL INPUTS FOR STREAM)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS decision_signals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  decision_id UUID NOT NULL REFERENCES decisions(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('SIGNAL', 'RISK', 'NOTE', 'PROGRESS')),
+  description TEXT NOT NULL,
+  impact TEXT CHECK (impact IN ('LOW', 'MEDIUM', 'HIGH')) DEFAULT 'LOW',
+  metadata JSONB DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by TEXT -- Optional: if we add auth later
+);
+
+COMMENT ON TABLE decision_signals IS 'Manual inputs (signals, risks, notes) to be interleaved with system events in the timeline.';
+
+-- Indexes for signal queries
+CREATE INDEX IF NOT EXISTS idx_decision_signals_decision ON decision_signals(decision_id);
+CREATE INDEX IF NOT EXISTS idx_decision_signals_created_at ON decision_signals(created_at DESC);
+
+-- RLS for Signals
+ALTER TABLE decision_signals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "decision_signals_select_policy" ON decision_signals FOR SELECT USING (true);
+CREATE POLICY "decision_signals_insert_policy" ON decision_signals FOR INSERT WITH CHECK (true);
+CREATE POLICY "decision_signals_update_policy" ON decision_signals FOR UPDATE USING (true);
+CREATE POLICY "decision_signals_delete_policy" ON decision_signals FOR DELETE USING (true);
+
+-- ============================================================================
 -- COMPLETION MESSAGE
 -- ============================================================================
 DO $$

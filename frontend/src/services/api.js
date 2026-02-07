@@ -108,6 +108,12 @@ class ApiService {
     });
   }
 
+  async deleteDependency(id) {
+    return this.request(`/dependencies/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Constraints endpoints
   async getConstraints(decisionId) {
     return this.request(`/constraints?decisionId=${decisionId}`);
@@ -127,11 +133,15 @@ class ApiService {
     return this.request('/profile');
   }
 
-  async updateProfile(data) {
+  async updateProfile(profileData) {
     return this.request('/profile', {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(profileData),
     });
+  }
+
+  async getTimeline(limit = 50) {
+    return this.request(`/timeline?limit=${limit}`);
   }
 
   // Health check

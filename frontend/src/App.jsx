@@ -7,6 +7,7 @@ import OrganisationOverview from './components/OrganisationOverview';
 import DecisionMonitoring from './components/DecisionMonitoring';
 import AssumptionsPage from './components/AssumptionsPage';
 import OrganizationProfile from './components/OrganizationProfile';
+import DecisionFlow from './components/DecisionFlow';
 
 function App() {
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
@@ -58,6 +59,7 @@ function App() {
           {currentView === 'monitoring' && <DecisionMonitoring />}
           {currentView === 'assumptions' && <AssumptionsPage />}
           {currentView === 'profile' && <OrganizationProfile />}
+          {currentView === 'flow' && <DecisionFlow />}
         </div>
       </div>
 
