@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, TrendingUp, Pen, FileText, Bell, Settings, FileText as FileIcon, LogOut, LayoutDashboard } from 'lucide-react';
 import api from '../services/api';
 
-const Sidebar = ({ currentView, onNavigate }) => {
+const Sidebar = ({ currentView, onNavigate, refreshKey }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -10,7 +10,7 @@ const Sidebar = ({ currentView, onNavigate }) => {
     // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshKey]); // Re-fetch when refreshKey changes
 
   const fetchUnreadCount = async () => {
     try {

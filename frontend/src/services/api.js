@@ -302,6 +302,11 @@ class ApiService {
       body: JSON.stringify({ days }),
     });
   }
+
+  // Get current simulated time
+  async getCurrentTime() {
+    return this.request('/simulate-time/current');
+  }
 }
 
 export default new ApiService();

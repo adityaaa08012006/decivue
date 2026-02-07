@@ -8,6 +8,7 @@ import { DecisionRepository } from '@data/repositories/decision-repository';
 import { getDatabase } from '@data/database';
 import { DeterministicEngine } from '@engine/index';
 import { eventBus } from '@events/event-bus';
+import { getCurrentTime } from '@api/routes/time-simulation';
 import { EventType } from '@events/event-types';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@utils/logger';
@@ -234,7 +235,7 @@ export class DecisionController {
           scope: c.scope
         })) as any,
         dependencies: dependencies,
-        currentTimestamp: new Date()
+        currentTimestamp: getCurrentTime()
       };
 
       const result = this.engine.evaluate(evaluationInput);

@@ -7,6 +7,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "create-test-conflict": "tsx scripts/create-test-conflict.ts",
+    "create-full-test-data": "tsx scripts/create-full-test-data.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

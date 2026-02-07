@@ -67,7 +67,7 @@ function App() {
   return (
     <div className="flex h-screen bg-neutral-white overflow-hidden">
       {/* Left Sidebar */}
-      <Sidebar currentView={currentView} onNavigate={handleNavigate} />
+      <Sidebar currentView={currentView} onNavigate={handleNavigate} refreshKey={refreshKey} />
 
       {/* Main Content */}
       <div className="flex-1 h-screen flex flex-col overflow-hidden">
@@ -92,7 +92,7 @@ function App() {
                   <button
                     onClick={() => setShowTimeSimMenu(!showTimeSimMenu)}
                     disabled={simulating}
-                    className="px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors flex items-center gap-2 shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-3 bg-primary-blue text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Clock size={20} />
                     {simulating ? 'Simulating...' : 'Time Jump'}

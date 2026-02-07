@@ -11,6 +11,20 @@ import { logger } from '@utils/logger';
 
 const router = Router();
 
+// Store the simulated time offset in memory
+// null means no simulation active (use real time)
+let simulatedTimeOffset: number | null = null;
+
+/**
+ * Get the current time (simulated or real)
+ * This is exported so other modules can use the simulated time
+ */
+export function getCurrentTime(): Date {
+  return simulatedTimeOffset 
+    ? new Date(Date.now() + simulatedTimeOffset)
+    : new Date();
+}
+
 /**
  * POST /api/simulate-time
  * Simulate a time jump and re-evaluate all decisions
@@ -29,9 +43,10 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
 
     logger.info(`Time simulation requested: +${days} days`);
 
-    // Calculate simulated timestamp
+    // Calculate simulated timestamp and store offset
     const simulatedTimestamp = new Date();
     simulatedTimestamp.setDate(simulatedTimestamp.getDate() + days);
+    simulatedTimeOffset = days * 24 * 60 * 60 * 1000; // Convert days to milliseconds
 
     // Fetch all decisions
     const { data: decisions, error: decisionsError } = await supabase
@@ -295,6 +310,35 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
       message: error.message
     });
   }
+});
+
+/**
+ * GET /api/simulate-time/current
+ * Get the current time (simulated or real)
+ */
+router.get('/current', (_req: Request, res: Response): any => {
+  const currentTime = getCurrentTime();
+  
+  return res.json({
+    currentTime: currentTime.toISOString(),
+    isSimulated: simulatedTimeOffset !== null,
+    offsetDays: simulatedTimeOffset ? Math.floor(simulatedTimeOffset / (1000 * 60 * 60 * 24)) : 0
+  });
+});
+
+/**
+ * DELETE /api/simulate-time/reset
+ * Reset time simulation to real time
+ */
+router.delete('/reset', (_req: Request, res: Response): any => {
+  simulatedTimeOffset = null;
+  logger.info('Time simulation reset to real time');
+  
+  return res.json({
+    message: 'Time simulation reset',
+    currentTime: getCurrentTime().toISOString(),
+    isSimulated: false
+  });
 });
 
 export default router;

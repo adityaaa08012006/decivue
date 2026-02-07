@@ -29,13 +29,26 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, title }
+  const [currentTime, setCurrentTime] = useState(new Date()); // Track simulated time
 
   // Store related data for each decision
   const [decisionData, setDecisionData] = useState({});
 
   useEffect(() => {
     fetchDecisions();
+    fetchCurrentTime(); // Fetch simulated time on mount
   }, []);
+
+  // Fetch current time (could be simulated)
+  const fetchCurrentTime = async () => {
+    try {
+      const response = await api.getCurrentTime();
+      setCurrentTime(new Date(response.currentTime || response.date || Date.now()));
+    } catch (err) {
+      // If endpoint doesn't exist yet, fallback to real time
+      setCurrentTime(new Date());
+    }
+  };
 
   // Fetch additional data when a decision is expanded
   useEffect(() => {
@@ -383,7 +396,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         {/* Expiry Badge */}
                         {decision.expiryDate && (() => {
                           const expiryDate = new Date(decision.expiryDate);
-                          const now = new Date();
+                          const now = currentTime;
                           const daysUntilExpiry = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
                           const isExpired = daysUntilExpiry < 0;
 
@@ -866,7 +879,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         {/* Expiry Date Display */}
                         {decision.expiryDate && (() => {
                           const expiryDate = new Date(decision.expiryDate);
-                          const now = new Date();
+                          const now = currentTime;
                           const daysUntilExpiry = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
                           const isExpired = daysUntilExpiry < 0;
                           const daysPastExpiry = Math.abs(daysUntilExpiry);
