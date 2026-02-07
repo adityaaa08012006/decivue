@@ -140,7 +140,7 @@ export class DecisionController {
 
   /**
    * PUT /api/decisions/:id/mark-reviewed
-   * Mark a decision as reviewed (updates last_reviewed_at to now)
+   * Mark a decision as reviewed (updates last_reviewed_at to now and re-evaluates to restore health)
    */
   async markReviewed(req: Request, res: Response, next: NextFunction) {
     try {
@@ -161,6 +161,113 @@ export class DecisionController {
         return res.status(404).json({ error: 'Decision not found' });
       }
 
+      logger.info(`Decision marked as reviewed: ${id}, triggering re-evaluation`);
+
+      // Re-evaluate the decision to restore health
+      // Fetch related data for evaluation
+      const [assumptionsResult, constraintsResult, dependenciesResult] = await Promise.all([
+        db.from('decision_assumptions')
+          .select('assumptions(*)')
+          .eq('decision_id', id),
+        db.from('decision_constraints')
+          .select('constraints(*)')
+          .eq('decision_id', id),
+        db.from('dependencies')
+          .select('blocking_decision_id, decisions!dependencies_blocking_decision_id_fkey(id, title, description, health_signal, lifecycle, created_at, last_reviewed_at, expiry_date, metadata)')
+          .eq('blocked_decision_id', id)
+      ]);
+
+      const assumptions = (assumptionsResult.data || [])
+        .map((da: any) => da.assumptions)
+        .filter(Boolean);
+
+      const constraints = (constraintsResult.data || [])
+        .map((dc: any) => dc.constraints)
+        .filter(Boolean);
+
+      const dependencies = (dependenciesResult.data || [])
+        .map((dep: any) => ({
+          id: dep.decisions?.id,
+          title: dep.decisions?.title || '',
+          description: dep.decisions?.description || '',
+          healthSignal: dep.decisions?.health_signal || 100,
+          lifecycle: dep.decisions?.lifecycle || 'STABLE',
+          createdAt: dep.decisions?.created_at ? new Date(dep.decisions.created_at) : new Date(),
+          lastReviewedAt: dep.decisions?.last_reviewed_at ? new Date(dep.decisions.last_reviewed_at) : new Date(),
+          expiryDate: dep.decisions?.expiry_date ? new Date(dep.decisions.expiry_date) : undefined,
+          metadata: dep.decisions?.metadata || {}
+        }))
+        .filter((dep: any) => dep.id);
+
+      // Evaluate with updated review timestamp
+      const evaluationInput = {
+        decision: {
+          id: decision.id,
+          title: decision.title,
+          description: decision.description,
+          lifecycle: decision.lifecycle,
+          healthSignal: decision.health_signal,
+          lastReviewedAt: new Date(decision.last_reviewed_at), // Now updated
+          createdAt: new Date(decision.created_at),
+          expiryDate: decision.expiry_date ? new Date(decision.expiry_date) : undefined,
+          metadata: decision.metadata || {}
+        },
+        assumptions: assumptions.map((a: any) => ({
+          id: a.id,
+          description: a.description,
+          status: a.status,
+          createdAt: a.created_at ? new Date(a.created_at) : new Date(),
+          validatedAt: a.validated_at ? new Date(a.validated_at) : undefined,
+          metadata: a.metadata || {}
+        })) as any,
+        constraints: constraints.map((c: any) => ({
+          id: c.id,
+          name: c.constraint_name || '',
+          description: c.description || '',
+          constraintType: c.constraint_type || 'OTHER',
+          ruleExpression: c.rule_definition,
+          isImmutable: c.is_immutable !== false,
+          createdAt: c.created_at ? new Date(c.created_at) : new Date(),
+          constraint_name: c.constraint_name,
+          constraint_type: c.constraint_type,
+          rule_definition: c.rule_definition,
+          scope: c.scope
+        })) as any,
+        dependencies: dependencies,
+        currentTimestamp: new Date()
+      };
+
+      const result = this.engine.evaluate(evaluationInput);
+
+      // When a decision is reviewed, reset health to 100 unless there are actual problems
+      // (constraints violated or assumptions broken)
+      let newHealth = 100;
+      let newLifecycle = 'STABLE';
+      let invalidatedReason = null;
+
+      // Only keep degraded state if there are real issues (not just time decay)
+      if (result.invalidatedReason === 'constraint_violation' || result.invalidatedReason === 'broken_assumptions') {
+        newHealth = result.newHealthSignal;
+        newLifecycle = result.newLifecycle;
+        invalidatedReason = result.invalidatedReason;
+      }
+
+      // Update decision with restored health
+      const { error: updateError } = await db
+        .from('decisions')
+        .update({
+          health_signal: newHealth,
+          lifecycle: newLifecycle,
+          invalidated_reason: invalidatedReason
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        logger.error(`Failed to update decision after review: ${updateError.message}`);
+      } else {
+        logger.info(`Decision ${id} reviewed and health restored to ${newHealth}`);
+      }
+
       // Dismiss any "NEEDS_REVIEW" notifications for this decision
       await db
         .from('notifications')
@@ -169,10 +276,16 @@ export class DecisionController {
         .eq('type', 'NEEDS_REVIEW')
         .eq('is_dismissed', false);
 
-      logger.info(`Decision marked as reviewed: ${id}`);
-      res.json(decision);
+      // Return the updated decision
+      const { data: updatedDecision } = await db
+        .from('decisions')
+        .select()
+        .eq('id', id)
+        .single();
+
+      return res.json(updatedDecision || decision);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

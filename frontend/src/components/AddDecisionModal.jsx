@@ -471,40 +471,52 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
 
               <div>
                 <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                  Link Organizational Constraints
+                  Organizational Constraints
                 </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {existingConstraints.map((constraint) => (
-                    <label
-                      key={constraint.id}
-                      className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.selectedConstraints.includes(
-                          constraint.id
-                        )}
-                        onChange={() =>
-                          toggleSelection('selectedConstraints', constraint.id)
-                        }
-                        className="mt-1"
-                      />
+                {existingConstraints.length > 0 ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2 text-blue-800 mb-3">
+                      <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-neutral-black">
-                          {constraint.name}
-                        </div>
-                        <div className="text-xs text-neutral-gray-600">
-                          {constraint.description}
-                        </div>
+                        <p className="text-sm font-medium mb-1">
+                          All organizational constraints automatically apply
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          These {existingConstraints.length} constraint{existingConstraints.length !== 1 ? 's' : ''} will be validated when you create this decision. They represent non-negotiable organizational facts.
+                        </p>
                       </div>
-                    </label>
-                  ))}
-                  {existingConstraints.length === 0 && (
-                    <p className="text-sm text-neutral-gray-500 italic">
-                      No constraints available
-                    </p>
-                  )}
-                </div>
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {existingConstraints.map((constraint) => (
+                        <div
+                          key={constraint.id}
+                          className="flex items-start gap-2 p-2 bg-white rounded border border-blue-100"
+                        >
+                          <svg className="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div className="flex-1">
+                            <div className="text-xs font-medium text-neutral-black">
+                              {constraint.name}
+                            </div>
+                            {constraint.description && (
+                              <div className="text-xs text-neutral-gray-600 mt-0.5">
+                                {constraint.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-neutral-gray-500 border-2 border-dashed border-neutral-gray-200 rounded-xl">
+                    <p className="text-sm">No constraints available</p>
+                    <p className="text-xs mt-1">You can add constraints in Organization Profile</p>
+                  </div>
+                )}
               </div>
             </div>
 

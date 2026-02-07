@@ -78,28 +78,33 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         filteredAssumptions = filteredAssumptions.filter((a: any) => a.scope === scope);
       }
 
-      // Build a map of assumption_id -> decision titles
-      const linkMap = new Map<string, string[]>();
+      // Build a map of assumption_id -> decision objects
+      const linkMap = new Map<string, Array<{ id: string; title: string }>>();
       (links || []).forEach((link: any) => {
         if (link.decisions) {
           const existing = linkMap.get(link.assumption_id) || [];
-          existing.push(link.decisions.title);
+          existing.push({
+            id: link.decisions.id,
+            title: link.decisions.title
+          });
           linkMap.set(link.assumption_id, existing);
         }
       });
 
-      // Transform data to include decision count and titles
+      // Transform data to include decision count, titles, and impacted decisions
       const enrichedData = filteredAssumptions.map((a: any) => {
-        const decisionTitles = linkMap.get(a.id) || [];
-        
+        const impactedDecisions = linkMap.get(a.id) || [];
+        const decisionTitles = impactedDecisions.map(d => d.title);
+
         return {
           ...a,
-          decisionCount: decisionTitles.length,
-          linkedDecisionTitle: a.scope === 'UNIVERSAL' 
-            ? 'All Decisions' 
-            : decisionTitles.length > 0 
+          decisionCount: impactedDecisions.length,
+          linkedDecisionTitle: a.scope === 'UNIVERSAL'
+            ? 'All Decisions'
+            : decisionTitles.length > 0
               ? decisionTitles.join(', ')
-              : 'Unlinked'
+              : 'Unlinked',
+          impactedDecisions: impactedDecisions
         };
       });
 

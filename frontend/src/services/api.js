@@ -147,6 +147,19 @@ class ApiService {
     return this.request('/constraints/all');
   }
 
+  async createConstraint(constraint) {
+    return this.request('/constraints', {
+      method: 'POST',
+      body: JSON.stringify(constraint),
+    });
+  }
+
+  async deleteConstraint(id) {
+    return this.request(`/constraints/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async linkConstraintToDecision(constraintId, decisionId) {
     return this.request('/constraints/link', {
       method: 'POST',
@@ -215,9 +228,79 @@ class ApiService {
     });
   }
 
+  // Constraint Violation endpoints
+  async getConstraintViolations(decisionId, includeResolved = false) {
+    const params = new URLSearchParams();
+    if (decisionId) params.append('decisionId', decisionId);
+    if (includeResolved) params.append('includeResolved', 'true');
+
+    const query = params.toString();
+    return this.request(`/constraint-violations${query ? `?${query}` : ''}`);
+  }
+
+  async getConstraintViolation(id) {
+    return this.request(`/constraint-violations/${id}`);
+  }
+
+  async resolveConstraintViolation(id) {
+    return this.request(`/constraint-violations/${id}/resolve`, {
+      method: 'PUT',
+    });
+  }
+
+  async deleteConstraintViolation(id) {
+    return this.request(`/constraint-violations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getViolationsByConstraint(constraintId) {
+    return this.request(`/constraint-violations/by-constraint/${constraintId}`);
+  }
+
+  // Assumption Conflicts endpoints
+  async getAssumptionConflicts(includeResolved = false) {
+    const params = new URLSearchParams();
+    if (includeResolved) params.append('includeResolved', 'true');
+    const query = params.toString();
+    return this.request(`/assumption-conflicts${query ? `?${query}` : ''}`);
+  }
+
+  async getAssumptionConflictsForAssumption(assumptionId) {
+    return this.request(`/assumption-conflicts/${assumptionId}`);
+  }
+
+  async detectAssumptionConflicts(assumptionIds = null) {
+    return this.request('/assumption-conflicts/detect', {
+      method: 'POST',
+      body: JSON.stringify({ assumptionIds }),
+    });
+  }
+
+  async resolveAssumptionConflict(id, resolutionAction, resolutionNotes = '') {
+    return this.request(`/assumption-conflicts/${id}/resolve`, {
+      method: 'PUT',
+      body: JSON.stringify({ resolutionAction, resolutionNotes }),
+    });
+  }
+
+  async deleteAssumptionConflict(id) {
+    return this.request(`/assumption-conflicts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Health check
   async checkHealth() {
     return this.request('/health', { baseUrl: 'http://localhost:3001' });
+  }
+
+  // Time simulation endpoint
+  async simulateTime(days) {
+    return this.request('/simulate-time', {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    });
   }
 }
 

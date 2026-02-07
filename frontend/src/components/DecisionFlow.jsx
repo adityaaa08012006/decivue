@@ -189,34 +189,15 @@ const DecisionFlow = () => {
         }
     };
 
-    // Calculate Velocity (events in last 7 days)
-    const velocity = events.filter(e => {
-        const diff = new Date() - new Date(e.timestamp);
-        return diff < 7 * 24 * 60 * 60 * 1000;
-    }).length;
-
     return (
         <div className="flex h-screen bg-neutral-white overflow-hidden">
             <div className="flex-1 flex flex-col h-full overflow-y-auto">
                 <div className="max-w-3xl mx-auto w-full p-8">
 
                     {/* Page Header */}
-                    <div className="mb-10 flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-neutral-black mb-1">Decision Flow</h1>
-                            <p className="text-neutral-gray-600">Organizational memory stream & evolution.</p>
-                        </div>
-
-                        {/* Velocity Indicator */}
-                        <div className="bg-white px-4 py-2 rounded-xl border border-neutral-gray-200 shadow-sm flex items-center gap-3">
-                            <div className="p-2 bg-green-50 rounded-lg text-green-600">
-                                <Activity size={20} />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-neutral-black leading-none">{velocity}</div>
-                                <div className="text-xs text-neutral-gray-500 font-medium uppercase tracking-wide">Velocity (7d)</div>
-                            </div>
-                        </div>
+                    <div className="mb-10">
+                        <h1 className="text-3xl font-bold text-neutral-black mb-1">Decision Flow</h1>
+                        <p className="text-neutral-gray-600">Organizational memory stream & evolution.</p>
                     </div>
 
                     {/* Filters Bar (Visual Only for now) */}

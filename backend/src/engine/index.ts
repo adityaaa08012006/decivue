@@ -23,6 +23,7 @@
 
 import { DecisionLifecycle } from '@data/models';
 import { IDecisionEngine, EvaluationInput, EvaluationOutput, EvaluationStep } from './types';
+import { ConstraintValidator, DecisionContext } from '../services/constraint-validator';
 
 export class DeterministicEngine implements IDecisionEngine {
   /**
@@ -91,21 +92,45 @@ export class DeterministicEngine implements IDecisionEngine {
    * Phase 1: Validate constraints
    */
   private validateConstraints(
-    _input: EvaluationInput,
+    input: EvaluationInput,
     trace: EvaluationStep[]
-  ): { passed: boolean } {
-    const step: EvaluationStep = {
-      step: 'constraint_validation',
-      passed: true,
-      details: 'All constraints validated successfully',
-      timestamp: new Date()
+  ): { passed: boolean; violatedConstraints?: any[] } {
+    const validator = new ConstraintValidator();
+
+    // Build decision context for validation
+    const context: DecisionContext = {
+      id: input.decision.id,
+      title: input.decision.title,
+      description: input.decision.description || '',
+      metadata: input.decision.metadata || {}
     };
 
-    // TODO: Implement constraint validation logic
-    // For now, assume all constraints pass
+    const violations: any[] = [];
+
+    // Validate against each constraint
+    for (const constraint of input.constraints) {
+      // Constraints from DB are in snake_case, cast to ConstraintDB for validator
+      const result = validator.validate(constraint as any, context);
+
+      if (!result.passed && result.violation) {
+        violations.push(result.violation);
+      }
+    }
+
+    const passed = violations.length === 0;
+
+    const step: EvaluationStep = {
+      step: 'constraint_validation',
+      passed,
+      details: passed
+        ? `All ${input.constraints.length} constraints validated successfully`
+        : `${violations.length} constraint(s) violated: ${violations.map(v => v.constraintName).join(', ')}`,
+      timestamp: new Date(),
+      metadata: passed ? {} : { violations }
+    };
 
     trace.push(step);
-    return { passed: step.passed };
+    return { passed, violatedConstraints: passed ? undefined : violations };
   }
 
   /**
@@ -173,22 +198,62 @@ export class DeterministicEngine implements IDecisionEngine {
    * Phase 4: Apply time-based health decay
    * Health is an internal signal only - never authoritative
    * Time decay alone can trigger UNDER_REVIEW but never AT_RISK or INVALIDATED
+   *
+   * Decay strategy:
+   * - If expiryDate is set: Decay accelerates as expiry approaches and passes
+   * - Otherwise: Decay based on time since last review (1 point per 30 days)
    */
   private applyHealthDecay(
     input: EvaluationInput,
     trace: EvaluationStep[]
   ): { decayAmount: number } {
-    const daysSinceReview =
-      (input.currentTimestamp.getTime() - input.decision.lastReviewedAt.getTime()) /
-      (1000 * 60 * 60 * 24);
+    let decayAmount = 0;
+    let details = '';
 
-    // Decay 1 point per 30 days without review
-    const decayAmount = Math.floor(daysSinceReview / 30);
+    if (input.decision.expiryDate) {
+      // Expiry-based decay
+      const daysUntilExpiry =
+        (input.decision.expiryDate.getTime() - input.currentTimestamp.getTime()) /
+        (1000 * 60 * 60 * 24);
+
+      if (daysUntilExpiry > 90) {
+        // More than 90 days until expiry: minimal decay
+        decayAmount = 0;
+        details = `${Math.floor(daysUntilExpiry)} days until expiry. No decay yet.`;
+      } else if (daysUntilExpiry > 30) {
+        // 30-90 days until expiry: warning phase (1 point per 15 days)
+        const daysSinceWarningStart = 90 - daysUntilExpiry;
+        decayAmount = Math.floor(daysSinceWarningStart / 15);
+        details = `${Math.floor(daysUntilExpiry)} days until expiry. Warning phase: -${decayAmount} health.`;
+      } else if (daysUntilExpiry > 0) {
+        // 0-30 days until expiry: critical phase (1 point per 5 days)
+        const baseDecay = Math.floor((90 - daysUntilExpiry) / 15); // Decay from warning phase
+        const criticalDecay = Math.floor((30 - daysUntilExpiry) / 5);
+        decayAmount = baseDecay + criticalDecay;
+        details = `${Math.floor(daysUntilExpiry)} days until expiry. Critical phase: -${decayAmount} health.`;
+      } else {
+        // Past expiry: severe decay (1 point per day)
+        const daysPastExpiry = Math.abs(daysUntilExpiry);
+        const baseDecay = Math.floor(90 / 15) + Math.floor(30 / 5); // Max decay before expiry
+        const overdueDecay = Math.floor(daysPastExpiry);
+        decayAmount = baseDecay + overdueDecay;
+        details = `${Math.floor(daysPastExpiry)} days PAST expiry. Severe decay: -${decayAmount} health.`;
+      }
+    } else {
+      // Review-based decay (original logic)
+      const daysSinceReview =
+        (input.currentTimestamp.getTime() - input.decision.lastReviewedAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+
+      // Decay 1 point per 30 days without review
+      decayAmount = Math.floor(daysSinceReview / 30);
+      details = `${Math.floor(daysSinceReview)} days since last review. Health decay: -${decayAmount}. (Health is a signal, not authority)`;
+    }
 
     trace.push({
       step: 'health_decay',
       passed: true,
-      details: `${Math.floor(daysSinceReview)} days since last review. Health decay: -${decayAmount}. (Health is a signal, not authority)`,
+      details,
       timestamp: new Date()
     });
 

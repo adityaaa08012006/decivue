@@ -26,6 +26,7 @@ export interface Decision {
   invalidatedReason?: string;      // Why was this invalidated? (constraint_violation | broken_assumptions | manual)
   createdAt: Date;
   lastReviewedAt: Date;            // Updated ONLY by explicit human review action
+  expiryDate?: Date;               // Optional expiration date - accelerates decay as it approaches/passes
   metadata?: Record<string, any>; // Additional context
 }
 

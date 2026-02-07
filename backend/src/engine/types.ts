@@ -27,6 +27,7 @@ export interface EvaluationStep {
   passed: boolean;
   details: string;                 // Explanation of what happened
   timestamp: Date;
+  metadata?: any;                  // Optional additional data (e.g., violations)
 }
 
 /**

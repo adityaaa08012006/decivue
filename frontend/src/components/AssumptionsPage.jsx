@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X } from 'lucide-react';
+import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X, Shield } from 'lucide-react';
 import api from '../services/api';
+import AssumptionConflictModal from './AssumptionConflictModal';
 
 const AssumptionsPage = () => {
     const [activeTab, setActiveTab] = useState('all'); // all, organizational, decision
@@ -8,6 +9,11 @@ const AssumptionsPage = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
     const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, description, type }
+
+    // Conflict Detection State
+    const [conflicts, setConflicts] = useState([]);
+    const [selectedConflict, setSelectedConflict] = useState(null);
+    const [detectingConflicts, setDetectingConflicts] = useState(false);
 
     // Data State
     const [assumptions, setAssumptions] = useState([]);
@@ -39,17 +45,44 @@ const AssumptionsPage = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [assumptionsData, decisionsData] = await Promise.all([
+            const [assumptionsData, decisionsData, conflictsData] = await Promise.all([
                 api.getAssumptions(),
-                api.getDecisions()
+                api.getDecisions(),
+                api.getAssumptionConflicts(false) // Only fetch unresolved conflicts
             ]);
             setAssumptions(assumptionsData);
             setDecisions(decisionsData);
+            setConflicts(conflictsData || []);
         } catch (error) {
             console.error("Failed to fetch data:", error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDetectConflicts = async () => {
+        try {
+            setDetectingConflicts(true);
+            const result = await api.detectAssumptionConflicts();
+
+            showToast('success', `Conflict detection complete! Found ${result.conflictsDetected} new conflict(s)`);
+
+            // Refetch conflicts
+            const conflictsData = await api.getAssumptionConflicts(false);
+            setConflicts(conflictsData || []);
+        } catch (error) {
+            console.error('Failed to detect conflicts:', error);
+            showToast('error', 'Failed to detect conflicts. Please try again.');
+        } finally {
+            setDetectingConflicts(false);
+        }
+    };
+
+    const handleConflictResolved = async () => {
+        // Refetch conflicts after resolution
+        const conflictsData = await api.getAssumptionConflicts(false);
+        setConflicts(conflictsData || []);
+        showToast('success', 'Conflict resolved successfully');
     };
 
     const handleCreate = async () => {
@@ -208,62 +241,75 @@ const AssumptionsPage = () => {
                 <div className="flex-1 overflow-y-auto">
                     <div className="p-8 max-w-7xl mx-auto">
 
-                        {/* Header Area */}
-                        <div className="flex items-end justify-between mb-8">
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h1 className="text-3xl font-bold text-neutral-black">Organizational Beliefs</h1>
+                        {/* Header */}
+                        <div className="mb-8">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-black mb-2">Assumptions</h1>
+                                    <p className="text-gray-600">Monitor and validate the beliefs underpinning your decisions</p>
                                 </div>
-                                <p className="text-neutral-gray-600 text-lg">Assumptions — The beliefs your decisions depend on.</p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="bg-neutral-gray-100 p-1 rounded-lg flex text-sm font-medium">
-                                    {['all', 'organizational', 'decision'].map((tab) => (
-                                        <button
-                                            key={tab}
-                                            onClick={() => setActiveTab(tab)}
-                                            className={`px-4 py-2 rounded-md transition-all capitalized ${activeTab === tab
-                                                    ? 'bg-white text-neutral-black shadow-sm'
-                                                    : 'text-neutral-gray-600 hover:text-neutral-black'
-                                                }`}
-                                        >
-                                            {tab === 'all' ? 'All View' : tab === 'organizational' ? 'Organizational' : 'Decision-Specific'}
-                                        </button>
-                                    ))}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleDetectConflicts}
+                                        disabled={detectingConflicts}
+                                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <Shield size={18} />
+                                        {detectingConflicts ? 'Detecting...' : 'Detect Conflicts'}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddModal(true)}
+                                        className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm font-medium"
+                                    >
+                                        <Plus size={18} />
+                                        Add Assumption
+                                    </button>
+                                    <button
+                                        onClick={fetchData}
+                                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm"
+                                    >
+                                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+                                        Refresh
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    className="px-5 py-2.5 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm"
-                                >
-                                    <Plus size={20} />
-                                    Add Assumption
-                                </button>
                             </div>
                         </div>
 
-                        {/* Filters & Search */}
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="flex-1 relative max-w-xl">
-                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-gray-400" size={20} />
+                        {/* Filter Tabs */}
+                        <div className="mb-6 flex gap-2">
+                            {['all', 'organizational', 'decision'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-5 py-2.5 rounded-lg font-medium transition-all ${
+                                        activeTab === tab
+                                            ? 'bg-blue-500 text-white shadow-md'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                                    }`}
+                                >
+                                    {tab === 'all' ? 'All' : tab === 'organizational' ? 'Organizational' : 'Decision-Specific'}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Search */}
+                        <div className="mb-6">
+                            <div className="relative max-w-md">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Search by keyword or linked decision..."
+                                    placeholder="Search assumptions or linked decisions..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3 bg-white border border-neutral-gray-200 rounded-xl focus:outline-none focus:border-primary-blue transition-all shadow-sm"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                                 />
                             </div>
-                            <button
-                                onClick={fetchData}
-                                className="p-3 bg-white border border-neutral-gray-200 rounded-xl hover:border-primary-blue transition-colors text-neutral-gray-500 hover:text-primary-blue"
-                            >
-                                <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
-                            </button>
                         </div>
 
                         {loading ? (
-                            <div className="flex justify-center py-12">
-                                <RefreshCw className="animate-spin text-neutral-gray-400" size={32} />
+                            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center shadow-sm">
+                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500 mb-4"></div>
+                                <p className="text-gray-700">Loading your assumptions...</p>
                             </div>
                         ) : (
                             <div className="space-y-10">
@@ -271,59 +317,57 @@ const AssumptionsPage = () => {
                                 {/* Organizational Assumptions */}
                                 {(activeTab === 'all' || activeTab === 'organizational') && orgAssumptions.length > 0 && (
                                     <section>
-                                        <h2 className="text-xl font-bold text-neutral-black mb-4 flex items-center gap-2">
-                                            <TrendingUp className="text-primary-blue" size={24} />
-                                            Systemic Risks (Organizational)
+                                        <h2 className="text-lg font-bold text-black mb-4">
+                                            Organizational Assumptions
                                         </h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {orgAssumptions.map((assumption) => (
-                                                <div key={assumption.id} className="bg-white p-6 rounded-2xl border border-neutral-gray-200 shadow-sm hover:shadow-md transition-shadow group relative">
+                                                <div key={assumption.id} className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-all group relative">
                                                     {/* Delete Button */}
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleDeleteAssumption(assumption.id, assumption.description);
                                                         }}
-                                                        className="absolute top-4 right-4 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                        className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                                                         title="Delete assumption"
                                                     >
                                                         <Trash2 size={18} />
                                                     </button>
 
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusBadge(assumption.status)} border`}>
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(assumption.status)}`}>
                                                             {getStatusLabel(assumption.status)}
                                                         </span>
                                                     </div>
 
-                                                    <h3 className="text-xl font-bold text-neutral-black mb-2 group-hover:text-primary-blue transition-colors">
+                                                    <h3 className="text-base font-semibold text-black mb-2 pr-8">
                                                         {assumption.description}
                                                     </h3>
 
-                                                    <div className="flex items-center gap-2 text-sm text-neutral-gray-600 mb-6">
-                                                        <span className="font-medium">Created {new Date(assumption.created_at).toLocaleDateString()}</span>
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                                                        <span>{new Date(assumption.created_at).toLocaleDateString()}</span>
                                                     </div>
 
-                                                    <div className="bg-neutral-gray-50 rounded-xl p-4 border border-neutral-gray-100">
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <div className="w-2 h-2 bg-neutral-gray-400 rounded-full"></div>
-                                                            <span className="text-sm font-semibold text-neutral-gray-700">
-                                                                {assumption.scope === 'UNIVERSAL' 
-                                                                    ? '🌐 Applies Universally' 
-                                                                    : `Supports ${assumption.decisionCount} Decision${assumption.decisionCount !== 1 ? 's' : ''}`
+                                                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="text-sm font-medium text-gray-700">
+                                                                {assumption.scope === 'UNIVERSAL'
+                                                                    ? '🌐 Universal'
+                                                                    : `${assumption.decisionCount} Decision${assumption.decisionCount !== 1 ? 's' : ''}`
                                                                 }
                                                             </span>
                                                         </div>
-                                                        <div className="space-y-2">
+                                                        <div className="space-y-1">
                                                             {assumption.impactedDecisions?.slice(0, 3).map((d, idx) => (
-                                                                <div key={idx} className="flex items-center gap-2 text-sm text-neutral-gray-600 pl-4">
-                                                                    <div className="w-1.5 h-1.5 bg-neutral-gray-300 rounded-full"></div>
+                                                                <div key={idx} className="flex items-center gap-2 text-sm text-gray-600 pl-2">
+                                                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
                                                                     {d.title}
                                                                 </div>
                                                             ))}
                                                             {assumption.scope !== 'UNIVERSAL' && assumption.decisionCount > 3 && (
-                                                                <div className="pl-8 text-xs text-neutral-gray-500">
-                                                                    + {assumption.decisionCount - 3} more...
+                                                                <div className="pl-4 text-sm text-gray-500">
+                                                                    +{assumption.decisionCount - 3} more
                                                                 </div>
                                                             )}
                                                         </div>
@@ -337,28 +381,27 @@ const AssumptionsPage = () => {
                                 {/* Decision-Specific Assumptions */}
                                 {(activeTab === 'all' || activeTab === 'decision') && decisionAssumptions.length > 0 && (
                                     <section>
-                                        <h2 className="text-xl font-bold text-neutral-black mb-4 flex items-center gap-2 mt-8">
-                                            <AlertCircle className="text-neutral-gray-600" size={24} />
-                                            Localized Risks (Decision-Specific)
+                                        <h2 className="text-lg font-bold text-black mb-4 mt-8">
+                                            Decision-Specific Assumptions
                                         </h2>
-                                        <div className="bg-white rounded-2xl border border-neutral-gray-200 overflow-hidden shadow-sm">
-                                            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-neutral-gray-50 border-b border-neutral-gray-200 text-xs font-bold text-neutral-gray-500 uppercase tracking-wider">
+                                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                            <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                                 <div className="col-span-6">Assumption</div>
-                                                <div className="col-span-3">Linked Decision</div>
-                                                <div className="col-span-2">Health</div>
-                                                <div className="col-span-1">Actions</div>
+                                                <div className="col-span-3">Decision</div>
+                                                <div className="col-span-2">Status</div>
+                                                <div className="col-span-1"></div>
                                             </div>
-                                            <div className="divide-y divide-neutral-gray-100">
+                                            <div className="divide-y divide-gray-100">
                                                 {decisionAssumptions.map((assumption) => (
-                                                    <div key={assumption.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-neutral-gray-50 transition-colors group">
-                                                        <div className="col-span-6 font-medium text-neutral-black group-hover:text-primary-blue transition-colors">
+                                                    <div key={assumption.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors group">
+                                                        <div className="col-span-6 text-sm text-gray-900 font-medium">
                                                             {assumption.description}
                                                         </div>
-                                                        <div className="col-span-3 text-sm text-neutral-gray-600">
+                                                        <div className="col-span-3 text-sm text-gray-600">
                                                             {assumption.linkedDecisionTitle || assumption.impactedDecisions?.[0]?.title || 'Unlinked'}
                                                         </div>
                                                         <div className="col-span-2">
-                                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadge(assumption.status)}`}>
+                                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(assumption.status)}`}>
                                                                 {getStatusLabel(assumption.status)}
                                                             </span>
                                                         </div>
@@ -368,7 +411,7 @@ const AssumptionsPage = () => {
                                                                     e.stopPropagation();
                                                                     handleDeleteAssumption(assumption.id, assumption.description);
                                                                 }}
-                                                                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                                 title="Delete assumption"
                                                             >
                                                                 <Trash2 size={18} />
@@ -382,12 +425,73 @@ const AssumptionsPage = () => {
                                 )}
 
                                 {assumptions.length === 0 && (
-                                    <div className="text-center py-12 bg-neutral-gray-50 rounded-2xl border border-neutral-gray-200 border-dashed">
-                                        <p className="text-neutral-gray-600 font-medium">No assumptions found.</p>
-                                        <button onClick={() => setShowAddModal(true)} className="mt-4 text-primary-blue hover:underline">
-                                            Create your first assumption
+                                    <div className="bg-white rounded-lg border border-gray-200 p-12 text-center shadow-sm">
+                                        <p className="text-gray-600 font-medium mb-2">No assumptions found</p>
+                                        <p className="text-sm text-gray-500 mb-4">Create your first assumption to start tracking beliefs</p>
+                                        <button
+                                            onClick={() => setShowAddModal(true)}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                                        >
+                                            <Plus size={18} />
+                                            Add Assumption
                                         </button>
                                     </div>
+                                )}
+
+                                {/* Assumption Conflicts */}
+                                {conflicts.length > 0 && (
+                                    <section className="mt-8">
+                                        <h2 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
+                                            Detected Conflicts
+                                            <span className="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium">
+                                                {conflicts.length} unresolved
+                                            </span>
+                                        </h2>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {conflicts.map((conflict) => (
+                                                <div
+                                                    key={conflict.id}
+                                                    className="bg-orange-50 border border-orange-200 rounded-lg p-5 hover:border-orange-300 transition-all cursor-pointer shadow-sm"
+                                                    onClick={() => setSelectedConflict(conflict)}
+                                                >
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-sm font-semibold text-orange-900 uppercase tracking-wide">
+                                                                {conflict.conflict_type?.replace(/_/g, ' ') || 'CONFLICT'}
+                                                            </span>
+                                                            <span className="text-sm text-orange-700">
+                                                                {Math.round(conflict.confidence_score * 100)}% confidence
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedConflict(conflict);
+                                                            }}
+                                                            className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors"
+                                                        >
+                                                            Resolve
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                            <div className="text-xs font-semibold text-blue-900 mb-2">Assumption A</div>
+                                                            <p className="text-sm text-gray-900">{conflict.assumption_a?.text || conflict.assumption_a?.description}</p>
+                                                        </div>
+                                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                                            <div className="text-xs font-semibold text-purple-900 mb-2">Assumption B</div>
+                                                            <p className="text-sm text-gray-900">{conflict.assumption_b?.text || conflict.assumption_b?.description}</p>
+                                                        </div>
+                                                    </div>
+                                                    {conflict.metadata?.reason && (
+                                                        <div className="mt-4 text-sm text-orange-800">
+                                                            <span className="font-semibold">Reason:</span> {conflict.metadata.reason}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
                                 )}
                             </div>
                         )}
@@ -397,45 +501,45 @@ const AssumptionsPage = () => {
 
             {/* Create Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl animate-fade-in-up">
-                        <h2 className="text-2xl font-bold text-neutral-black mb-4">Add New Assumption</h2>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
+                        <h2 className="text-2xl font-bold text-black mb-6">New Assumption</h2>
 
                         {!newAssumptionType ? (
                             // Step 1: Select Type
                             <>
-                                <p className="text-neutral-gray-600 mb-8 text-lg">What kind of belief does this represent?</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <p className="text-gray-600 mb-6">Choose the type of assumption</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                     <button
                                         onClick={() => setNewAssumptionType('organizational')}
-                                        className="p-6 rounded-xl border-2 border-neutral-gray-200 hover:border-primary-blue hover:bg-blue-50 transition-all text-left group"
+                                        className="p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
                                     >
-                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                                            <TrendingUp className="text-primary-blue" size={24} />
+                                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
+                                            <TrendingUp className="text-blue-600" size={24} />
                                         </div>
-                                        <h3 className="text-lg font-bold text-neutral-black mb-2">Organizational Belief</h3>
-                                        <p className="text-neutral-gray-600 text-sm">A systemic truth that affects multiple decisions or the entire company.</p>
+                                        <h3 className="text-lg font-bold text-black mb-2">Organizational</h3>
+                                        <p className="text-sm text-gray-600">Universal assumption affecting multiple decisions</p>
                                     </button>
 
                                     <button
                                         onClick={() => setNewAssumptionType('decision')}
-                                        className="p-6 rounded-xl border-2 border-neutral-gray-200 hover:border-status-orange hover:bg-orange-50 transition-all text-left group"
+                                        className="p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
                                     >
-                                        <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-200 transition-colors">
-                                            <AlertCircle className="text-status-orange" size={24} />
+                                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
+                                            <AlertCircle className="text-blue-600" size={24} />
                                         </div>
-                                        <h3 className="text-lg font-bold text-neutral-black mb-2">Decision-Specific</h3>
-                                        <p className="text-neutral-gray-600 text-sm">A localized assumption relevant to only one specific decision.</p>
+                                        <h3 className="text-lg font-bold text-black mb-2">Decision-Specific</h3>
+                                        <p className="text-sm text-gray-600">Local assumption for a single decision</p>
                                     </button>
                                 </div>
                             </>
                         ) : (
                             // Step 2: Form
-                            <div className="space-y-6">
+                            <div className="space-y-5">
                                 <div>
-                                    <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">Assumption Statement</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Assumption</label>
                                     <textarea
-                                        className="w-full p-4 border border-neutral-gray-300 rounded-xl focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all"
+                                        className="w-full p-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all"
                                         rows="3"
                                         placeholder="e.g., Q3 Hiring Plan will be approved by June"
                                         value={formData.description}
@@ -445,10 +549,10 @@ const AssumptionsPage = () => {
 
                                 {newAssumptionType === 'decision' && (
                                     <div>
-                                        <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">Link directly to a decision?</label>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Link to Decision (Optional)</label>
                                         <div className="relative">
                                             <select
-                                                className="w-full p-4 border border-neutral-gray-300 rounded-xl appearance-none focus:border-primary-blue focus:ring-1 focus:ring-primary-blue bg-white"
+                                                className="w-full p-4 border border-gray-300 rounded-lg appearance-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-white"
                                                 value={formData.linkToDecisionId}
                                                 onChange={e => setFormData({ ...formData, linkToDecisionId: e.target.value })}
                                             >
@@ -457,41 +561,41 @@ const AssumptionsPage = () => {
                                                     <option key={d.id} value={d.id}>{d.title}</option>
                                                 ))}
                                             </select>
-                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-gray-500 pointer-events-none" size={16} />
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={18} />
                                         </div>
                                     </div>
                                 )}
 
                                 {newAssumptionType === 'organizational' && (
-                                    <div className="p-4 bg-blue-50 text-blue-800 rounded-xl text-sm flex gap-2">
-                                        <TrendingUp size={16} className="flex-shrink-0 mt-0.5" />
-                                        <p>Organizational beliefs are global. You can link them to specific decisions later from the decision detail view.</p>
+                                    <div className="p-4 bg-blue-50 text-blue-800 rounded-lg text-sm flex gap-2 border border-blue-200">
+                                        <TrendingUp size={18} className="flex-shrink-0 mt-0.5" />
+                                        <p>Organizational assumptions apply globally. Link them to specific decisions later.</p>
                                     </div>
                                 )}
 
                                 <div className="flex justify-end gap-3 pt-4">
                                     <button
                                         onClick={() => setNewAssumptionType(null)}
-                                        className="px-6 py-2.5 text-neutral-gray-600 font-medium hover:bg-neutral-gray-100 rounded-lg transition-colors"
+                                        className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                                     >
                                         Back
                                     </button>
                                     <button
                                         onClick={handleCreate}
                                         disabled={!formData.description}
-                                        className="px-6 py-2.5 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-6 py-3 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                                     >
-                                        Create Assumption
+                                        Create
                                     </button>
                                 </div>
                             </div>
                         )}
 
                         {!newAssumptionType && (
-                            <div className="flex justify-end mt-4">
+                            <div className="flex justify-end">
                                 <button
                                     onClick={() => setShowAddModal(false)}
-                                    className="px-6 py-2.5 text-neutral-gray-600 font-medium hover:bg-neutral-gray-100 rounded-lg transition-colors"
+                                    className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -499,6 +603,15 @@ const AssumptionsPage = () => {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Assumption Conflict Resolution Modal */}
+            {selectedConflict && (
+                <AssumptionConflictModal
+                    conflict={selectedConflict}
+                    onClose={() => setSelectedConflict(null)}
+                    onResolved={handleConflictResolved}
+                />
             )}
 
         </div>

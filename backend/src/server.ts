@@ -17,9 +17,12 @@ import decisionRoutes from '@api/routes/decisions';
 import assumptionRoutes from '@api/routes/assumptions';
 import dependencyRoutes from '@api/routes/dependencies';
 import constraintRoutes from '@api/routes/constraints';
+import constraintViolationsRoutes from '@api/routes/constraint-violations';
+import assumptionConflictsRoutes from '@api/routes/assumption-conflicts';
 import profileRoutes from '@api/routes/profile';
 import timelineRoutes from '@api/routes/timeline';
 import notificationRoutes from '@api/routes/notifications';
+import timeSimulationRoutes from '@api/routes/time-simulation';
 
 // Load environment variables
 dotenv.config();
@@ -67,9 +70,12 @@ app.use('/api/decisions', decisionRoutes);
 app.use('/api/assumptions', assumptionRoutes);
 app.use('/api/dependencies', dependencyRoutes);
 app.use('/api/constraints', constraintRoutes);
+app.use('/api/constraint-violations', constraintViolationsRoutes);
+app.use('/api/assumption-conflicts', assumptionConflictsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/timeline', timelineRoutes); // Added timeline route
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/simulate-time', timeSimulationRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

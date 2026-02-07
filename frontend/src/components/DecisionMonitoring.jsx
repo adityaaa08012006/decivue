@@ -10,6 +10,7 @@ import {
   Link2,
   Target,
   Shield,
+  Lock,
   Activity,
   RefreshCw,
   Plus,
@@ -73,11 +74,12 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
   const fetchDecisionDetails = async (decisionId) => {
     try {
-      // Fetch assumptions, dependencies, and constraints in parallel
-      const [assumptions, dependencies, constraints] = await Promise.all([
+      // Fetch assumptions, dependencies, constraints, and violations in parallel
+      const [assumptions, dependencies, constraints, violations] = await Promise.all([
         api.getAssumptions(decisionId).catch(() => []),
         api.getDependencies(decisionId).catch(() => ({ dependsOn: [], blocks: [] })),
-        api.getConstraints(decisionId).catch(() => [])
+        api.getConstraints(decisionId).catch(() => []),
+        api.getConstraintViolations(decisionId).catch(() => [])
       ]);
 
       setDecisionData(prev => ({
@@ -85,7 +87,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
         [decisionId]: {
           assumptions,
           dependencies,
-          constraints
+          constraints,
+          violations
         }
       }));
     } catch (err) {
@@ -216,6 +219,18 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     } catch (err) {
       console.error('Failed to mark decision as reviewed:', err);
       showToast('error', 'Failed to mark as reviewed. Please try again.');
+    }
+  };
+
+  const handleResolveViolation = async (violationId, decisionId) => {
+    try {
+      await api.resolveConstraintViolation(violationId);
+      // Refresh decision details to update violations list
+      await fetchDecisionDetails(decisionId);
+      showToast('success', 'Constraint violation marked as resolved');
+    } catch (err) {
+      console.error('Failed to resolve violation:', err);
+      showToast('error', 'Failed to resolve violation. Please try again.');
     }
   };
 
@@ -711,6 +726,85 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         )
                       )}
                     </div>
+
+                    {/* Constraint Violations */}
+                    {decisionData[decision.id]?.violations?.length > 0 && (
+                      <div className="mt-4 bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertCircle className="w-5 h-5 text-red-600" />
+                          <h4 className="font-semibold text-red-900">Constraint Violations</h4>
+                        </div>
+                        <div className="space-y-3">
+                          {decisionData[decision.id].violations.map(violation => (
+                            <div key={violation.id} className="bg-white rounded-lg p-3 border border-red-200">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <p className="font-medium text-red-800 mb-1">
+                                    {violation.constraints?.name || 'Constraint'}
+                                  </p>
+                                  <p className="text-sm text-red-700 mb-2">{violation.violation_reason}</p>
+                                  <p className="text-xs text-gray-600">
+                                    Detected: {new Date(violation.detected_at).toLocaleString()}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleResolveViolation(violation.id, decision.id)}
+                                  className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors whitespace-nowrap"
+                                >
+                                  Resolve
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Organizational Constraints */}
+                    {decisionData[decision.id]?.constraints?.length > 0 && (
+                      <div className="mt-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Shield className="w-5 h-5 text-blue-600" />
+                          <h4 className="font-semibold text-blue-900">Organizational Constraints</h4>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                            {decisionData[decision.id].constraints.length}
+                          </span>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-auto">
+                            Auto-Applied
+                          </span>
+                        </div>
+                        <p className="text-sm text-blue-700 mb-3">
+                          All organizational constraints automatically apply to every decision. These are non-negotiable organizational facts.
+                        </p>
+                        <div className="space-y-2">
+                          {decisionData[decision.id].constraints.map(constraint => (
+                            <div key={constraint.id} className="bg-white rounded-lg p-3 border border-blue-200">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <p className="font-medium text-blue-900 mb-1">
+                                    {constraint.name}
+                                  </p>
+                                  {constraint.description && (
+                                    <p className="text-sm text-gray-700 mb-2">{constraint.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-3 text-xs text-gray-600">
+                                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                      {constraint.constraint_type || 'OTHER'}
+                                    </span>
+                                    {constraint.is_immutable && (
+                                      <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                        <Lock className="w-3 h-3" />
+                                        Immutable
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Feature 4: Conflicts */}
                     <div>
