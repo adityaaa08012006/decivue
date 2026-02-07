@@ -65,42 +65,53 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
       return res.json(uniqueAssumptions);
     } else {
-      // Get all assumptions, optionally filtered by scope
-      let query = db
+      // Get all assumptions with their linked decisions
+      const { data: assumptions, error: assumptionsError } = await db
         .from('assumptions')
-        .select(`
-          *,
-          decision_assumptions (
-            decision_id,
-            decisions (
-              id,
-              title
-            )
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
+      if (assumptionsError) throw assumptionsError;
+
+      // Get all decision links
+      const { data: links, error: linksError } = await db
+        .from('decision_assumptions')
+        .select(`
+          assumption_id,
+          decisions (
+            id,
+            title
+          )
+        `);
+
+      if (linksError) throw linksError;
+
+      // Filter by scope if requested
+      let filteredAssumptions = assumptions || [];
       if (scope) {
-        query = query.eq('scope', scope);
+        filteredAssumptions = filteredAssumptions.filter((a: any) => a.scope === scope);
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
+      // Build a map of assumption_id -> decision titles
+      const linkMap = new Map<string, string[]>();
+      (links || []).forEach((link: any) => {
+        if (link.decisions) {
+          const existing = linkMap.get(link.assumption_id) || [];
+          existing.push(link.decisions.title);
+          linkMap.set(link.assumption_id, existing);
+        }
+      });
 
       // Transform data to include decision count and titles
-      const enrichedData = (data || []).map((a: any) => {
-        const linkedDecisions = a.decision_assumptions || [];
-        const decisionTitles = linkedDecisions
-          .filter((da: any) => da.decisions)
-          .map((da: any) => da.decisions.title);
+      const enrichedData = filteredAssumptions.map((a: any) => {
+        const decisionTitles = linkMap.get(a.id) || [];
         
         return {
           ...a,
-          decisionCount: linkedDecisions.length,
+          decisionCount: decisionTitles.length,
           linkedDecisionTitle: a.scope === 'UNIVERSAL' 
             ? 'All Decisions' 
-            : linkedDecisions.length > 0 
+            : decisionTitles.length > 0 
               ? decisionTitles.join(', ')
               : 'Unlinked'
         };

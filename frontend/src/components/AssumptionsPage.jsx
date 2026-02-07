@@ -195,7 +195,12 @@ const AssumptionsPage = () => {
                                                     <div className="bg-neutral-gray-50 rounded-xl p-4 border border-neutral-gray-100">
                                                         <div className="flex items-center gap-2 mb-3">
                                                             <div className="w-2 h-2 bg-neutral-gray-400 rounded-full"></div>
-                                                            <span className="text-sm font-semibold text-neutral-gray-700">Supports {assumption.decisionCount} Decisions</span>
+                                                            <span className="text-sm font-semibold text-neutral-gray-700">
+                                                                {assumption.scope === 'UNIVERSAL' 
+                                                                    ? '🌐 Applies Universally' 
+                                                                    : `Supports ${assumption.decisionCount} Decision${assumption.decisionCount !== 1 ? 's' : ''}`
+                                                                }
+                                                            </span>
                                                         </div>
                                                         <div className="space-y-2">
                                                             {assumption.impactedDecisions?.slice(0, 3).map((d, idx) => (
@@ -204,7 +209,7 @@ const AssumptionsPage = () => {
                                                                     {d.title}
                                                                 </div>
                                                             ))}
-                                                            {assumption.decisionCount > 3 && (
+                                                            {assumption.scope !== 'UNIVERSAL' && assumption.decisionCount > 3 && (
                                                                 <div className="pl-8 text-xs text-neutral-gray-500">
                                                                     + {assumption.decisionCount - 3} more...
                                                                 </div>
@@ -237,7 +242,7 @@ const AssumptionsPage = () => {
                                                             {assumption.description}
                                                         </div>
                                                         <div className="col-span-4 text-sm text-neutral-gray-600">
-                                                            {assumption.impactedDecisions?.[0]?.title || 'Unlinked'}
+                                                            {assumption.linkedDecisionTitle || assumption.impactedDecisions?.[0]?.title || 'Unlinked'}
                                                         </div>
                                                         <div className="col-span-2">
                                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadge(assumption.status)}`}>
