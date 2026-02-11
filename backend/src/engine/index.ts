@@ -32,8 +32,11 @@ export class DeterministicEngine implements IDecisionEngine {
    */
   evaluate(input: EvaluationInput): EvaluationOutput {
     const trace: EvaluationStep[] = [];
-    let lifecycle = input.decision.lifecycle;
-    let healthSignal = input.decision.healthSignal;
+    // Always start from ACTIVE lifecycle unless constraints/assumptions force invalidation
+    let lifecycle = input.decision.lifecycle === DecisionLifecycle.INVALIDATED 
+      ? DecisionLifecycle.ACTIVE 
+      : input.decision.lifecycle;
+    let healthSignal = 100; // Start fresh at 100 and recalculate
     let invalidatedReason: string | undefined = undefined;
 
     // Step 1: Validate constraints
@@ -56,9 +59,13 @@ export class DeterministicEngine implements IDecisionEngine {
     if (lifecycle !== DecisionLifecycle.INVALIDATED) {
       const assumptionResult = this.checkAssumptions(input, trace);
       if (!assumptionResult.passed) {
+        // Hard fail from universal assumptions or too many specific failures
         lifecycle = DecisionLifecycle.INVALIDATED;
         healthSignal = 0;
         invalidatedReason = 'broken_assumptions';
+      } else {
+        // Apply proportional health penalty from decision-specific assumptions
+        healthSignal = Math.max(0, healthSignal - assumptionResult.healthPenalty);
       }
     }
 
@@ -172,26 +179,73 @@ export class DeterministicEngine implements IDecisionEngine {
 
   /**
    * Phase 3: Check assumptions
-   * Status represents drift: HOLDING (stable), SHAKY (deteriorating), BROKEN (invalidated)
+   * Status represents drift: VALID (stable), SHAKY (deteriorating), BROKEN (invalidated)
+   * 
+   * STRATEGY:
+   * - Universal assumptions: Strict - ANY broken universal assumption immediately invalidates
+   * - Decision-specific assumptions: Proportional - Health reduces proportionally to broken count
    */
   private checkAssumptions(
     input: EvaluationInput,
     trace: EvaluationStep[]
-  ): { passed: boolean } {
-    const brokenAssumptions = input.assumptions.filter(a => a.status === 'BROKEN');
+  ): { passed: boolean; healthPenalty: number } {
+    // Separate universal and decision-specific assumptions
+    const universalAssumptions = input.assumptions.filter(a => 
+      (a as any).scope === 'UNIVERSAL' || (a as any).isUniversal
+    );
+    const decisionSpecificAssumptions = input.assumptions.filter(a => 
+      (a as any).scope === 'DECISION_SPECIFIC' || !(a as any).scope && !(a as any).isUniversal
+    );
+
+    const brokenUniversal = universalAssumptions.filter(a => a.status === 'BROKEN');
+    const brokenSpecific = decisionSpecificAssumptions.filter(a => a.status === 'BROKEN');
+
+    let passed = true;
+    let healthPenalty = 0;
+    let details = '';
+
+    // Check universal assumptions (strict - any broken = fail)
+    if (brokenUniversal.length > 0) {
+      passed = false;
+      details = `CRITICAL: ${brokenUniversal.length} universal assumption(s) broken - decision invalidated`;
+    } 
+    // Check decision-specific assumptions (proportional penalty)
+    else if (decisionSpecificAssumptions.length > 0) {
+      const specificBrokenPercent = (brokenSpecific.length / decisionSpecificAssumptions.length);
+      healthPenalty = Math.floor(specificBrokenPercent * 60); // Max 60 point penalty
+      
+      if (brokenSpecific.length === 0) {
+        details = `All ${input.assumptions.length} assumptions are valid`;
+      } else {
+        details = `${brokenSpecific.length} of ${decisionSpecificAssumptions.length} decision-specific assumptions broken (${Math.round(specificBrokenPercent * 100)}% failure) - health penalty: -${healthPenalty} points`;
+        // If too many decision-specific assumptions fail, still invalidate
+        if (specificBrokenPercent >= 0.7) { // 70% or more broken
+          passed = false;
+          details += ' - exceeds threshold, decision invalidated';
+        }
+      }
+    } else if (universalAssumptions.length > 0 && brokenUniversal.length === 0) {
+      details = `All ${universalAssumptions.length} universal assumptions are valid`;
+    } else {
+      details = 'No assumptions to evaluate';
+    }
 
     const step: EvaluationStep = {
       step: 'assumption_check',
-      passed: brokenAssumptions.length === 0,
-      details:
-        brokenAssumptions.length === 0
-          ? `All ${input.assumptions.length} assumptions are holding`
-          : `${brokenAssumptions.length} broken assumptions detected (drift invalidates decision)`,
-      timestamp: new Date()
+      passed,
+      details,
+      timestamp: new Date(),
+      metadata: {
+        universalTotal: universalAssumptions.length,
+        universalBroken: brokenUniversal.length,
+        specificTotal: decisionSpecificAssumptions.length,
+        specificBroken: brokenSpecific.length,
+        healthPenalty
+      }
     };
 
     trace.push(step);
-    return { passed: step.passed };
+    return { passed, healthPenalty };
   }
 
   /**

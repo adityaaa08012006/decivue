@@ -29,6 +29,7 @@
       "@engine/*": ["src/engine/*"],
       "@events/*": ["src/events/*"],
       "@data/*": ["src/data/*"],
+      "@services/*": ["src/services/*"],
       "@utils/*": ["src/utils/*"]
     }
   },

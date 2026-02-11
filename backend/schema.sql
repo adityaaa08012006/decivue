@@ -45,14 +45,14 @@ CREATE INDEX IF NOT EXISTS idx_decisions_invalidated ON decisions(lifecycle) WHE
 CREATE TABLE IF NOT EXISTS assumptions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   description TEXT NOT NULL UNIQUE, -- Global assumptions must be unique
-  status TEXT NOT NULL CHECK (status IN ('HOLDING', 'SHAKY', 'BROKEN')) DEFAULT 'HOLDING',
+  status TEXT NOT NULL CHECK (status IN ('VALID', 'SHAKY', 'BROKEN')) DEFAULT 'VALID',
   validated_at TIMESTAMPTZ,
   metadata JSONB DEFAULT '{}'::JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE assumptions IS 'Global, reusable assumptions. Not tied to single decisions.';
-COMMENT ON COLUMN assumptions.status IS 'Represents drift from original state: HOLDING (stable) | SHAKY (deteriorating) | BROKEN (invalidated)';
+COMMENT ON COLUMN assumptions.status IS 'Represents drift from original state: VALID (stable) | SHAKY (deteriorating) | BROKEN (invalidated)';
 COMMENT ON COLUMN assumptions.description IS 'Must be unique. Assumptions are shared across decisions.';
 
 -- Index for faster status lookups

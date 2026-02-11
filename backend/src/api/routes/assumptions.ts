@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '@data/database';
+import { AssumptionValidationService } from '../../services/assumption-validation-service';
 
 const router = Router();
 
@@ -135,7 +136,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       .from('assumptions')
       .upsert({
         description,
-        status: status || 'HOLDING',
+        status: status || 'VALID',
         scope: scope || 'DECISION_SPECIFIC',
         metadata: metadata || {}
       }, { onConflict: 'description' })
@@ -281,10 +282,34 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
     const db = getDatabase();
 
+    // Get current assumption state for validation
+    const { data: currentAssumption } = await db
+      .from('assumptions')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!currentAssumption) {
+      return res.status(404).json({ error: 'Assumption not found' });
+    }
+
+    // Validate status change if status is being updated
+    let validationResult = null;
+    if (status !== undefined && status !== currentAssumption.status) {
+      validationResult = await AssumptionValidationService.validateStatusChange(
+        id,
+        status,
+        currentAssumption.status
+      );
+    }
+
     // Build update object with only provided fields
     const updateData: any = {};
     if (description !== undefined) updateData.description = description;
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined) {
+      updateData.status = status;
+      updateData.validated_at = new Date().toISOString(); // Update validation timestamp
+    }
     if (scope !== undefined) updateData.scope = scope;
     if (metadata !== undefined) updateData.metadata = metadata;
 
@@ -292,6 +317,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
+    // Perform the update
     const { data, error } = await db
       .from('assumptions')
       .update(updateData)
@@ -304,7 +330,24 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       return res.status(404).json({ error: 'Assumption not found' });
     }
 
-    return res.json(data);
+    // If status changed, trigger re-evaluation of linked decisions
+    if (status !== undefined && status !== currentAssumption.status) {
+      // Fire and forget - don't wait for re-evaluation
+      AssumptionValidationService.reEvaluateLinkedDecisions(id).catch((err) => {
+        console.error('Failed to re-evaluate linked decisions:', err);
+      });
+    }
+
+    // Return response with validation warning if applicable
+    return res.json({
+      ...data,
+      validation: validationResult && !validationResult.isValid ? {
+        warning: true,
+        suggestedStatus: validationResult.suggestedStatus,
+        reason: validationResult.reason,
+        confidence: validationResult.confidence
+      } : null
+    });
   } catch (error) {
     return next(error);
   }

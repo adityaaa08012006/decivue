@@ -4,7 +4,7 @@
  * PHILOSOPHY:
  * - Assumptions are NOT tied to single decisions - they are global and reusable
  * - Status represents DRIFT from the original state, not absolute truth
- * - HOLDING: assumption is stable
+ * - VALID: assumption is stable
  * - SHAKY: assumption is deteriorating but not yet broken
  * - BROKEN: assumption no longer holds, invalidates dependent decisions
  *
@@ -12,7 +12,7 @@
  */
 
 export enum AssumptionStatus {
-  HOLDING = 'HOLDING',   // Stable, assumptions holds true
+  VALID = 'VALID',       // Stable, assumptions holds true
   SHAKY = 'SHAKY',       // Deteriorating, needs attention
   BROKEN = 'BROKEN'      // No longer valid, invalidates decisions
 }

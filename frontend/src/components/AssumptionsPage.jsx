@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X, Shield } from 'lucide-react';
+import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X, Shield, Edit2 } from 'lucide-react';
 import api from '../services/api';
 import AssumptionConflictModal from './AssumptionConflictModal';
+import ConflictResolutionModal from './ConflictResolutionModal';
 
 const AssumptionsPage = () => {
     const [activeTab, setActiveTab] = useState('all'); // all, organizational, decision
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingAssumption, setEditingAssumption] = useState(null); // Assumption being edited
     const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
     const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, description, type }
 
@@ -14,6 +17,7 @@ const AssumptionsPage = () => {
     const [conflicts, setConflicts] = useState([]);
     const [selectedConflict, setSelectedConflict] = useState(null);
     const [detectingConflicts, setDetectingConflicts] = useState(false);
+    const [resolvingConflict, setResolvingConflict] = useState(null); // Conflict to resolve
 
     // Data State
     const [assumptions, setAssumptions] = useState([]);
@@ -28,12 +32,13 @@ const AssumptionsPage = () => {
         fetchData();
     }, []);
 
-    // Auto-dismiss toast after 4 seconds
+    // Auto-dismiss toast after 4 seconds (or 8 seconds for errors)
     useEffect(() => {
         if (toast) {
+            const duration = toast.type === 'error' ? 8000 : 4000;
             const timer = setTimeout(() => {
                 setToast(null);
-            }, 4000);
+            }, duration);
             return () => clearTimeout(timer);
         }
     }, [toast]);
@@ -79,25 +84,73 @@ const AssumptionsPage = () => {
     };
 
     const handleConflictResolved = async () => {
-        // Refetch conflicts after resolution
-        const conflictsData = await api.getAssumptionConflicts(false);
+        // Refetch conflicts and assumptions after resolution
+        const [conflictsData, assumptionsData] = await Promise.all([
+            api.getAssumptionConflicts(false),
+            api.getAssumptions()
+        ]);
         setConflicts(conflictsData || []);
-        showToast('success', 'Conflict resolved successfully');
+        setAssumptions(assumptionsData || []);
+        showToast('success', 'Conflict resolved successfully! Affected decisions will be re-evaluated.');
+    };
+
+    const handleResolveConflict = async (conflictId, resolutionAction, resolutionNotes) => {
+        await api.resolveAssumptionConflict(conflictId, resolutionAction, resolutionNotes);
+        setResolvingConflict(null);
+        await handleConflictResolved();
     };
 
     const handleCreate = async () => {
         try {
             await api.createAssumption({
                 description: formData.description,
-                status: 'HOLDING',
+                status: 'VALID',
                 linkToDecisionId: formData.linkToDecisionId || undefined
             });
             setShowAddModal(false);
             setNewAssumptionType(null);
             setFormData({ description: '', linkToDecisionId: '' });
+            showToast('success', 'Assumption created successfully');
             fetchData(); // Refresh list
         } catch (error) {
             console.error("Failed to create assumption:", error);
+            showToast('error', 'Failed to create assumption. Please try again.');
+        }
+    };
+
+    const handleEditAssumption = (assumption) => {
+        setEditingAssumption({
+            id: assumption.id,
+            description: assumption.description,
+            status: assumption.status,
+            scope: assumption.scope
+        });
+        setShowEditModal(true);
+    };
+
+    const handleUpdateAssumption = async () => {
+        if (!editingAssumption) return;
+
+        try {
+            const response = await api.updateAssumption(editingAssumption.id, {
+                description: editingAssumption.description,
+                status: editingAssumption.status
+            });
+
+            setShowEditModal(false);
+            setEditingAssumption(null);
+
+            // Check if there's a validation warning
+            if (response.validation?.warning) {
+                showToast('error', `⚠️ Status Mismatch: ${response.validation.reason} (Suggested: ${response.validation.suggestedStatus})`);
+            } else {
+                showToast('success', 'Assumption updated successfully');
+            }
+
+            fetchData(); // Refresh list
+        } catch (error) {
+            console.error("Failed to update assumption:", error);
+            showToast('error', 'Failed to update assumption. Please try again.');
         }
     };
 
@@ -138,7 +191,8 @@ const AssumptionsPage = () => {
 
     const getStatusLabel = (status) => {
         switch (status) {
-            case 'HOLDING': return 'Stable';
+            case 'VALID': return 'Valid';
+            case 'HOLDING': return 'Valid'; // Backward compatibility
             case 'SHAKY': return 'Watching';
             case 'BROKEN': return 'Broken';
             default: return 'Unknown';
@@ -147,7 +201,8 @@ const AssumptionsPage = () => {
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'HOLDING': return 'bg-green-100 text-status-green border-green-200';
+            case 'VALID': return 'bg-green-100 text-status-green border-green-200';
+            case 'HOLDING': return 'bg-green-100 text-status-green border-green-200'; // Backward compatibility
             case 'SHAKY': return 'bg-orange-100 text-status-orange border-orange-200';
             case 'BROKEN': return 'bg-red-100 text-status-red border-red-200';
             default: return 'bg-gray-100 text-neutral-gray-600 border-gray-200';
@@ -323,17 +378,29 @@ const AssumptionsPage = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {orgAssumptions.map((assumption) => (
                                                 <div key={assumption.id} className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-all group relative">
-                                                    {/* Delete Button */}
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteAssumption(assumption.id, assumption.description);
-                                                        }}
-                                                        className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Delete assumption"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                    {/* Action Buttons */}
+                                                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditAssumption(assumption);
+                                                            }}
+                                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Edit assumption"
+                                                        >
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteAssumption(assumption.id, assumption.description);
+                                                            }}
+                                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Delete assumption"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
 
                                                     <div className="flex justify-between items-start mb-3">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(assumption.status)}`}>
@@ -405,7 +472,17 @@ const AssumptionsPage = () => {
                                                                 {getStatusLabel(assumption.status)}
                                                             </span>
                                                         </div>
-                                                        <div className="col-span-1 flex justify-end">
+                                                        <div className="col-span-1 flex justify-end gap-2">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEditAssumption(assumption);
+                                                                }}
+                                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                title="Edit assumption"
+                                                            >
+                                                                <Edit2 size={18} />
+                                                            </button>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -466,7 +543,7 @@ const AssumptionsPage = () => {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                setSelectedConflict(conflict);
+                                                                setResolvingConflict(conflict);
                                                             }}
                                                             className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors"
                                                         >
@@ -605,12 +682,92 @@ const AssumptionsPage = () => {
                 </div>
             )}
 
+            {/* Edit Modal */}
+            {showEditModal && editingAssumption && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
+                        <h2 className="text-2xl font-bold text-black mb-6">Edit Assumption</h2>
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                                <textarea
+                                    className="w-full p-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all"
+                                    rows="3"
+                                    placeholder="e.g., Q3 Hiring Plan will be approved by June"
+                                    value={editingAssumption.description}
+                                    onChange={e => setEditingAssumption({ ...editingAssumption, description: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                                <div className="flex gap-3">
+                                    {['VALID', 'SHAKY', 'BROKEN'].map((status) => (
+                                        <button
+                                            key={status}
+                                            onClick={() => setEditingAssumption({ ...editingAssumption, status })}
+                                            className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
+                                                editingAssumption.status === status
+                                                    ? status === 'VALID'
+                                                        ? 'bg-green-500 text-white border-2 border-green-600'
+                                                        : status === 'SHAKY'
+                                                        ? 'bg-orange-500 text-white border-2 border-orange-600'
+                                                        : 'bg-red-500 text-white border-2 border-red-600'
+                                                    : 'bg-gray-100 text-gray-700 border-2 border-gray-200 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {status === 'VALID' ? '✓ Valid' : status === 'SHAKY' ? '⚠ Watching' : '✗ Broken'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {editingAssumption.scope === 'UNIVERSAL' && (
+                                <div className="p-4 bg-blue-50 text-blue-800 rounded-lg text-sm flex gap-2 border border-blue-200">
+                                    <Shield size={18} className="flex-shrink-0 mt-0.5" />
+                                    <p>This is a <strong>Universal (Organizational)</strong> assumption. Changes will affect all linked decisions.</p>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button
+                                    onClick={() => {
+                                        setShowEditModal(false);
+                                        setEditingAssumption(null);
+                                    }}
+                                    className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleUpdateAssumption}
+                                    disabled={!editingAssumption.description}
+                                    className="px-6 py-3 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Assumption Conflict Resolution Modal */}
             {selectedConflict && (
                 <AssumptionConflictModal
                     conflict={selectedConflict}
                     onClose={() => setSelectedConflict(null)}
                     onResolved={handleConflictResolved}
+                />
+            )}
+
+            {/* New Conflict Resolution Modal */}
+            {resolvingConflict && (
+                <ConflictResolutionModal
+                    conflict={resolvingConflict}
+                    onResolve={handleResolveConflict}
+                    onClose={() => setResolvingConflict(null)}
                 />
             )}
 

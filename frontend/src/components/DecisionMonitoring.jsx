@@ -77,12 +77,35 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
       const data = await api.getDecisions();
       setDecisions(data);
       setError(null);
+      
+      // Auto-evaluate all decisions that need it (stale health or newly loaded)
+      autoEvaluateDecisions(data);
     } catch (err) {
       console.error('Failed to fetch decisions:', err);
       setError('Failed to load decisions. Please make sure the backend is running.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Auto-evaluate decisions that need evaluation
+  const autoEvaluateDecisions = async (decisionsList) => {
+    console.log('🔄 Auto-evaluating decisions on load...');
+    
+    // Evaluate all decisions silently in the background
+    for (const decision of decisionsList) {
+      try {
+        await api.evaluateDecision(decision.id);
+        console.log(`✅ Auto-evaluated: ${decision.title}`);
+      } catch (err) {
+        console.error(`Failed to auto-evaluate ${decision.title}:`, err);
+      }
+    }
+    
+    // Refresh decisions after evaluation
+    const updatedData = await api.getDecisions();
+    setDecisions(updatedData);
+    console.log('✅ All decisions auto-evaluated and refreshed');
   };
 
   const fetchDecisionDetails = async (decisionId) => {
@@ -94,6 +117,12 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
         api.getConstraints(decisionId).catch(() => []),
         api.getConstraintViolations(decisionId).catch(() => [])
       ]);
+
+      console.log(`📋 Fetched data for decision ${decisionId}:`, {
+        assumptions: assumptions?.length || 0,
+        dependencies: dependencies,
+        constraints: constraints?.length || 0
+      });
 
       setDecisionData(prev => ({
         ...prev,
@@ -232,6 +261,40 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     } catch (err) {
       console.error('Failed to mark decision as reviewed:', err);
       showToast('error', 'Failed to mark as reviewed. Please try again.');
+    }
+  };
+
+  const handleEvaluateNow = async (decisionId, decisionTitle) => {
+    try {
+      console.log('🔄 Starting evaluation for:', decisionId, decisionTitle);
+      showToast('info', `Evaluating "${decisionTitle}"...`);
+      
+      const result = await api.evaluateDecision(decisionId);
+      console.log('✅ Evaluation result:', result);
+      
+      await fetchDecisions(); // Refresh the list to show updated health
+      
+      // Show detailed result
+      const healthChange = result.evaluation?.healthChange || 0;
+      const lifecycleChanged = result.evaluation?.lifecycleChanged;
+      
+      let message = `Evaluation complete for "${decisionTitle}". `;
+      if (healthChange > 0) {
+        message += `Health improved by ${healthChange} points! ✨`;
+      } else if (healthChange < 0) {
+        message += `Health decreased by ${Math.abs(healthChange)} points. ⚠️`;
+      } else {
+        message += `Health unchanged (${result.evaluation?.newHealth}/100).`;
+      }
+      
+      if (lifecycleChanged) {
+        message += ` Lifecycle changed to ${result.evaluation?.newLifecycle}.`;
+      }
+      
+      showToast(healthChange >= 0 ? 'success' : 'warning', message);
+    } catch (err) {
+      console.error('❌ Failed to evaluate decision:', err);
+      showToast('error', `Failed to evaluate "${decisionTitle}". Error: ${err.message}`);
     }
   };
 
@@ -479,6 +542,16 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          handleEvaluateNow(decision.id, decision.title);
+                        }}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Evaluate now"
+                      >
+                        <RefreshCw size={18} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleMarkReviewed(decision.id, decision.title);
                         }}
                         className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -617,7 +690,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           </div>
                           <div className="space-y-2">
                             {decisionData[decision.id].assumptions.filter(a => a.scope === 'UNIVERSAL').map(assumption => {
-                              const isHolding = assumption.status === 'HOLDING';
+                              const isValid = assumption.status === 'VALID' || assumption.status === 'HOLDING'; // Support both
                               const isShaky = assumption.status === 'SHAKY';
                               const isBroken = assumption.status === 'BROKEN';
                               const hasConflicts = assumption.conflicts && assumption.conflicts.length > 0;
@@ -630,7 +703,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                     'bg-purple-50 border-purple-200'
                                   }`}>
                                     <div className="flex items-start gap-2">
-                                      {isHolding ? (
+                                      {isValid ? (
                                         <CheckCircle size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
                                       ) : isShaky ? (
                                         <AlertCircle size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
@@ -641,9 +714,9 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                         <p className="text-sm font-medium text-gray-800">{assumption.description}</p>
                                         <div className="flex items-center gap-3 mt-1">
                                           <span className={`text-xs font-semibold ${
-                                            isHolding ? 'text-purple-600' : isShaky ? 'text-orange-600' : 'text-red-600'
+                                            isValid ? 'text-purple-600' : isShaky ? 'text-orange-600' : 'text-red-600'
                                           }`}>
-                                            {isHolding ? '✓ Holding' : isShaky ? '⚠ Shaky' : '✗ Broken'}
+                                            {isValid ? '✓ Valid' : isShaky ? '⚠ Shaky' : '✗ Broken'}
                                           </span>
                                           <span className="text-xs text-purple-600 font-medium">🔒 Universal</span>
                                           {assumption.validated_at && (
@@ -692,7 +765,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             {decisionData[decision.id].assumptions
                               .filter(a => a.scope === 'DECISION_SPECIFIC' || !a.scope)
                               .map(assumption => {
-                              const isHolding = assumption.status === 'HOLDING';
+                              const isValid = assumption.status === 'VALID' || assumption.status === 'HOLDING'; // Support both
                               const isShaky = assumption.status === 'SHAKY';
                               const isBroken = assumption.status === 'BROKEN';
                               const hasConflicts = assumption.conflicts && assumption.conflicts.length > 0;
@@ -705,7 +778,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                     'border-gray-200'
                                   }`}>
                                     <div className="flex items-start gap-2">
-                                      {isHolding ? (
+                                      {isValid ? (
                                         <CheckCircle size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
                                       ) : isShaky ? (
                                         <AlertCircle size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
@@ -716,9 +789,9 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                         <p className="text-sm text-gray-800">{assumption.description}</p>
                                         <div className="flex items-center gap-3 mt-1">
                                           <span className={`text-xs font-semibold ${
-                                            isHolding ? 'text-teal-600' : isShaky ? 'text-orange-600' : 'text-red-600'
+                                            isValid ? 'text-teal-600' : isShaky ? 'text-orange-600' : 'text-red-600'
                                           }`}>
-                                            {isHolding ? '✓ Holding' : isShaky ? '⚠ Shaky' : '✗ Broken'}
+                                            {isValid ? '✓ Valid' : isShaky ? '⚠ Shaky' : '✗ Broken'}
                                           </span>
                                           {assumption.validated_at && (
                                             <span className="text-xs text-gray-500">

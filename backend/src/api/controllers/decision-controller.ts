@@ -126,16 +126,230 @@ export class DecisionController {
   async evaluate(req: Request, res: Response, next: NextFunction) {
     try {
       const decisionId = req.params.id;
+      const db = getDatabase();
 
-      // TODO: Fetch decision, assumptions, dependencies, and constraints
-      // For now, return a placeholder
+      logger.info(`🔄 Starting evaluation for decision: ${decisionId}`);
 
-      res.json({
-        message: 'Evaluation endpoint - to be implemented',
-        decisionId
+      // Fetch decision
+      const { data: decision, error: decisionError } = await db
+        .from('decisions')
+        .select('*')
+        .eq('id', decisionId)
+        .single();
+
+      if (decisionError || !decision) {
+        logger.error(`Decision not found: ${decisionId}`);
+        return res.status(404).json({ error: 'Decision not found' });
+      }
+
+      logger.info(`Found decision: ${decision.title}`);
+
+      // Fetch assumptions linked to this decision
+      const { data: decisionAssumptions } = await db
+        .from('decision_assumptions')
+        .select(`
+          assumption_id,
+          assumptions (
+            id,
+            description,
+            status,
+            scope,
+            created_at,
+            validated_at,
+            metadata
+          )
+        `)
+        .eq('decision_id', decisionId);
+
+      const assumptions = (decisionAssumptions || [])
+        .map((da: any) => da.assumptions)
+        .filter(Boolean)
+        .map((a: any) => ({
+          ...a,
+          scope: a.scope || 'DECISION_SPECIFIC', // Default to decision-specific if not set
+          isUniversal: false
+        }));
+
+      // Fetch universal assumptions (they apply to all decisions)
+      const { data: universalAssumptions } = await db
+        .from('assumptions')
+        .select('*')
+        .eq('scope', 'UNIVERSAL');
+
+      const universalWithFlag = (universalAssumptions || []).map(a => ({
+        ...a,
+        isUniversal: true
+      }));
+
+      const allAssumptions = [...assumptions, ...universalWithFlag];
+
+      // Fetch constraints
+      const { data: decisionConstraints } = await db
+        .from('decision_constraints')
+        .select(`
+          constraint_id,
+          constraints (
+            id,
+            name,
+            description,
+            constraint_type,
+            rule_expression,
+            is_immutable,
+            created_at
+          )
+        `)
+        .eq('decision_id', decisionId);
+
+      const constraints = (decisionConstraints || [])
+        .map((dc: any) => dc.constraints)
+        .filter(Boolean);
+
+      logger.info(`📋 Evaluation context:`);
+      logger.info(`   - Decision-specific assumptions: ${assumptions.length}`);
+      logger.info(`   - Universal assumptions: ${(universalAssumptions || []).length}`);
+      logger.info(`   - Total assumptions: ${allAssumptions.length}`);
+      logger.info(`   - Broken assumptions: ${allAssumptions.filter(a => a.status === 'BROKEN').length}`);
+      logger.info(`   - VALID assumptions: ${allAssumptions.filter(a => a.status === 'VALID').length}`);
+      logger.info(`   - SHAKY assumptions: ${allAssumptions.filter(a => a.status === 'SHAKY').length}`);
+      allAssumptions.forEach(a => {
+        logger.info(`     → ${a.scope || 'DECISION_SPECIFIC'}: ${a.status} - ${a.description.substring(0, 50)}...`);
+      });
+      logger.info(`   - Constraints: ${constraints.length}`);
+
+      // Fetch dependencies
+      const { data: dependencies } = await db
+        .from('dependencies')
+        .select('*')
+        .or(`source_decision_id.eq.${decisionId},target_decision_id.eq.${decisionId}`);
+
+      // Build evaluation input
+      const evaluationInput = {
+        decision: {
+          id: decision.id,
+          title: decision.title,
+          description: decision.description,
+          lifecycle: decision.lifecycle,
+          healthSignal: decision.health_signal,
+          lastReviewedAt: decision.last_reviewed_at ? new Date(decision.last_reviewed_at) : undefined,
+          createdAt: new Date(decision.created_at),
+          expiryDate: decision.expiry_date ? new Date(decision.expiry_date) : undefined,
+          metadata: decision.metadata || {}
+        },
+        assumptions: allAssumptions.map((a: any) => ({
+          id: a.id,
+          description: a.description,
+          status: a.status,
+          scope: a.scope || 'DECISION_SPECIFIC',
+          isUniversal: a.isUniversal || false,
+          createdAt: a.created_at ? new Date(a.created_at) : new Date(),
+          validatedAt: a.validated_at ? new Date(a.validated_at) : undefined,
+          metadata: a.metadata || {}
+        })),
+        constraints: constraints.map((c: any) => ({
+          id: c.id,
+          name: c.name || c.constraint_name || '',
+          description: c.description || '',
+          constraintType: c.constraint_type || 'OTHER',
+          ruleExpression: c.rule_expression || c.rule_definition,
+          isImmutable: c.is_immutable !== false,
+          createdAt: c.created_at ? new Date(c.created_at) : new Date(),
+          constraint_name: c.name || c.constraint_name,
+          constraint_type: c.constraint_type,
+          rule_definition: c.rule_expression || c.rule_definition,
+          scope: c.scope
+        })),
+        dependencies: (dependencies || []).map((d: any) => ({
+          id: d.id,
+          sourceDecisionId: d.source_decision_id,
+          targetDecisionId: d.target_decision_id,
+          dependencyType: d.dependency_type,
+          description: d.description,
+          isBlocking: d.is_blocking,
+          createdAt: d.created_at ? new Date(d.created_at) : new Date()
+        })),
+        currentTimestamp: getCurrentTime()
+      };
+
+      // Run evaluation engine
+      const result = this.engine.evaluate(evaluationInput);
+
+      logger.info(`📊 Evaluation result:`);
+      logger.info(`   - Old health: ${decision.health_signal}`);
+      logger.info(`   - New health: ${result.newHealthSignal}`);
+      logger.info(`   - Health change: ${result.newHealthSignal - decision.health_signal}`);
+      logger.info(`   - Old lifecycle: ${decision.lifecycle}`);
+      logger.info(`   - New lifecycle: ${result.newLifecycle}`);
+      logger.info(`   - Invalidated reason: ${result.invalidatedReason || 'none'}`);
+      logger.info(`   - Changes detected: ${result.changesDetected}`);
+
+      // Update decision with new health and lifecycle
+      const { error: updateError } = await db
+        .from('decisions')
+        .update({
+          health_signal: result.newHealthSignal,
+          lifecycle: result.newLifecycle,
+          invalidated_reason: result.invalidatedReason || null
+        })
+        .eq('id', decisionId);
+
+      if (updateError) {
+        logger.error(`Failed to update decision after evaluation: ${updateError.message}`);
+        return res.status(500).json({ error: 'Failed to update decision' });
+      }
+
+      // Record in evaluation history
+      await db.from('evaluation_history').insert({
+        decision_id: decisionId,
+        old_lifecycle: decision.lifecycle,
+        new_lifecycle: result.newLifecycle,
+        old_health_signal: decision.health_signal,
+        new_health_signal: result.newHealthSignal,
+        invalidated_reason: result.invalidatedReason || null,
+        trace: result.trace || {},
+        evaluated_at: getCurrentTime().toISOString()
+      });
+
+      logger.info(`Decision ${decisionId} evaluated`, {
+        oldHealth: decision.health_signal,
+        newHealth: result.newHealthSignal,
+        oldLifecycle: decision.lifecycle,
+        newLifecycle: result.newLifecycle
+      });
+
+      // Emit event
+      await eventBus.emit({
+        id: uuidv4(),
+        type: EventType.DECISION_EVALUATED,
+        timestamp: getCurrentTime(),
+        decisionId,
+        oldHealth: decision.health_signal,
+        newHealth: result.newHealthSignal,
+        healthChange: result.newHealthSignal - decision.health_signal
+      });
+
+      // Return updated decision
+      const { data: updatedDecision } = await db
+        .from('decisions')
+        .select('*')
+        .eq('id', decisionId)
+        .single();
+
+      return res.json({
+        decision: updatedDecision,
+        evaluation: {
+          oldHealth: decision.health_signal,
+          newHealth: result.newHealthSignal,
+          healthChange: result.newHealthSignal - decision.health_signal,
+          oldLifecycle: decision.lifecycle,
+          newLifecycle: result.newLifecycle,
+          lifecycleChanged: decision.lifecycle !== result.newLifecycle,
+          invalidatedReason: result.invalidatedReason,
+          trace: result.trace
+        }
       });
     } catch (error) {
-      next(error);
+      logger.error('Evaluation failed', { error });
+      return next(error);
     }
   }
 

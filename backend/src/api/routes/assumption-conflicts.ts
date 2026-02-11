@@ -8,6 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '@data/database';
 import { AssumptionConflictDetector } from '../../services/assumption-conflict-detector';
 import { logger } from '@utils/logger';
+import { getCurrentTime } from './time-simulation';
 
 const router = Router();
 const detector = new AssumptionConflictDetector();
@@ -175,7 +176,7 @@ router.put('/:id/resolve', async (req: Request, res: Response, next: NextFunctio
     const { data: resolvedConflict, error: updateError } = await db
       .from('assumption_conflicts')
       .update({
-        resolved_at: new Date().toISOString(),
+        resolved_at: getCurrentTime().toISOString(),
         resolution_action: resolutionAction,
         resolution_notes: resolutionNotes || null,
       })
@@ -189,23 +190,72 @@ router.put('/:id/resolve', async (req: Request, res: Response, next: NextFunctio
     if (resolutionAction === 'VALIDATE_A') {
       await db
         .from('assumptions')
-        .update({ status: 'VALIDATED' })
+        .update({ status: 'VALID' }) // Valid status
         .eq('id', conflict.assumption_a_id);
+      
+      // Mark the other assumption as BROKEN
+      await db
+        .from('assumptions')
+        .update({ status: 'BROKEN' })
+        .eq('id', conflict.assumption_b_id);
     } else if (resolutionAction === 'VALIDATE_B') {
       await db
         .from('assumptions')
-        .update({ status: 'VALIDATED' })
+        .update({ status: 'VALID' }) // Valid status
         .eq('id', conflict.assumption_b_id);
+      
+      // Mark the other assumption as BROKEN
+      await db
+        .from('assumptions')
+        .update({ status: 'BROKEN' })
+        .eq('id', conflict.assumption_a_id);
     } else if (resolutionAction === 'DEPRECATE_BOTH') {
       await db
         .from('assumptions')
         .update({ status: 'BROKEN' })
         .in('id', [conflict.assumption_a_id, conflict.assumption_b_id]);
+    } else if (resolutionAction === 'MERGE') {
+      // Mark both as needs review for manual merge
+      await db
+        .from('assumptions')
+        .update({ status: 'VALID' })
+        .in('id', [conflict.assumption_a_id, conflict.assumption_b_id]);
+    }
+    // KEEP_BOTH - no status changes needed
+
+    // Find all decisions affected by these assumptions and trigger re-evaluation
+    const { data: affectedDecisions } = await db
+      .from('decision_assumptions')
+      .select('decision_id')
+      .in('assumption_id', [conflict.assumption_a_id, conflict.assumption_b_id]);
+
+    if (affectedDecisions && affectedDecisions.length > 0) {
+      const uniqueDecisionIds = [...new Set(affectedDecisions.map(d => d.decision_id))];
+      
+      logger.info('Triggering re-evaluation for affected decisions', {
+        conflictId: id,
+        decisionCount: uniqueDecisionIds.length,
+        decisionIds: uniqueDecisionIds
+      });
+
+      // Trigger evaluation for each affected decision
+      for (const decisionId of uniqueDecisionIds) {
+        try {
+          await fetch(`http://localhost:3001/api/decisions/${decisionId}/evaluate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          logger.info(`Re-evaluated decision ${decisionId}`);
+        } catch (evalError) {
+          logger.error(`Failed to re-evaluate decision ${decisionId}`, { error: evalError });
+        }
+      }
     }
 
     logger.info('Assumption conflict resolved', {
       conflictId: id,
       action: resolutionAction,
+      affectedDecisions: affectedDecisions?.length || 0
     });
 
     return res.json(resolvedConflict);
