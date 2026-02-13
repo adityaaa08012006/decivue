@@ -68,6 +68,13 @@ class ApiService {
     });
   }
 
+  async retireDecision(id, reason) {
+    return this.request(`/decisions/${id}/retire`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   async evaluateDecision(id) {
     return this.request(`/decisions/${id}/evaluate`, {
       method: 'POST',
@@ -306,6 +313,23 @@ class ApiService {
   // Get current simulated time
   async getCurrentTime() {
     return this.request('/simulate-time/current');
+  }
+
+  // Parameter Templates endpoints
+  async getParameterTemplates(category = null) {
+    const query = category ? `?category=${category}` : '';
+    return this.request(`/parameter-templates${query}`);
+  }
+
+  async addCustomTemplate(category, templateName) {
+    return this.request('/parameter-templates', {
+      method: 'POST',
+      body: JSON.stringify({ category, templateName }),
+    });
+  }
+
+  async getTemplateCategories() {
+    return this.request('/parameter-templates/categories');
   }
 }
 

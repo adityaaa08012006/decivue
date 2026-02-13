@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X, Shield, Edit2 } from 'lucide-react';
+import { Search, ChevronDown, Plus, AlertCircle, TrendingUp, RefreshCw, Link2, Trash2, CheckCircle, XCircle, X, Shield, Edit2, Layers } from 'lucide-react';
 import api from '../services/api';
 import AssumptionConflictModal from './AssumptionConflictModal';
 import ConflictResolutionModal from './ConflictResolutionModal';
+import StructuredAssumptionForm from './StructuredAssumptionForm';
 
 const AssumptionsPage = () => {
     const [activeTab, setActiveTab] = useState('all'); // all, organizational, decision
@@ -10,6 +11,7 @@ const AssumptionsPage = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingAssumption, setEditingAssumption] = useState(null); // Assumption being edited
+    const [editMode, setEditMode] = useState('simple'); // 'simple' | 'structured'
     const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
     const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, description, type }
 
@@ -123,8 +125,12 @@ const AssumptionsPage = () => {
             id: assumption.id,
             description: assumption.description,
             status: assumption.status,
-            scope: assumption.scope
+            scope: assumption.scope,
+            category: assumption.category,
+            parameters: assumption.parameters || {}
         });
+        // Default to structured mode if assumption has category (for conflict resolution)
+        setEditMode(assumption.category ? 'structured' : 'simple');
         setShowEditModal(true);
     };
 
@@ -132,13 +138,22 @@ const AssumptionsPage = () => {
         if (!editingAssumption) return;
 
         try {
-            const response = await api.updateAssumption(editingAssumption.id, {
+            const updateData = {
                 description: editingAssumption.description,
                 status: editingAssumption.status
-            });
+            };
+
+            // Always include structured data if it exists (regardless of edit mode)
+            if (editingAssumption.category) {
+                updateData.category = editingAssumption.category;
+                updateData.parameters = editingAssumption.parameters;
+            }
+
+            const response = await api.updateAssumption(editingAssumption.id, updateData);
 
             setShowEditModal(false);
             setEditingAssumption(null);
+            setEditMode('simple');
 
             // Check if there's a validation warning
             if (response.validation?.warning) {
@@ -148,6 +163,34 @@ const AssumptionsPage = () => {
             }
 
             fetchData(); // Refresh list
+        } catch (error) {
+            console.error("Failed to update assumption:", error);
+            showToast('error', 'Failed to update assumption. Please try again.');
+        }
+    };
+
+    const handleStructuredUpdate = async (assumptionData) => {
+        if (!editingAssumption) return;
+
+        try {
+            const updateData = {
+                ...assumptionData,
+                status: editingAssumption.status
+            };
+
+            const response = await api.updateAssumption(editingAssumption.id, updateData);
+
+            setShowEditModal(false);
+            setEditingAssumption(null);
+            setEditMode('simple');
+
+            if (response.validation?.warning) {
+                showToast('error', `⚠️ Status Mismatch: ${response.validation.reason} (Suggested: ${response.validation.suggestedStatus})`);
+            } else {
+                showToast('success', 'Assumption updated successfully');
+            }
+
+            fetchData();
         } catch (error) {
             console.error("Failed to update assumption:", error);
             showToast('error', 'Failed to update assumption. Please try again.');
@@ -685,70 +728,149 @@ const AssumptionsPage = () => {
             {/* Edit Modal */}
             {showEditModal && editingAssumption && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
-                        <h2 className="text-2xl font-bold text-black mb-6">Edit Assumption</h2>
+                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-black">Edit Assumption</h2>
+                            <button
+                                onClick={() => {
+                                    setShowEditModal(false);
+                                    setEditingAssumption(null);
+                                    setEditMode('simple');
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-lg"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                        <div className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                                <textarea
-                                    className="w-full p-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all"
-                                    rows="3"
-                                    placeholder="e.g., Q3 Hiring Plan will be approved by June"
-                                    value={editingAssumption.description}
-                                    onChange={e => setEditingAssumption({ ...editingAssumption, description: e.target.value })}
-                                />
-                            </div>
+                        {/* Mode Toggle */}
+                        <div className="mb-6 flex gap-2">
+                            <button
+                                onClick={() => setEditMode('simple')}
+                                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                                    editMode === 'simple'
+                                        ? 'bg-blue-500 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                Simple Mode
+                            </button>
+                            <button
+                                onClick={() => setEditMode('structured')}
+                                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                                    editMode === 'structured'
+                                        ? 'bg-blue-500 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                <Layers size={16} />
+                                Structured Mode (Better Conflict Detection)
+                            </button>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                                <div className="flex gap-3">
-                                    {['VALID', 'SHAKY', 'BROKEN'].map((status) => (
-                                        <button
-                                            key={status}
-                                            onClick={() => setEditingAssumption({ ...editingAssumption, status })}
-                                            className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
-                                                editingAssumption.status === status
-                                                    ? status === 'VALID'
-                                                        ? 'bg-green-500 text-white border-2 border-green-600'
-                                                        : status === 'SHAKY'
-                                                        ? 'bg-orange-500 text-white border-2 border-orange-600'
-                                                        : 'bg-red-500 text-white border-2 border-red-600'
-                                                    : 'bg-gray-100 text-gray-700 border-2 border-gray-200 hover:bg-gray-200'
-                                            }`}
-                                        >
-                                            {status === 'VALID' ? '✓ Valid' : status === 'SHAKY' ? '⚠ Watching' : '✗ Broken'}
-                                        </button>
-                                    ))}
+                        {editMode === 'simple' ? (
+                            <div className="space-y-5">
+                                {/* Warning if assumption has structured data */}
+                                {editingAssumption.category && (
+                                    <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-lg">
+                                        <div className="flex items-start gap-3">
+                                            <Layers size={20} className="flex-shrink-0 mt-0.5 text-amber-600" />
+                                            <div>
+                                                <p className="font-semibold mb-1">This assumption has structured parameters</p>
+                                                <p className="text-sm text-amber-800">
+                                                    Category: <strong>{editingAssumption.category}</strong>
+                                                    {editingAssumption.parameters?.timeframe && <> • Timeframe: <strong>{editingAssumption.parameters.timeframe}</strong></>}
+                                                    {editingAssumption.parameters?.amount && <> • Amount: <strong>{editingAssumption.parameters.amount}</strong></>}
+                                                </p>
+                                                <p className="text-sm text-amber-800 mt-2">
+                                                    💡 To resolve conflicts or change these parameters, switch to <strong>Structured Mode</strong>.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                                    <textarea
+                                        className="w-full p-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all"
+                                        rows="3"
+                                        placeholder="e.g., Q3 Hiring Plan will be approved by June"
+                                        value={editingAssumption.description}
+                                        onChange={e => setEditingAssumption({ ...editingAssumption, description: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                                    <div className="flex gap-3">
+                                        {['VALID', 'SHAKY', 'BROKEN'].map((status) => (
+                                            <button
+                                                key={status}
+                                                onClick={() => setEditingAssumption({ ...editingAssumption, status })}
+                                                className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
+                                                    editingAssumption.status === status
+                                                        ? status === 'VALID'
+                                                            ? 'bg-green-500 text-white border-2 border-green-600'
+                                                            : status === 'SHAKY'
+                                                            ? 'bg-orange-500 text-white border-2 border-orange-600'
+                                                            : 'bg-red-500 text-white border-2 border-red-600'
+                                                        : 'bg-gray-100 text-gray-700 border-2 border-gray-200 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {status === 'VALID' ? '✓ Valid' : status === 'SHAKY' ? '⚠ Watching' : '✗ Broken'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {editingAssumption.scope === 'UNIVERSAL' && (
+                                    <div className="p-4 bg-blue-50 text-blue-800 rounded-lg text-sm flex gap-2 border border-blue-200">
+                                        <Shield size={18} className="flex-shrink-0 mt-0.5" />
+                                        <p>This is a <strong>Universal (Organizational)</strong> assumption. Changes will affect all linked decisions.</p>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        onClick={() => {
+                                            setShowEditModal(false);
+                                            setEditingAssumption(null);
+                                            setEditMode('simple');
+                                        }}
+                                        className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleUpdateAssumption}
+                                        disabled={!editingAssumption.description}
+                                        className="px-6 py-3 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                    >
+                                        Save Changes
+                                    </button>
                                 </div>
                             </div>
-
-                            {editingAssumption.scope === 'UNIVERSAL' && (
-                                <div className="p-4 bg-blue-50 text-blue-800 rounded-lg text-sm flex gap-2 border border-blue-200">
-                                    <Shield size={18} className="flex-shrink-0 mt-0.5" />
-                                    <p>This is a <strong>Universal (Organizational)</strong> assumption. Changes will affect all linked decisions.</p>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    onClick={() => {
+                        ) : (
+                            <div>
+                                <StructuredAssumptionForm
+                                    existingAssumption={editingAssumption}
+                                    onSubmit={handleStructuredUpdate}
+                                    onCancel={() => {
                                         setShowEditModal(false);
                                         setEditingAssumption(null);
+                                        setEditMode('simple');
                                     }}
-                                    className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleUpdateAssumption}
-                                    disabled={!editingAssumption.description}
-                                    className="px-6 py-3 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                >
-                                    Save Changes
-                                </button>
+                                />
+
+                                {editingAssumption.scope === 'UNIVERSAL' && (
+                                    <div className="mt-4 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm flex gap-2 border border-blue-200">
+                                        <Shield size={18} className="flex-shrink-0 mt-0.5" />
+                                        <p>This is a <strong>Universal (Organizational)</strong> assumption. Changes will affect all linked decisions.</p>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}

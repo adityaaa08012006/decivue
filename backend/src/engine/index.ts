@@ -69,13 +69,36 @@ export class DeterministicEngine implements IDecisionEngine {
       }
     }
 
-    // Step 4: Apply time-based health decay (only if not already invalidated)
-    if (lifecycle !== DecisionLifecycle.INVALIDATED) {
+    // Step 4: Check for expiry-based retirement (before decay)
+    // If decision is significantly past expiry (30+ days), automatically retire it
+    if (lifecycle !== DecisionLifecycle.INVALIDATED && 
+        lifecycle !== DecisionLifecycle.RETIRED && 
+        input.decision.expiryDate) {
+      const daysUntilExpiry = 
+        (input.decision.expiryDate.getTime() - input.currentTimestamp.getTime()) /
+        (1000 * 60 * 60 * 24);
+      
+      if (daysUntilExpiry < -30) {
+        // More than 30 days past expiry - automatically retire
+        lifecycle = DecisionLifecycle.RETIRED;
+        invalidatedReason = 'expired';
+        const daysPastExpiry = Math.abs(daysUntilExpiry);
+        trace.push({
+          step: 'expiry_retirement',
+          passed: false,
+          details: `Decision expired ${Math.floor(daysPastExpiry)} days ago. Automatically retired.`,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Step 5: Apply time-based health decay (only if not already invalidated or retired)
+    if (lifecycle !== DecisionLifecycle.INVALIDATED && lifecycle !== DecisionLifecycle.RETIRED) {
       const decayResult = this.applyHealthDecay(input, trace);
       healthSignal = Math.max(0, healthSignal - decayResult.decayAmount);
     }
 
-    // Step 5: Update lifecycle state (skip if already invalidated by constraints/assumptions)
+    // Step 6: Update lifecycle state (skip if already invalidated/retired by constraints/assumptions/expiry)
     const updatedLifecycle = invalidatedReason
       ? lifecycle
       : this.determineLifecycleState(healthSignal, lifecycle, trace);

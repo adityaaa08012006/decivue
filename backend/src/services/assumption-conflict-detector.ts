@@ -1,6 +1,6 @@
 /**
  * Assumption Conflict Detector
- * Detects potential conflicts between assumptions using NLP-like strategies
+ * Detects potential conflicts between assumptions using structured data and NLP-like strategies
  */
 
 import { logger } from '../utils/logger';
@@ -10,6 +10,8 @@ export interface Assumption {
   text: string;
   status: string;
   scope?: string;
+  category?: string;
+  parameters?: Record<string, any>;
 }
 
 export interface ConflictDetectionResult {
@@ -50,10 +52,23 @@ export class AssumptionConflictDetector {
       return null;
     }
 
+    // PRIORITY 1: Structured data detection (highest confidence)
+    if (assumptionA.category && assumptionB.category && assumptionA.parameters && assumptionB.parameters) {
+      const structuredResult = this.detectStructuredConflict(assumptionA, assumptionB);
+      if (structuredResult) {
+        logger.debug('Structured conflict detected', {
+          assumptionA: assumptionA.id,
+          assumptionB: assumptionB.id,
+          confidence: structuredResult.confidenceScore,
+        });
+        return structuredResult;
+      }
+    }
+
     const textA = assumptionA.text.toLowerCase();
     const textB = assumptionB.text.toLowerCase();
 
-    // Strategy 1: Negation detection
+    // Strategy 2: Negation detection
     const negationResult = this.detectNegationConflict(textA, textB);
     if (negationResult) {
       logger.debug('Negation conflict detected', {
@@ -64,7 +79,7 @@ export class AssumptionConflictDetector {
       return negationResult;
     }
 
-    // Strategy 2: Antonym/keyword detection
+    // Strategy 3: Antonym/keyword detection
     const keywordResult = this.detectKeywordConflict(textA, textB);
     if (keywordResult) {
       logger.debug('Keyword conflict detected', {
@@ -75,7 +90,7 @@ export class AssumptionConflictDetector {
       return keywordResult;
     }
 
-    // Strategy 3: Contextual similarity with contradictory sentiment
+    // Strategy 4: Contextual similarity with contradictory sentiment
     const contextualResult = this.detectContextualConflict(textA, textB);
     if (contextualResult) {
       logger.debug('Contextual conflict detected', {
@@ -120,7 +135,158 @@ export class AssumptionConflictDetector {
   }
 
   /**
-   * Strategy 1: Detect negation-based conflicts
+   * STRATEGY 1: Detect structured parameter conflicts (HIGHEST CONFIDENCE)
+   * Uses category and parameters fields for deterministic conflict detection
+   */
+  private detectStructuredConflict(assumptionA: Assumption, assumptionB: Assumption): ConflictDetectionResult | null {
+    // Only works if both have the same category
+    if (assumptionA.category !== assumptionB.category) {
+      return null;
+    }
+
+    const paramsA = assumptionA.parameters || {};
+    const paramsB = assumptionB.parameters || {};
+
+    // Budget & Financial conflicts
+    if (assumptionA.category === 'Budget & Financial') {
+      if (paramsA.amount && paramsB.amount && paramsA.timeframe === paramsB.timeframe) {
+        // Different amounts for same timeframe = potential conflict
+        if (paramsA.amount !== paramsB.amount) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.95,
+            reason: `Different budget amounts specified for ${paramsA.timeframe}: ${paramsA.amount} vs ${paramsB.amount}`
+          };
+        }
+      }
+
+      // Check for contradictory outcome expectations
+      if (paramsA.outcome && paramsB.outcome) {
+        const opposites = [
+          ['Approval Required', 'Approval Denied'],
+          ['Funding Secured', 'Funding Rejected'],
+          ['Budget Approved', 'Budget Rejected']
+        ];
+        
+        for (const [outcome1, outcome2] of opposites) {
+          if ((paramsA.outcome.includes(outcome1) && paramsB.outcome.includes(outcome2)) ||
+              (paramsA.outcome.includes(outcome2) && paramsB.outcome.includes(outcome1))) {
+            return {
+              conflictType: 'CONTRADICTORY',
+              confidenceScore: 0.98,
+              reason: `Contradictory outcomes: "${paramsA.outcome}" vs "${paramsB.outcome}"`
+            };
+          }
+        }
+      }
+    }
+
+    // Timeline & Schedule conflicts
+    if (assumptionA.category === 'Timeline & Schedule') {
+      if (paramsA.timeframe === paramsB.timeframe && paramsA.outcome && paramsB.outcome) {
+        // Same timeframe but different outcome expectations
+        const incompatibleOutcomes = ['Deadline Met', 'Deadline Missed', 'Milestone Achieved', 'Milestone Failed'];
+        const hasIncompatible = incompatibleOutcomes.some(o1 => 
+          incompatibleOutcomes.some(o2 => 
+            o1 !== o2 && paramsA.outcome.includes(o1) && paramsB.outcome.includes(o2)
+          )
+        );
+
+        if (hasIncompatible) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.92,
+            reason: `Incompatible timeline outcomes for ${paramsA.timeframe}: "${paramsA.outcome}" vs "${paramsB.outcome}"`
+          };
+        }
+      }
+    }
+
+    // Resource & Staffing conflicts
+    if (assumptionA.category === 'Resource & Staffing') {
+      if (paramsA.resourceType === paramsB.resourceType && paramsA.timeframe === paramsB.timeframe) {
+        // Check for contradictory availability
+        if (paramsA.outcome && paramsB.outcome) {
+          if ((paramsA.outcome.includes('Available') && paramsB.outcome.includes('Unavailable')) ||
+              (paramsA.outcome.includes('Unavailable') && paramsB.outcome.includes('Available'))) {
+            return {
+              conflictType: 'CONTRADICTORY',
+              confidenceScore: 0.96,
+              reason: `Contradictory resource availability for ${paramsA.resourceType} in ${paramsA.timeframe}`
+            };
+          }
+        }
+      }
+    }
+
+    // Impact Area conflicts - check if they target same area with opposite directions
+    if (paramsA.impactArea && paramsB.impactArea && paramsA.impactArea === paramsB.impactArea) {
+      // Check for explicitly opposite directions
+      if (paramsA.direction && paramsB.direction) {
+        const dirA = paramsA.direction.toLowerCase();
+        const dirB = paramsB.direction.toLowerCase();
+        
+        if (dirA !== dirB) {
+          const oppositeDirections = [
+            ['increase', 'decrease'],
+            ['improve', 'worsen'],
+            ['positive', 'negative'],
+            ['up', 'down']
+          ];
+
+          let isOpposite = false;
+          for (const [dir1, dir2] of oppositeDirections) {
+            if ((dirA.includes(dir1) && dirB.includes(dir2)) ||
+                (dirA.includes(dir2) && dirB.includes(dir1))) {
+              isOpposite = true;
+              break;
+            }
+          }
+
+          if (isOpposite) {
+            return {
+              conflictType: 'CONTRADICTORY',
+              confidenceScore: 0.94,
+              reason: `Opposite impact directions on ${paramsA.impactArea}: ${paramsA.direction} vs ${paramsB.direction}`
+            };
+          }
+        }
+      }
+      
+      // Even without explicit directions, if both target the same impact area,
+      // check the assumption text for contradictory keywords
+      const textA = assumptionA.text.toLowerCase();
+      const textB = assumptionB.text.toLowerCase();
+      
+      // Look for contradictory keywords in the text
+      const contradictoryPairs = [
+        ['increase', 'decrease'],
+        ['grow', 'shrink'],
+        ['rise', 'fall'],
+        ['improve', 'decline'],
+        ['gain', 'lose'],
+        ['up', 'down'],
+        ['higher', 'lower'],
+        ['more', 'less']
+      ];
+      
+      for (const [word1, word2] of contradictoryPairs) {
+        if ((textA.includes(word1) && textB.includes(word2)) ||
+            (textA.includes(word2) && textB.includes(word1))) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.88,
+            reason: `Contradictory impact predictions for ${paramsA.impactArea}: "${word1}" vs "${word2}"`
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Strategy 2: Detect negation-based conflicts
    * e.g., "X will happen" vs "X will not happen"
    */
   private detectNegationConflict(textA: string, textB: string): ConflictDetectionResult | null {

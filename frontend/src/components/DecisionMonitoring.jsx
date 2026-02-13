@@ -17,7 +17,8 @@ import {
   Edit,
   Trash2,
   X,
-  Check
+  Check,
+  Archive
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -29,6 +30,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, title }
+  const [retireConfirmation, setRetireConfirmation] = useState(null); // { id, title }
   const [currentTime, setCurrentTime] = useState(new Date()); // Track simulated time
 
   // Store related data for each decision
@@ -110,18 +112,27 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
   const fetchDecisionDetails = async (decisionId) => {
     try {
-      // Fetch assumptions, dependencies, constraints, and violations in parallel
-      const [assumptions, dependencies, constraints, violations] = await Promise.all([
+      // Fetch assumptions, dependencies, constraints, violations, and conflicts in parallel
+      const [assumptions, dependencies, constraints, violations, allConflicts] = await Promise.all([
         api.getAssumptions(decisionId).catch(() => []),
         api.getDependencies(decisionId).catch(() => ({ dependsOn: [], blocks: [] })),
         api.getConstraints(decisionId).catch(() => []),
-        api.getConstraintViolations(decisionId).catch(() => [])
+        api.getConstraintViolations(decisionId).catch(() => []),
+        api.getAssumptionConflicts(false).catch(() => [])
       ]);
+
+      // Filter conflicts that involve this decision's assumptions
+      const assumptionIds = assumptions.map(a => a.id);
+      const conflictsForDecision = allConflicts.filter(conflict => 
+        assumptionIds.includes(conflict.assumption_a_id) || 
+        assumptionIds.includes(conflict.assumption_b_id)
+      );
 
       console.log(`📋 Fetched data for decision ${decisionId}:`, {
         assumptions: assumptions?.length || 0,
         dependencies: dependencies,
-        constraints: constraints?.length || 0
+        constraints: constraints?.length || 0,
+        conflicts: conflictsForDecision?.length || 0
       });
 
       setDecisionData(prev => ({
@@ -130,7 +141,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
           assumptions,
           dependencies,
           constraints,
-          violations
+          violations,
+          conflicts: conflictsForDecision
         }
       }));
     } catch (err) {
@@ -145,6 +157,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     // If manually set to RETIRED or INVALIDATED, respect that
     if (lifecycle === 'RETIRED' || lifecycle === 'INVALIDATED') {
       return lifecycle;
+    }
+
+    // Check if any assumptions are in conflict
+    const details = decisionData[decision.id];
+    if (details?.conflicts && details.conflicts.length > 0) {
+      // Decision has conflicting assumptions - cannot be healthy
+      return healthSignal < 65 ? 'AT_RISK' : 'UNDER_REVIEW';
     }
 
     // Otherwise, sync with health
@@ -213,7 +232,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   };
 
   const filteredDecisions = filterStatus === 'all' 
-    ? decisions 
+    ? decisions.filter(d => d.lifecycle !== 'RETIRED' && d.lifecycle !== 'INVALIDATED')
     : decisions.filter(d => {
         if (filterStatus === 'active') return d.lifecycle === 'STABLE';
         if (filterStatus === 'at-risk') return d.lifecycle === 'AT_RISK' || d.lifecycle === 'UNDER_REVIEW';
@@ -223,7 +242,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
   // Calculate counts for each filter status
   const getCountForStatus = (status) => {
-    if (status === 'all') return decisions.length;
+    if (status === 'all') return decisions.filter(d => d.lifecycle !== 'RETIRED' && d.lifecycle !== 'INVALIDATED').length;
     if (status === 'active') return decisions.filter(d => d.lifecycle === 'STABLE').length;
     if (status === 'at-risk') return decisions.filter(d => d.lifecycle === 'AT_RISK' || d.lifecycle === 'UNDER_REVIEW').length;
     if (status === 'deprecated') return decisions.filter(d => d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED').length;
@@ -256,11 +275,33 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const handleMarkReviewed = async (decisionId, decisionTitle) => {
     try {
       await api.markDecisionReviewed(decisionId);
-      await fetchDecisions(); // Refresh the list
+      // Refresh the list WITHOUT auto-evaluation to preserve the reviewed state
+      const data = await api.getDecisions();
+      setDecisions(data);
       showToast('success', `"${decisionTitle}" marked as reviewed`);
     } catch (err) {
       console.error('Failed to mark decision as reviewed:', err);
-      showToast('error', 'Failed to mark as reviewed. Please try again.');
+      const errorMessage = err.message || 'Failed to mark as reviewed. Please try again.';
+      showToast('error', errorMessage);
+    }
+  };
+
+  const handleRetireDecision = (decisionId, decisionTitle) => {
+    setRetireConfirmation({ id: decisionId, title: decisionTitle });
+  };
+
+  const confirmRetire = async () => {
+    if (!retireConfirmation) return;
+
+    try {
+      await api.retireDecision(retireConfirmation.id, 'manually_retired');
+      await fetchDecisions(); // Refresh the list
+      showToast('success', `Decision "${retireConfirmation.title}" has been retired`);
+      setRetireConfirmation(null);
+    } catch (err) {
+      console.error('Failed to retire decision:', err);
+      showToast('error', 'Failed to retire decision. Please try again.');
+      setRetireConfirmation(null);
     }
   };
 
@@ -372,6 +413,40 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
         </div>
       )}
 
+      {/* Retire Confirmation Modal */}
+      {retireConfirmation && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mx-auto mb-4">
+              <Archive className="text-orange-600" size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-neutral-black mb-2 text-center">Retire Decision?</h2>
+            <p className="text-neutral-gray-600 mb-6 text-center">
+              Are you sure you want to retire <span className="font-semibold">"{retireConfirmation.title}"</span>?
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> This action marks the decision as deprecated and final. The decision will be set to RETIRED lifecycle and cannot be reviewed.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRetireConfirmation(null)}
+                className="flex-1 px-6 py-3 bg-neutral-gray-100 text-neutral-gray-700 font-semibold rounded-xl hover:bg-neutral-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRetire}
+                className="flex-1 px-6 py-3 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors"
+              >
+                Retire
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -456,6 +531,12 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         <span className={`px-3 py-1 rounded-md text-xs font-semibold ${getStatusColor(effectiveLifecycle)}`}>
                           {effectiveLifecycle.replace('_', ' ')}
                         </span>
+                        {/* Conflict Warning Badge */}
+                        {decisionData[decision.id]?.conflicts?.length > 0 && (
+                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-300 flex items-center gap-1">
+                            ⚠️ {decisionData[decision.id].conflicts.length} Assumption Conflict{decisionData[decision.id].conflicts.length > 1 ? 's' : ''}
+                          </span>
+                        )}
                         {/* Expiry Badge */}
                         {decision.expiryDate && (() => {
                           const expiryDate = new Date(decision.expiryDate);
@@ -544,8 +625,9 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           e.stopPropagation();
                           handleEvaluateNow(decision.id, decision.title);
                         }}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Evaluate now"
+                        disabled={decision.lifecycle === 'RETIRED'}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={decision.lifecycle === 'RETIRED' ? 'Cannot evaluate retired decisions' : 'Evaluate now'}
                       >
                         <RefreshCw size={18} />
                       </button>
@@ -554,11 +636,29 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           e.stopPropagation();
                           handleMarkReviewed(decision.id, decision.title);
                         }}
-                        className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Mark as reviewed"
+                        disabled={decision.lifecycle === 'RETIRED' || (decision.expiryDate && (() => {
+                          const expiryDate = new Date(decision.expiryDate);
+                          const now = currentTime;
+                          const daysUntilExpiry = (expiryDate - now) / (1000 * 60 * 60 * 24);
+                          return daysUntilExpiry < -30;
+                        })())}
+                        className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={decision.lifecycle === 'RETIRED' ? 'Cannot review retired decisions' : 'Mark as reviewed'}
                       >
                         <Check size={18} />
                       </button>
+                      {decision.lifecycle !== 'RETIRED' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRetireDecision(decision.id, decision.title);
+                          }}
+                          className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Retire decision (mark as deprecated)"
+                        >
+                          <Archive size={18} />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

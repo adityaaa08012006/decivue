@@ -8,13 +8,17 @@ import {
   Target,
   Shield,
   CheckCircle,
+  Layers,
 } from 'lucide-react';
 import api from '../services/api';
+import StructuredAssumptionForm from './StructuredAssumptionForm';
 
 const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [showStructuredForm, setShowStructuredForm] = useState(false);
+  const [showNoAssumptionsWarning, setShowNoAssumptionsWarning] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -70,6 +74,8 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       selectedConstraints: [],
     });
     setNewAssumptionText('');
+    setShowStructuredForm(false); // Ensure simple mode is default
+    setShowNoAssumptionsWarning(false); // Reset warning
     setError(null);
   };
 
@@ -124,6 +130,19 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       return;
     }
 
+    // Check if no assumptions are selected or created
+    const hasNoAssumptions = 
+      formData.selectedAssumptions.length === 0 && 
+      formData.newAssumptions.length === 0;
+
+    if (hasNoAssumptions && !showNoAssumptionsWarning) {
+      // Show warning on first attempt
+      setShowNoAssumptionsWarning(true);
+      return;
+    }
+
+    // Reset warning after confirmation
+    setShowNoAssumptionsWarning(false);
     setIsSubmitting(true);
     setError(null);
 
@@ -155,13 +174,22 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       // Step 3: Create and link new assumptions
       if (formData.newAssumptions.length > 0) {
         await Promise.all(
-          formData.newAssumptions.map((description) =>
-            api.createAssumption({
-              description,
-              scope: 'DECISION_SPECIFIC',
-              linkToDecisionId: decisionId,
-            })
-          )
+          formData.newAssumptions.map((assumption) => {
+            // Handle both string (simple mode) and object (structured mode)
+            const assumptionData = typeof assumption === 'string'
+              ? {
+                  description: assumption,
+                  scope: 'DECISION_SPECIFIC',
+                  linkToDecisionId: decisionId,
+                }
+              : {
+                  ...assumption,
+                  scope: 'DECISION_SPECIFIC',
+                  linkToDecisionId: decisionId,
+                };
+            
+            return api.createAssumption(assumptionData);
+          })
         );
       }
 
@@ -332,92 +360,140 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="space-y-6">
             {/* Assumptions Section */}
             <div className="p-6 bg-blue-50 rounded-xl border border-blue-100">
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="text-primary-blue" size={20} />
-                <h3 className="font-bold text-neutral-black">Assumptions</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Target className="text-primary-blue" size={20} />
+                  <h3 className="font-bold text-neutral-black">Assumptions</h3>
+                </div>
+                <button
+                  onClick={() => setShowStructuredForm(!showStructuredForm)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
+                  title="Use structured dropdowns for better conflict detection"
+                >
+                  <Layers size={16} />
+                  {showStructuredForm ? 'Simple Mode' : 'Structured Mode'}
+                </button>
               </div>
 
-              {/* Existing assumptions */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                  Link Existing Assumptions
-                </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {existingAssumptions.map((assumption) => (
-                    <label
-                      key={assumption.id}
-                      className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.selectedAssumptions.includes(
-                          assumption.id
-                        )}
-                        onChange={() =>
-                          toggleSelection('selectedAssumptions', assumption.id)
-                        }
-                        className="mt-1"
-                      />
-                      <span className="text-sm text-neutral-gray-700">
-                        {assumption.description}
-                      </span>
+              {!showStructuredForm ? (
+                <>
+                  {/* Existing assumptions */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                      Link Existing Assumptions
                     </label>
-                  ))}
-                  {existingAssumptions.length === 0 && (
-                    <p className="text-sm text-neutral-gray-500 italic">
-                      No existing assumptions available
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Add new assumptions */}
-              <div>
-                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                  Add New Assumptions
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="flex-1 p-3 border border-neutral-gray-300 rounded-lg focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all text-sm"
-                    placeholder="Enter new assumption..."
-                    value={newAssumptionText}
-                    onChange={(e) => setNewAssumptionText(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addNewAssumption();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={addNewAssumption}
-                    className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-                {formData.newAssumptions.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {formData.newAssumptions.map((assumption, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-white rounded-lg text-sm"
-                      >
-                        <span className="text-neutral-gray-700">
-                          {assumption}
-                        </span>
-                        <button
-                          onClick={() => removeNewAssumption(index)}
-                          className="text-red-500 hover:text-red-700"
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {existingAssumptions.map((assumption) => (
+                        <label
+                          key={assumption.id}
+                          className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
                         >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                          <input
+                            type="checkbox"
+                            checked={formData.selectedAssumptions.includes(
+                              assumption.id
+                            )}
+                            onChange={() =>
+                              toggleSelection('selectedAssumptions', assumption.id)
+                            }
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm text-neutral-gray-700">
+                              {assumption.description}
+                            </span>
+                            {assumption.category && (
+                              <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                {assumption.category}
+                              </span>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                      {existingAssumptions.length === 0 && (
+                        <p className="text-sm text-neutral-gray-500 italic">
+                          No existing assumptions available
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Add new assumptions - Simple mode */}
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                      Add New Assumptions (Quick Entry)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        className="flex-1 p-3 border border-neutral-gray-300 rounded-lg focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all text-sm"
+                        placeholder="Enter new assumption..."
+                        value={newAssumptionText}
+                        onChange={(e) => setNewAssumptionText(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addNewAssumption();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={addNewAssumption}
+                        className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                    {formData.newAssumptions.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {formData.newAssumptions.map((assumption, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-white rounded-lg text-sm"
+                          >
+                            <div className="flex-1">
+                              <span className="text-neutral-gray-700">
+                                {typeof assumption === 'string' ? assumption : assumption.description}
+                              </span>
+                              {typeof assumption === 'object' && assumption.category && (
+                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                  {assumption.category}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeNewAssumption(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 Tip: Use Structured Mode for better conflict detection
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-white p-4 rounded-lg">
+                  <StructuredAssumptionForm
+                    onSubmit={async (assumptionData) => {
+                      // Add to newAssumptions list as structured data
+                      setFormData((prev) => ({
+                        ...prev,
+                        newAssumptions: [
+                          ...prev.newAssumptions,
+                          assumptionData, // Store full structured data
+                        ],
+                      }));
+                      setShowStructuredForm(false);
+                    }}
+                    onCancel={() => setShowStructuredForm(false)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Dependencies Section */}
@@ -576,6 +652,46 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
         )}
       </div>
+
+      {/* No Assumptions Warning Modal */}
+      {showNoAssumptionsWarning && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="p-3 bg-amber-100 rounded-full flex-shrink-0">
+                <Shield size={24} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">
+                  No Assumptions Added
+                </h3>
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  This decision has no assumptions linked to it. Without assumptions, 
+                  the system cannot monitor the decision's health or detect potential risks.
+                </p>
+                <p className="text-gray-700 text-sm leading-relaxed mt-3">
+                  <strong>Recommendation:</strong> Add at least one assumption to enable 
+                  effective decision monitoring and conflict detection.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowNoAssumptionsWarning(false)}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Add Assumptions
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="flex-1 px-4 py-3 bg-amber-500 text-white font-semibold rounded-xl hover:bg-amber-600 transition-colors"
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

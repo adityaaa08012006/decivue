@@ -86,6 +86,8 @@ router.post('/detect', async (req: Request, res: Response, next: NextFunction) =
         text: a.description,
         status: a.status,
         scope: a.scope,
+        category: a.category,
+        parameters: a.parameters || {}
       }))
     );
 

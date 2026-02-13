@@ -2,8 +2,117 @@ import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '@data/database';
 import { AssumptionValidationService } from '../../services/assumption-validation-service';
+import { AssumptionConflictDetector } from '../../services/assumption-conflict-detector';
+import { logger } from '../../utils/logger';
 
 const router = Router();
+const conflictDetector = new AssumptionConflictDetector();
+
+/**
+ * Helper: Re-check conflicts for an assumption after it's been updated
+ * Resolves conflicts that no longer exist
+ */
+async function recheckConflictsForAssumption(assumptionId: string, updatedAssumption: any) {
+  try {
+    console.log(`🔍 recheckConflictsForAssumption called for ${assumptionId}`);
+    console.log('Updated assumption data:', {
+      id: updatedAssumption.id,
+      description: updatedAssumption.description?.substring(0, 50),
+      category: updatedAssumption.category,
+      parameters: updatedAssumption.parameters
+    });
+    
+    const db = getDatabase();
+
+    // Get all unresolved conflicts involving this assumption
+    const { data: conflicts, error: conflictsError } = await db
+      .from('assumption_conflicts')
+      .select('*')
+      .or(`assumption_a_id.eq.${assumptionId},assumption_b_id.eq.${assumptionId}`)
+      .is('resolved_at', null);
+
+    if (conflictsError) {
+      logger.error('Failed to fetch conflicts for re-checking:', conflictsError);
+      return;
+    }
+
+    if (!conflicts || conflicts.length === 0) {
+      return; // No conflicts to re-check
+    }
+
+    logger.info(`Re-checking ${conflicts.length} conflicts for assumption ${assumptionId}`);
+
+    // For each conflict, re-run detection
+    for (const conflict of conflicts) {
+      // Get the other assumption in the conflict
+      const otherAssumptionId = conflict.assumption_a_id === assumptionId 
+        ? conflict.assumption_b_id 
+        : conflict.assumption_a_id;
+
+      const { data: otherAssumption } = await db
+        .from('assumptions')
+        .select('*')
+        .eq('id', otherAssumptionId)
+        .single();
+
+      if (!otherAssumption) continue;
+
+      // Re-run conflict detection
+      const detectionResult = conflictDetector.detectConflict(
+        {
+          id: updatedAssumption.id,
+          text: updatedAssumption.description,
+          status: updatedAssumption.status,
+          scope: updatedAssumption.scope,
+          category: updatedAssumption.category,
+          parameters: updatedAssumption.parameters || {}
+        },
+        {
+          id: otherAssumption.id,
+          text: otherAssumption.description,
+          status: otherAssumption.status,
+          scope: otherAssumption.scope,
+          category: otherAssumption.category,
+          parameters: otherAssumption.parameters || {}
+        }
+      );
+
+      // If no conflict detected or confidence is too low, mark as auto-resolved
+      if (!detectionResult || detectionResult.confidenceScore < 0.7) {
+        console.log(`✅ Auto-resolving conflict ${conflict.id} - no longer detected or low confidence`);
+        await db
+          .from('assumption_conflicts')
+          .update({
+            resolved_at: new Date().toISOString(),
+            resolution_action: 'AUTO_RESOLVED',
+            resolution_notes: 'Automatically resolved after assumption update - conflict no longer detected'
+          })
+          .eq('id', conflict.id);
+
+        logger.info(`Auto-resolved conflict ${conflict.id} after assumption update`);
+      } else {
+        // Conflict still exists but might have changed - update metadata
+        console.log(`⚠️ Conflict ${conflict.id} still exists - confidence: ${detectionResult.confidenceScore}`);
+        await db
+          .from('assumption_conflicts')
+          .update({
+            conflict_type: detectionResult.conflictType,
+            confidence_score: detectionResult.confidenceScore,
+            metadata: { 
+              reason: detectionResult.reason,
+              last_rechecked_at: new Date().toISOString()
+            }
+          })
+          .eq('id', conflict.id);
+
+        logger.info(`Updated conflict ${conflict.id} after re-check - still exists with ${detectionResult.confidenceScore} confidence`);
+      }
+    }
+  } catch (error) {
+    logger.error('Error during conflict re-checking:', error);
+    // Don't throw - this is a background task
+  }
+}
 
 /**
  * GET /api/assumptions
@@ -119,11 +228,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * POST /api/assumptions
  * Create a new assumption (universal or decision-specific)
- * Body: { description, status?, scope?, linkToDecisionId?, metadata? }
+ * Body: { description, status?, scope?, linkToDecisionId?, metadata?, category?, parameters? }
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { description, status, scope, linkToDecisionId, metadata } = req.body;
+    const { description, status, scope, linkToDecisionId, metadata, category, parameters } = req.body;
 
     if (!description) {
       return res.status(400).json({ error: 'Description is required' });
@@ -132,14 +241,20 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const db = getDatabase();
 
     // Create or get existing assumption
+    const assumptionData: any = {
+      description,
+      status: status || 'VALID',
+      scope: scope || 'DECISION_SPECIFIC',
+      metadata: metadata || {}
+    };
+
+    // Add structured fields if provided
+    if (category) assumptionData.category = category;
+    if (parameters) assumptionData.parameters = parameters;
+
     const { data: assumption, error: createError } = await db
       .from('assumptions')
-      .upsert({
-        description,
-        status: status || 'VALID',
-        scope: scope || 'DECISION_SPECIFIC',
-        metadata: metadata || {}
-      }, { onConflict: 'description' })
+      .upsert(assumptionData, { onConflict: 'description' })
       .select()
       .single();
 
@@ -278,7 +393,7 @@ router.get('/:id/conflicts', async (req: Request, res: Response, next: NextFunct
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { description, status, scope, metadata } = req.body;
+    const { description, status, scope, metadata, category, parameters } = req.body;
 
     const db = getDatabase();
 
@@ -312,6 +427,8 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (scope !== undefined) updateData.scope = scope;
     if (metadata !== undefined) updateData.metadata = metadata;
+    if (category !== undefined) updateData.category = category;
+    if (parameters !== undefined) updateData.parameters = parameters;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
@@ -336,6 +453,19 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       AssumptionValidationService.reEvaluateLinkedDecisions(id).catch((err) => {
         console.error('Failed to re-evaluate linked decisions:', err);
       });
+    }
+
+    // Re-check conflicts after any update that could affect conflict detection
+    if (category !== undefined || parameters !== undefined || description !== undefined) {
+      console.log(`🔄 Re-checking conflicts for assumption ${id} after update`);
+      console.log('Updated fields:', { category, parameters, description: description?.substring(0, 50) });
+      // Wait for conflict re-checking to complete before responding
+      try {
+        await recheckConflictsForAssumption(id, data);
+      } catch (err) {
+        console.error('Failed to re-check conflicts:', err);
+        // Don't fail the update if conflict re-checking fails
+      }
     }
 
     // Return response with validation warning if applicable

@@ -120,6 +120,51 @@ export class DecisionController {
   }
 
   /**
+   * PUT /api/decisions/:id/retire
+   * Retire a decision (mark as deprecated/final)
+   */
+  async retire(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const db = getDatabase();
+
+      // Update decision to RETIRED lifecycle
+      const { data: decision, error } = await db
+        .from('decisions')
+        .update({
+          lifecycle: 'RETIRED',
+          invalidated_reason: reason || 'manually_retired',
+          health_signal: 0
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (!decision) {
+        return res.status(404).json({ error: 'Decision not found' });
+      }
+
+      // Emit event
+      await eventBus.emit({
+        id: uuidv4(),
+        type: EventType.LIFECYCLE_CHANGED,
+        timestamp: getCurrentTime(),
+        decisionId: id,
+        oldLifecycle: decision.lifecycle,
+        newLifecycle: 'RETIRED'
+      });
+
+      logger.info(`Decision retired: ${id}`);
+      return res.json(decision);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /api/decisions/:id/evaluate
    * Trigger manual evaluation of a decision
    */
@@ -362,6 +407,39 @@ export class DecisionController {
       const { id } = req.params;
       const db = getDatabase();
 
+      // First, check the decision's current state
+      const { data: currentDecision } = await db
+        .from('decisions')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!currentDecision) {
+        return res.status(404).json({ error: 'Decision not found' });
+      }
+
+      // Prevent reviewing RETIRED decisions
+      if (currentDecision.lifecycle === 'RETIRED') {
+        return res.status(400).json({ 
+          error: 'Cannot review a retired decision',
+          message: 'This decision has been retired and cannot be reviewed. Retired decisions are final.'
+        });
+      }
+
+      // Prevent reviewing significantly expired decisions (30+ days past expiry)
+      if (currentDecision.expiry_date) {
+        const expiryDate = new Date(currentDecision.expiry_date);
+        const now = getCurrentTime();
+        const daysUntilExpiry = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (daysUntilExpiry < -30) {
+          return res.status(400).json({
+            error: 'Cannot review an expired decision',
+            message: `This decision expired ${Math.floor(Math.abs(daysUntilExpiry))} days ago and should be retired.`
+          });
+        }
+      }
+
       // Update last_reviewed_at to current timestamp
       const { data: decision, error } = await db
         .from('decisions')
@@ -454,17 +532,39 @@ export class DecisionController {
 
       const result = this.engine.evaluate(evaluationInput);
 
-      // When a decision is reviewed, reset health to 100 unless there are actual problems
-      // (constraints violated or assumptions broken)
+      // Check for assumption conflicts
+      const assumptionIds = assumptions.map((a: any) => a.id);
+      const { data: allConflicts } = await db.rpc('get_all_assumption_conflicts', {
+        unresolved_only: true
+      });
+      
+      const conflictsForDecision = (allConflicts || []).filter((conflict: any) => 
+        assumptionIds.includes(conflict.assumption1_id) || 
+        assumptionIds.includes(conflict.assumption2_id)
+      );
+      const hasConflicts = conflictsForDecision.length > 0;
+
+      // When a decision is reviewed, reset health to 100 unless there are actual blocking problems
+      // Reviewing acknowledges broken assumptions and accepts the current state
+      // Only hard violations (constraints or conflicts) should prevent the reset
       let newHealth = 100;
       let newLifecycle = 'STABLE';
       let invalidatedReason = null;
 
-      // Only keep degraded state if there are real issues (not just time decay)
-      if (result.invalidatedReason === 'constraint_violation' || result.invalidatedReason === 'broken_assumptions') {
+      // Only keep degraded state for constraint violations (hard failures)
+      if (result.invalidatedReason === 'constraint_violation') {
         newHealth = result.newHealthSignal;
         newLifecycle = result.newLifecycle;
         invalidatedReason = result.invalidatedReason;
+        logger.info(`Decision ${id} has constraint violations - cannot restore health via review`);
+      } else if (hasConflicts) {
+        // Decision has conflicts - keep it in UNDER_REVIEW
+        newHealth = 70; // Moderate health penalty for conflicts
+        newLifecycle = 'UNDER_REVIEW';
+        logger.info(`Decision ${id} has ${conflictsForDecision.length} assumption conflict(s) - keeping in UNDER_REVIEW`);
+      } else {
+        // Review successfully acknowledges any broken assumptions
+        logger.info(`Decision ${id} reviewed - health restored to 100 (any broken assumptions acknowledged)`);
       }
 
       // Update decision with restored health
