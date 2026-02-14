@@ -8,9 +8,32 @@ A comprehensive decision-monitoring platform that treats decisions as living ent
 
 ```
 decivue/
-├── frontend/          # React dashboard (Vite + Tailwind CSS)
-├── backend/           # Node.js/TypeScript backend (Express + Supabase)
-└── README.md          # This file
+├── backend/                  # Node.js/TypeScript backend
+│   ├── migrations/           # Database migrations
+│   ├── scripts/              # Utility scripts
+│   ├── src/                  # Source code
+│   │   ├── api/             # API routes and controllers
+│   │   ├── core/            # Decision engine logic
+│   │   ├── data/            # Data access layer
+│   │   └── events/          # Event bus system
+│   ├── tests/               # Backend tests
+│   ├── .env.example         # Environment template
+│   ├── package.json
+│   ├── schema.sql           # Database schema
+│   └── tsconfig.json
+├── frontend/                 # React dashboard (Vite + Tailwind CSS)
+│   ├── public/              # Static assets
+│   ├── src/                 # Source code
+│   │   ├── components/      # React components
+│   │   ├── contexts/        # React contexts (Auth, Theme)
+│   │   └── services/        # API service layer
+│   ├── index.html
+│   ├── package.json
+│   ├── tailwind.config.js
+│   └── vite.config.js
+├── docs/                    # Documentation
+├── .gitignore
+└── README.md               # This file
 ```
 
 ## Features
