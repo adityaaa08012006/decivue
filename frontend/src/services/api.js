@@ -390,8 +390,19 @@ class ApiService {
     });
   }
 
+  async deleteParameterTemplate(templateId) {
+    return this.request(`/parameter-templates/${templateId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getTemplateCategories() {
     return this.request('/parameter-templates/categories');
+  }
+
+  // Users endpoints
+  async getOrganizationUsers() {
+    return this.request('/users');
   }
 }
 

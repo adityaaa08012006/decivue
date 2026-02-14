@@ -37,7 +37,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   ];
 
   const helpItems = [
-    { id: 'settings', label: 'Settings', icon: 'settings', active: false },
+    { id: 'settings', label: 'Settings', icon: 'settings', active: currentView === 'settings' },
     { id: 'profile', label: 'Organisation Information', icon: 'doc', active: currentView === 'profile' },
   ];
 
@@ -95,30 +95,30 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   );
 
   return (
-    <div className="w-60 h-screen bg-neutral-white border-r border-neutral-gray-200 flex flex-col p-4">
+    <div className="w-60 h-screen bg-neutral-white dark:bg-neutral-gray-800 border-r border-neutral-gray-200 dark:border-neutral-gray-700 flex flex-col p-4">
       {/* Logo */}
       <div className="flex items-center gap-2 mb-4 px-2 flex-shrink-0">
         <div className="w-8 h-8 flex items-center justify-center">
           <img src="/assets/logo.png" alt="Decivue" className="w-8 h-8" />
         </div>
-        <span className="text-xl font-bold text-neutral-black">Decivue</span>
+        <span className="text-xl font-bold text-neutral-black dark:text-white">Decivue</span>
       </div>
 
       {/* User Info */}
       {user && (
-        <div className="px-2 py-3 mb-4 border-b border-neutral-gray-200 flex-shrink-0">
-          <p className="text-sm font-semibold text-neutral-black truncate">{user.fullName}</p>
-          <p className="text-xs text-neutral-gray-500 truncate">{user.email}</p>
+        <div className="px-2 py-3 mb-4 border-b border-neutral-gray-200 dark:border-neutral-gray-700 flex-shrink-0">
+          <p className="text-sm font-semibold text-neutral-black dark:text-white truncate">{user.fullName}</p>
+          <p className="text-xs text-neutral-gray-500 dark:text-neutral-gray-400 truncate">{user.email}</p>
           <div className="mt-2 flex items-center gap-2 flex-wrap">
             <span className={`text-xs px-2 py-1 rounded font-medium ${
               user.role === 'lead'
                 ? 'bg-primary-blue text-white'
-                : 'bg-neutral-gray-200 text-neutral-gray-700'
+                : 'bg-neutral-gray-200 dark:bg-neutral-gray-700 text-neutral-gray-700 dark:text-neutral-gray-300'
             }`}>
               {user.role === 'lead' ? 'Org Lead' : 'Team Member'}
             </span>
             {user.role === 'lead' && user.orgCode && (
-              <span className="text-xs font-mono bg-green-100 text-green-700 px-2 py-1 rounded font-semibold">
+              <span className="text-xs font-mono bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded font-semibold">
                 {user.orgCode}
               </span>
             )}
@@ -130,7 +130,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       <div className="flex-1 flex flex-col">
         {/* MENU Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 mb-2 px-2">MENU</p>
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">MENU</p>
           <div className="space-y-0.5">
             {menuItems.map((item) => (
               <MenuItem key={item.id} item={item} />
@@ -138,11 +138,11 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 my-2" />
+        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-2" />
 
         {/* ANALYTICS Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 mb-2 px-2">ANALYTICS</p>
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">ANALYTICS</p>
           <div className="space-y-0.5">
             {analyticsItems.map((item) => (
               <MenuItem key={item.id} item={item} />
@@ -150,7 +150,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 my-2" />
+        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-2" />
 
         {/* Other Items */}
         <div className="mb-4">
@@ -161,11 +161,11 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 my-2" />
+        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-2" />
 
         {/* HELP Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 mb-2 px-2">HELP</p>
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">HELP</p>
           <div className="space-y-0.5">
             {helpItems.map((item) => (
               <MenuItem key={item.id} item={item} />
@@ -175,10 +175,10 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       </div>
 
       {/* Log out - Fixed at bottom */}
-      <div className="flex-shrink-0 pt-3 border-t border-neutral-gray-200">
+      <div className="flex-shrink-0 pt-3 border-t border-neutral-gray-200 dark:border-neutral-gray-700">
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 px-4 py-2 text-primary-red hover:bg-red-50 rounded-lg w-full transition-all"
+          className="flex items-center gap-3 px-4 py-2 text-primary-red dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-all"
         >
           <LogOut size={20} strokeWidth={2} />
           <span className="text-sm font-medium">Log out</span>

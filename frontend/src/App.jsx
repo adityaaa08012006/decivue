@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, ArrowRight, PanelRightOpen, Clock, ChevronDown } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import Sidebar from './components/Sidebar';
@@ -12,6 +13,8 @@ import AssumptionsPage from './components/AssumptionsPage';
 import OrganizationProfile from './components/OrganizationProfile';
 import NotificationsPage from './components/NotificationsPage';
 import DecisionFlow from './components/DecisionFlow';
+import SettingsPage from './components/SettingsPage';
+import TeamPage from './components/TeamPage';
 import AddDecisionModal from './components/AddDecisionModal';
 import api from './services/api';
 
@@ -72,10 +75,10 @@ function AppContent() {
   // Show loading while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-white flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-white dark:bg-neutral-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-blue mx-auto"></div>
-          <p className="mt-4 text-neutral-gray-600">Loading...</p>
+          <p className="mt-4 text-neutral-gray-600 dark:text-neutral-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -91,7 +94,7 @@ function AppContent() {
 
   // Authenticated - show main app
   return (
-    <div className="flex h-screen bg-neutral-white overflow-hidden">
+    <div className="flex h-screen bg-neutral-white dark:bg-neutral-gray-900 overflow-hidden">
       {/* Left Sidebar */}
       <Sidebar
         currentView={currentView}
@@ -111,11 +114,11 @@ function AppContent() {
                 <div className="flex-1 max-w-2xl">
                   <button
                     onClick={() => setShowAddDecisionModal(true)}
-                    className="w-full flex items-center gap-3 px-6 py-3 bg-white border-2 border-neutral-gray-300 rounded-xl hover:border-primary-blue transition-colors text-left group"
+                    className="w-full flex items-center gap-3 px-6 py-3 bg-white dark:bg-neutral-gray-800 border-2 border-neutral-gray-300 dark:border-neutral-gray-700 rounded-xl hover:border-primary-blue dark:hover:border-primary-blue transition-colors text-left group"
                   >
-                    <Plus size={20} className="text-neutral-gray-500 group-hover:text-primary-blue transition-colors" />
-                    <span className="text-neutral-gray-600 font-medium">Add a decision</span>
-                    <ArrowRight size={20} className="text-neutral-gray-400 ml-auto group-hover:text-primary-blue transition-colors" />
+                    <Plus size={20} className="text-neutral-gray-500 dark:text-neutral-gray-400 group-hover:text-primary-blue transition-colors" />
+                    <span className="text-neutral-gray-600 dark:text-neutral-gray-300 font-medium">Add a decision</span>
+                    <ArrowRight size={20} className="text-neutral-gray-400 dark:text-neutral-gray-500 ml-auto group-hover:text-primary-blue transition-colors" />
                   </button>
                 </div>
 
@@ -133,8 +136,8 @@ function AppContent() {
 
                   {/* Time Simulation Dropdown Menu */}
                   {showTimeSimMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                      <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-gray-700 py-2 z-50">
+                      <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-neutral-gray-700">
                         Simulate Time Jump
                       </div>
                       {[
@@ -147,7 +150,7 @@ function AppContent() {
                         <button
                           key={option.days}
                           onClick={() => handleTimeSimulation(option.days)}
-                          className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+                          className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium"
                         >
                           {option.label}
                         </button>
@@ -161,15 +164,15 @@ function AppContent() {
               {simulationResult && (
                 <div className={`mb-6 p-4 rounded-xl border-2 ${
                   simulationResult.success
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-red-50 border-red-200'
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                 }`}>
                   {simulationResult.success ? (
                     <div>
-                      <h3 className="font-bold text-green-900 mb-2">
+                      <h3 className="font-bold text-green-900 dark:text-green-300 mb-2">
                         🕐 Time Jump: +{simulationResult.days} days completed
                       </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-green-800">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-green-800 dark:text-green-400">
                         <div>
                           <span className="font-semibold">{simulationResult.evaluatedCount}</span> decisions evaluated
                         </div>
@@ -185,7 +188,7 @@ function AppContent() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-red-900">
+                    <div className="text-red-900 dark:text-red-300">
                       <span className="font-bold">Error:</span> {simulationResult.error}
                     </div>
                   )}
@@ -210,6 +213,8 @@ function AppContent() {
           {currentView === 'notifications' && <NotificationsPage />}
           {currentView === 'profile' && <OrganizationProfile />}
           {currentView === 'flow' && <DecisionFlow key={`flow-${refreshKey}`} />}
+          {currentView === 'team' && <TeamPage />}
+          {currentView === 'settings' && <SettingsPage />}
         </div>
       </div>
 
@@ -226,11 +231,13 @@ function AppContent() {
   );
 }
 
-// Main App component wrapped with AuthProvider
+// Main App component wrapped with providers
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

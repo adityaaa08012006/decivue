@@ -1,23 +1,42 @@
 import { Router } from 'express';
-import { Request, Response, NextFunction } from 'express';
-import { getDatabase } from '@data/database';
+import { Response, NextFunction } from 'express';
+import { getDatabase, getAuthenticatedDatabase } from '@data/database';
+import { AuthRequest } from '../../middleware/auth';
 
 const router = Router();
 
 /**
  * GET /api/parameter-templates
- * Get all parameter templates, optionally filtered by category
- * Query params:
- *   - category: Filter by specific category
+ * Get all parameter templates for the authenticated user's organization
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { category } = req.query;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
 
-    const { data, error } = await db.rpc('get_parameter_templates', {
-      p_category: category || null
-    });
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const db = req.accessToken
+      ? getAuthenticatedDatabase(req.accessToken)
+      : getDatabase();
+
+    // Query parameter_templates directly with organization filter
+    let query = db
+      .from('parameter_templates')
+      .select('id, category, template_name, display_order, metadata')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('display_order', { ascending: true })
+      .order('template_name', { ascending: true });
+
+    if (category) {
+      query = query.eq('category', category as string);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -46,28 +65,52 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * POST /api/parameter-templates
- * Add a custom template (user-contributed)
+ * Add a custom template for the authenticated user's organization
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { category, templateName } = req.body;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
 
     if (!category || !templateName) {
       return res.status(400).json({ error: 'Category and template name are required' });
     }
 
-    const db = getDatabase();
-    const { data, error } = await db.rpc('add_custom_template', {
-      p_category: category,
-      p_template_name: templateName
-    });
+    const db = req.accessToken
+      ? getAuthenticatedDatabase(req.accessToken)
+      : getDatabase();
 
-    if (error) throw error;
+    // Insert directly instead of using RPC
+    const { data, error } = await db
+      .from('parameter_templates')
+      .insert({
+        organization_id: organizationId,
+        category,
+        template_name: templateName,
+        display_order: 1000, // Custom templates go at the end
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // Handle unique constraint violation
+      if (error.code === '23505') {
+        return res.status(409).json({ 
+          error: 'A template with this name already exists in this category' 
+        });
+      }
+      throw error;
+    }
 
     return res.status(201).json({ 
-      id: data,
-      category,
-      templateName
+      id: data.id,
+      category: data.category,
+      templateName: data.template_name
     });
   } catch (error) {
     return next(error);
@@ -75,25 +118,47 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * GET /api/parameter-templates/categories
- * Get distinct categories
+ * DELETE /api/parameter-templates/:id
+ * Delete a custom template (soft delete - sets is_active = false)
  */
-router.get('/categories', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const db = getDatabase();
+    const { id } = req.params;
+    const organizationId = req.user?.organizationId;
 
-    const { data, error } = await db
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const db = req.accessToken
+      ? getAuthenticatedDatabase(req.accessToken)
+      : getDatabase();
+
+    // Verify the template belongs to this organization before deleting
+    const { data: template } = await db
       .from('parameter_templates')
-      .select('category')
-      .eq('is_active', true)
-      .order('category');
+      .select('organization_id')
+      .eq('id', id)
+      .single();
+
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    if (template.organization_id !== organizationId) {
+      return res.status(403).json({ error: 'Cannot delete template from another organization' });
+    }
+
+    // Soft delete
+    const { error } = await db
+      .from('parameter_templates')
+      .update({ is_active: false })
+      .eq('id', id)
+      .eq('organization_id', organizationId);
 
     if (error) throw error;
 
-    // Get unique categories
-    const categories = [...new Set((data || []).map((item: any) => item.category))];
-
-    return res.json({ categories });
+    return res.status(204).send();
   } catch (error) {
     return next(error);
   }

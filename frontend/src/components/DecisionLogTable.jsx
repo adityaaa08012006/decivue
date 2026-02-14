@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
 const DecisionLogTable = () => {
+  const { isLead } = useAuth();
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -94,15 +96,20 @@ const DecisionLogTable = () => {
                 <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
                   Status
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Description
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
+                  Creator
+                </th>
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Last Reviewed
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
-                  Action
-                </th>
+                {isLead && (
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                    Action
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -118,24 +125,31 @@ const DecisionLogTable = () => {
                   </td>
                   <td className="py-4 px-4">{getStatusBadge(mapLifecycleToStatus(decision.lifecycle))}</td>
                   <td className="py-4 px-4">
-                    <span className="text-sm text-neutral-gray-700">{decision.description || 'No description'}</span>
+                    <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">{decision.description || 'No description'}</span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="text-sm text-neutral-black">
-                      {new Date(decision.lastReviewedAt).toLocaleDateString()}
+                    <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">
+                      {decision.creator?.fullName || decision.creator?.email || 'Unknown'}
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex gap-2">
-                      <button className="px-4 py-1.5 bg-status-green text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-colors">
-                        Acknowledge
-                      </button>
-                      <button className="px-4 py-1.5 bg-status-orange text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition-colors flex items-center gap-1">
-                        Review
-                        <RotateCcw size={14} />
-                      </button>
-                    </div>
+                    <span className="text-sm text-neutral-black dark:text-white">
+                      {new Date(decision.lastReviewedAt).toLocaleDateString()}
+                    </span>
                   </td>
+                  {isLead && (
+                    <td className="py-4 px-4">
+                      <div className="flex gap-2">
+                        <button className="px-4 py-1.5 bg-status-green text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-colors">
+                          Acknowledge
+                        </button>
+                        <button className="px-4 py-1.5 bg-status-orange text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition-colors flex items-center gap-1">
+                          Review
+                          <RotateCcw size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

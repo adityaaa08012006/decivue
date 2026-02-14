@@ -7,4 +7,20 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ensure html and body respect dark mode */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #111827; /* neutral-gray-900 */
+  color: #ffffff;
+}
+
+html:not(.dark) body {
+  background-color: #F2F5FA; /* neutral-white */
+  color: #000000;
 }

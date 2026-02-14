@@ -27,6 +27,11 @@ export interface Decision {
   createdAt: Date;
   lastReviewedAt: Date;            // Updated ONLY by explicit human review action
   expiryDate?: Date;               // Optional expiration date - accelerates decay as it approaches/passes
+  createdBy?: string;              // User ID who created this decision
+  creator?: {                      // Creator user information (joined from users table)
+    fullName?: string;
+    email?: string;
+  };
   metadata?: Record<string, any>; // Additional context
 }
 

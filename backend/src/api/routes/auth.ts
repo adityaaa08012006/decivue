@@ -133,17 +133,31 @@ router.post('/register/create-org', async (req, res) => {
     });
 
     console.log('✅ Step 5 SUCCESS: Organization profile created');
+
+    // 6. Seed default parameter templates for the organization
+    console.log('📋 Step 6: Seeding default parameter templates...');
+    const { error: templateError } = await adminDb.rpc('seed_default_parameter_templates', {
+      p_organization_id: org.id
+    });
+
+    if (templateError) {
+      console.error('⚠️ Step 6 WARNING: Template seeding failed (non-fatal):', templateError);
+      // Continue anyway - templates can be added later
+    } else {
+      console.log('✅ Step 6 SUCCESS: Default templates seeded');
+    }
+
     console.log('🎉 REGISTRATION COMPLETE!');
 
-    // 6. Sign in the user to get a valid session
-    console.log('🔑 Step 6: Signing in user to get session...');
+    // 7. Sign in the user to get a valid session
+    console.log('🔑 Step 7: Signing in user to get session...');
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (signInError || !signInData.session) {
-      console.error('❌ Step 6 FAILED: Sign-in error:', signInError);
+      console.error('❌ Step 7 FAILED: Sign-in error:', signInError);
       // User and org were created, but couldn't get session
       // Return error but don't rollback (user can just login)
       return res.status(500).json({
@@ -153,7 +167,7 @@ router.post('/register/create-org', async (req, res) => {
       });
     }
 
-    console.log('✅ Step 6 SUCCESS: User signed in with session');
+    console.log('✅ Step 7 SUCCESS: User signed in with session');
 
     // Return session
     return res.status(201).json({

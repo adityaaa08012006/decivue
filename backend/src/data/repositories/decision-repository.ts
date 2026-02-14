@@ -47,7 +47,10 @@ export class DecisionRepository {
   async findById(id: string): Promise<Decision> {
     const { data, error } = await this.db
       .from('decisions')
-      .select('*')
+      .select(`
+        *,
+        creator:users!created_by(full_name, email)
+      `)
       .eq('id', id)
       .single();
 
@@ -64,7 +67,10 @@ export class DecisionRepository {
   async findAll(): Promise<Decision[]> {
     const { data, error } = await this.db
       .from('decisions')
-      .select('*')
+      .select(`
+        *,
+        creator:users!created_by(full_name, email)
+      `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -183,6 +189,11 @@ export class DecisionRepository {
       createdAt: new Date(row.created_at),
       lastReviewedAt: new Date(row.last_reviewed_at),
       expiryDate: row.expiry_date ? new Date(row.expiry_date) : undefined,
+      createdBy: row.created_by,
+      creator: row.creator ? {
+        fullName: row.creator.full_name,
+        email: row.creator.email
+      } : undefined,
       metadata: row.metadata
     };
   }

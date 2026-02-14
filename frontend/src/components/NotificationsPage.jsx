@@ -13,9 +13,11 @@ import {
     GitBranch,
     Shield
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
 const NotificationsPage = () => {
+    const { isLead } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, unread, critical
@@ -281,7 +283,7 @@ const NotificationsPage = () => {
                                                         Mark Read
                                                     </button>
                                                 )}
-                                                {notification.type === 'NEEDS_REVIEW' && notification.decision_id && (
+                                                {isLead && notification.type === 'NEEDS_REVIEW' && notification.decision_id && (
                                                     <button
                                                         onClick={() => handleMarkReviewed(notification.decision_id, notification.id)}
                                                         className="text-xs px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
