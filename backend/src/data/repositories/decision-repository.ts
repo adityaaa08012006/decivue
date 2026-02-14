@@ -20,7 +20,9 @@ export class DecisionRepository {
       lifecycle: DecisionLifecycle.STABLE,
       health_signal: 100,
       invalidated_reason: null,
-      metadata: data.metadata
+      metadata: data.metadata,
+      organization_id: (data as any).organization_id, // Added for multi-tenant support
+      created_by: (data as any).created_by // Added for auth tracking
     };
 
     // Add expiry_date if provided

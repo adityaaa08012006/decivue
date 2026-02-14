@@ -2,23 +2,60 @@
 const API_BASE_URL = 'http://localhost:3001/api';
 
 class ApiService {
+  constructor() {
+    this.authToken = null;
+  }
+
+  // Set authentication token
+  setAuthToken(token) {
+    this.authToken = token;
+  }
+
+  // Get authentication token
+  getAuthToken() {
+    return this.authToken;
+  }
+
   // Helper method for making requests
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    // Add auth token if available
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
     const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     };
 
     try {
       const response = await fetch(url, config);
 
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        // Clear local storage and redirect to login
+        localStorage.removeItem('decivue_session');
+        localStorage.removeItem('decivue_user');
+        this.authToken = null;
+
+        // Reload page to show login screen
+        if (!window.location.pathname.includes('/login')) {
+          window.location.reload();
+        }
+
+        const error = await response.json().catch(() => ({ error: 'Unauthorized' }));
+        throw new Error(error.error || 'Session expired. Please login again.');
+      }
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        throw new Error(error.error || error.message || `HTTP error! status: ${response.status}`);
       }
 
       // Handle 204 No Content (DELETE operations)
@@ -31,6 +68,31 @@ class ApiService {
       console.error(`API Error (${endpoint}):`, error);
       throw error;
     }
+  }
+
+  // Convenience methods for HTTP verbs
+  async get(endpoint, options = {}) {
+    return this.request(endpoint, { ...options, method: 'GET' });
+  }
+
+  async post(endpoint, data, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async put(endpoint, data, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(endpoint, options = {}) {
+    return this.request(endpoint, { ...options, method: 'DELETE' });
   }
 
   // Decision endpoints

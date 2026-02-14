@@ -3,15 +3,16 @@
  * Handles HTTP requests for decision operations
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { DecisionRepository } from '@data/repositories/decision-repository';
-import { getDatabase } from '@data/database';
+import { getDatabase, getAuthenticatedDatabase } from '@data/database';
 import { DeterministicEngine } from '@engine/index';
 import { eventBus } from '@events/event-bus';
 import { getCurrentTime } from '@api/routes/time-simulation';
 import { EventType } from '@events/event-types';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@utils/logger';
+import { AuthRequest } from '@middleware/auth';
 
 export class DecisionController {
   private _repository?: DecisionRepository;
@@ -34,11 +35,17 @@ export class DecisionController {
 
   /**
    * GET /api/decisions
-   * Get all decisions
+   * Get all decisions (filtered by RLS to user's organization)
    */
-  async getAll(_req: Request, res: Response, next: NextFunction) {
+  async getAll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const decisions = await this.repository.findAll();
+      // Use authenticated client so RLS policies apply
+      const db = req.accessToken
+        ? getAuthenticatedDatabase(req.accessToken)
+        : getDatabase();
+
+      const repository = new DecisionRepository(db);
+      const decisions = await repository.findAll();
       res.json(decisions);
     } catch (error) {
       next(error);
@@ -47,11 +54,16 @@ export class DecisionController {
 
   /**
    * GET /api/decisions/:id
-   * Get a single decision by ID
+   * Get a single decision by ID (filtered by RLS)
    */
-  async getById(req: Request, res: Response, next: NextFunction) {
+  async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const decision = await this.repository.findById(req.params.id);
+      const db = req.accessToken
+        ? getAuthenticatedDatabase(req.accessToken)
+        : getDatabase();
+
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
       res.json(decision);
     } catch (error) {
       next(error);
@@ -62,9 +74,21 @@ export class DecisionController {
    * POST /api/decisions
    * Create a new decision
    */
-  async create(req: Request, res: Response, next: NextFunction) {
+  async create(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const decision = await this.repository.create(req.body);
+      const db = req.accessToken
+        ? getAuthenticatedDatabase(req.accessToken)
+        : getDatabase();
+
+      // Add organization_id and created_by from authenticated user
+      const decisionData = {
+        ...req.body,
+        organization_id: req.user?.organizationId,
+        created_by: req.user?.id,
+      };
+
+      const repository = new DecisionRepository(db);
+      const decision = await repository.create(decisionData);
 
       // Emit event
       await eventBus.emit({
@@ -85,9 +109,14 @@ export class DecisionController {
    * PUT /api/decisions/:id
    * Update a decision
    */
-  async update(req: Request, res: Response, next: NextFunction) {
+  async update(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const decision = await this.repository.update(req.params.id, req.body);
+      const db = req.accessToken
+        ? getAuthenticatedDatabase(req.accessToken)
+        : getDatabase();
+
+      const repository = new DecisionRepository(db);
+      const decision = await repository.update(req.params.id, req.body);
 
       // Emit event
       await eventBus.emit({
@@ -95,7 +124,7 @@ export class DecisionController {
         type: EventType.DECISION_UPDATED,
         timestamp: new Date(),
         decisionId: decision.id,
-        changes: req.body
+        changes: req.body,
       });
 
       logger.info(`Decision updated: ${decision.id}`);
@@ -109,9 +138,14 @@ export class DecisionController {
    * DELETE /api/decisions/:id
    * Delete a decision
    */
-  async delete(req: Request, res: Response, next: NextFunction) {
+  async delete(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      await this.repository.delete(req.params.id);
+      const db = req.accessToken
+        ? getAuthenticatedDatabase(req.accessToken)
+        : getDatabase();
+
+      const repository = new DecisionRepository(db);
+      await repository.delete(req.params.id);
       logger.info(`Decision deleted: ${req.params.id}`);
       res.status(204).send();
     } catch (error) {
@@ -123,11 +157,13 @@ export class DecisionController {
    * PUT /api/decisions/:id/retire
    * Retire a decision (mark as deprecated/final)
    */
-  async retire(req: Request, res: Response, next: NextFunction) {
+  async retire(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const db = getDatabase();
+      const db = req.accessToken
+        ? getAuthenticatedDatabase(req.accessToken)
+        : getDatabase();
 
       // Update decision to RETIRED lifecycle
       const { data: decision, error } = await db
@@ -168,7 +204,7 @@ export class DecisionController {
    * POST /api/decisions/:id/evaluate
    * Trigger manual evaluation of a decision
    */
-  async evaluate(req: Request, res: Response, next: NextFunction) {
+  async evaluate(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const decisionId = req.params.id;
       const db = getDatabase();
@@ -402,7 +438,7 @@ export class DecisionController {
    * PUT /api/decisions/:id/mark-reviewed
    * Mark a decision as reviewed (updates last_reviewed_at to now and re-evaluates to restore health)
    */
-  async markReviewed(req: Request, res: Response, next: NextFunction) {
+  async markReviewed(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const db = getDatabase();

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, TrendingUp, Pen, FileText, Bell, Settings, FileText as FileIcon, LogOut, LayoutDashboard } from 'lucide-react';
 import api from '../services/api';
 
-const Sidebar = ({ currentView, onNavigate, refreshKey }) => {
+const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -97,12 +97,34 @@ const Sidebar = ({ currentView, onNavigate, refreshKey }) => {
   return (
     <div className="w-60 h-screen bg-neutral-white border-r border-neutral-gray-200 flex flex-col p-4">
       {/* Logo */}
-      <div className="flex items-center gap-2 mb-6 px-2 flex-shrink-0">
+      <div className="flex items-center gap-2 mb-4 px-2 flex-shrink-0">
         <div className="w-8 h-8 flex items-center justify-center">
           <img src="/assets/logo.png" alt="Decivue" className="w-8 h-8" />
         </div>
         <span className="text-xl font-bold text-neutral-black">Decivue</span>
       </div>
+
+      {/* User Info */}
+      {user && (
+        <div className="px-2 py-3 mb-4 border-b border-neutral-gray-200 flex-shrink-0">
+          <p className="text-sm font-semibold text-neutral-black truncate">{user.fullName}</p>
+          <p className="text-xs text-neutral-gray-500 truncate">{user.email}</p>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <span className={`text-xs px-2 py-1 rounded font-medium ${
+              user.role === 'lead'
+                ? 'bg-primary-blue text-white'
+                : 'bg-neutral-gray-200 text-neutral-gray-700'
+            }`}>
+              {user.role === 'lead' ? 'Org Lead' : 'Team Member'}
+            </span>
+            {user.role === 'lead' && user.orgCode && (
+              <span className="text-xs font-mono bg-green-100 text-green-700 px-2 py-1 rounded font-semibold">
+                {user.orgCode}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Content - No scrolling */}
       <div className="flex-1 flex flex-col">
@@ -154,7 +176,10 @@ const Sidebar = ({ currentView, onNavigate, refreshKey }) => {
 
       {/* Log out - Fixed at bottom */}
       <div className="flex-shrink-0 pt-3 border-t border-neutral-gray-200">
-        <button className="flex items-center gap-3 px-4 py-2 text-primary-red hover:bg-red-50 rounded-lg w-full transition-all">
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-2 text-primary-red hover:bg-red-50 rounded-lg w-full transition-all"
+        >
           <LogOut size={20} strokeWidth={2} />
           <span className="text-sm font-medium">Log out</span>
         </button>

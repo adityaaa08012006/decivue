@@ -13,6 +13,8 @@ import { initializeDatabase } from '@data/database';
 import { registerReEvaluationHandlers } from '@events/handlers/re-evaluation-handler';
 import { logger } from '@utils/logger';
 import { AppError } from '@utils/errors';
+import { authenticate } from './middleware/auth';
+import authRoutes from '@api/routes/auth';
 import decisionRoutes from '@api/routes/decisions';
 import assumptionRoutes from '@api/routes/assumptions';
 import dependencyRoutes from '@api/routes/dependencies';
@@ -59,6 +61,7 @@ app.get('/api', (_req: Request, res: Response) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
+      auth: '/api/auth',
       decisions: '/api/decisions',
       assumptions: '/api/assumptions',
       constraints: '/api/constraints'
@@ -66,18 +69,21 @@ app.get('/api', (_req: Request, res: Response) => {
   });
 });
 
-// API routes
-app.use('/api/decisions', decisionRoutes);
-app.use('/api/assumptions', assumptionRoutes);
-app.use('/api/dependencies', dependencyRoutes);
-app.use('/api/constraints', constraintRoutes);
-app.use('/api/constraint-violations', constraintViolationsRoutes);
-app.use('/api/assumption-conflicts', assumptionConflictsRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/timeline', timelineRoutes); // Added timeline route
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/simulate-time', timeSimulationRoutes);
-app.use('/api/parameter-templates', parameterTemplatesRoutes);
+// Public routes (no authentication required)
+app.use('/api/auth', authRoutes);
+
+// Protected routes (authentication required)
+app.use('/api/decisions', authenticate, decisionRoutes);
+app.use('/api/assumptions', authenticate, assumptionRoutes);
+app.use('/api/dependencies', authenticate, dependencyRoutes);
+app.use('/api/constraints', authenticate, constraintRoutes);
+app.use('/api/constraint-violations', authenticate, constraintViolationsRoutes);
+app.use('/api/assumption-conflicts', authenticate, assumptionConflictsRoutes);
+app.use('/api/profile', authenticate, profileRoutes);
+app.use('/api/timeline', authenticate, timelineRoutes);
+app.use('/api/notifications', authenticate, notificationRoutes);
+app.use('/api/simulate-time', authenticate, timeSimulationRoutes);
+app.use('/api/parameter-templates', authenticate, parameterTemplatesRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -136,8 +142,19 @@ process.on('uncaughtException', (error: Error) => {
 });
 
 process.on('unhandledRejection', (reason: any) => {
-  logger.error('Unhandled Rejection', { reason });
-  process.exit(1);
+  logger.error('Unhandled Rejection', {
+    reason: reason,
+    message: reason?.message || 'Unknown error',
+    stack: reason?.stack || 'No stack trace',
+    details: reason?.details || 'No details'
+  });
+
+  // In development, don't exit - just log the error
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  } else {
+    logger.warn('⚠️ Server continuing despite unhandled rejection (development mode)');
+  }
 });
 
 // Start the server

@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { Request, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { getDatabase } from '@data/database';
 import { AssumptionValidationService } from '../../services/assumption-validation-service';
 import { AssumptionConflictDetector } from '../../services/assumption-conflict-detector';
 import { logger } from '../../utils/logger';
+import { AuthRequest } from '@middleware/auth';
 
 const router = Router();
 const conflictDetector = new AssumptionConflictDetector();
@@ -230,7 +230,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * Create a new assumption (universal or decision-specific)
  * Body: { description, status?, scope?, linkToDecisionId?, metadata?, category?, parameters? }
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { description, status, scope, linkToDecisionId, metadata, category, parameters } = req.body;
 
@@ -245,7 +245,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       description,
       status: status || 'VALID',
       scope: scope || 'DECISION_SPECIFIC',
-      metadata: metadata || {}
+      metadata: metadata || {},
+      organization_id: req.user?.organizationId, // Add organization_id
     };
 
     // Add structured fields if provided
@@ -266,7 +267,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         .from('decision_assumptions')
         .insert({
           decision_id: linkToDecisionId,
-          assumption_id: assumption.id
+          assumption_id: assumption.id,
         })
         .select();
 

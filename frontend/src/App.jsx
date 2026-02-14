@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, ArrowRight, PanelRightOpen, Clock, ChevronDown } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
 import Sidebar from './components/Sidebar';
 import DecisionHealthOverview from './components/DecisionHealthOverview';
 import DecisionLogTable from './components/DecisionLogTable';
@@ -12,7 +15,9 @@ import DecisionFlow from './components/DecisionFlow';
 import AddDecisionModal from './components/AddDecisionModal';
 import api from './services/api';
 
-function App() {
+function AppContent() {
+  const { user, loading, logout, isLead } = useAuth();
+  const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [showAddDecisionModal, setShowAddDecisionModal] = useState(false);
@@ -64,10 +69,37 @@ function App() {
     }
   };
 
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-blue mx-auto"></div>
+          <p className="mt-4 text-neutral-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated - show login/register
+  if (!user) {
+    if (authView === 'login') {
+      return <LoginPage onNavigateToRegister={() => setAuthView('register')} />;
+    }
+    return <RegisterPage onNavigateToLogin={() => setAuthView('login')} />;
+  }
+
+  // Authenticated - show main app
   return (
     <div className="flex h-screen bg-neutral-white overflow-hidden">
       {/* Left Sidebar */}
-      <Sidebar currentView={currentView} onNavigate={handleNavigate} refreshKey={refreshKey} />
+      <Sidebar
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        refreshKey={refreshKey}
+        user={user}
+        onLogout={logout}
+      />
 
       {/* Main Content */}
       <div className="flex-1 h-screen flex flex-col overflow-hidden">
@@ -194,4 +226,11 @@ function App() {
   );
 }
 
-export default App;
+// Main App component wrapped with AuthProvider
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
