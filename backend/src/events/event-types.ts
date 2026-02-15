@@ -12,6 +12,7 @@ export enum EventType {
   DECISION_EVALUATED = 'DECISION_EVALUATED',
   ASSUMPTION_CREATED = 'ASSUMPTION_CREATED',
   ASSUMPTION_UPDATED = 'ASSUMPTION_UPDATED',
+  ASSUMPTION_BROKEN = 'ASSUMPTION_BROKEN',
   CONSTRAINT_VIOLATED = 'CONSTRAINT_VIOLATED',
   DEPENDENCY_CHANGED = 'DEPENDENCY_CHANGED',
   RE_EVALUATION_TRIGGERED = 'RE_EVALUATION_TRIGGERED'
@@ -53,6 +54,16 @@ export interface AssumptionUpdatedEvent extends BaseEvent {
   changes: Partial<Assumption>;
 }
 
+export interface AssumptionBrokenEvent extends BaseEvent {
+  type: EventType.ASSUMPTION_BROKEN;
+  decisionId: string;
+  assumptionId?: string;
+  message?: string;
+  triggeredBy?: string;
+  decisionName?: string;
+  ctaUrl?: string;
+}
+
 export interface ConstraintViolatedEvent extends BaseEvent {
   type: EventType.CONSTRAINT_VIOLATED;
   decisionId: string;
@@ -77,6 +88,7 @@ export type DomainEvent =
   | DecisionEvaluatedEvent
   | AssumptionCreatedEvent
   | AssumptionUpdatedEvent
+  | AssumptionBrokenEvent
   | ConstraintViolatedEvent
   | DependencyChangedEvent
   | ReEvaluationTriggeredEvent;

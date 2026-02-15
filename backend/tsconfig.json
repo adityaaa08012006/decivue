@@ -30,7 +30,9 @@
       "@events/*": ["src/events/*"],
       "@data/*": ["src/data/*"],
       "@services/*": ["src/services/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      "@templates/*": ["src/templates/*"],
+      "@middleware/*": ["src/middleware/*"]
     }
   },
   "include": ["src/**/*"],

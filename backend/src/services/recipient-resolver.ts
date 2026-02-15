@@ -1,4 +1,4 @@
-import { getDatabase } from '@data/database';
+import { getAdminDatabase } from '@data/database';
 import { logger } from '@utils/logger';
 
 export interface Recipient {
@@ -11,9 +11,10 @@ export interface Recipient {
  * Resolve eligible recipients for a decision-scoped notification.
  * - includes decision owner and collaborators (flexible schema handling)
  * - excludes the triggering user
+ * - uses admin database to bypass RLS policies
  */
 export async function resolveRecipients(decisionId: string, triggeredByUserId?: string): Promise<Recipient[]> {
-  const db = getDatabase();
+  const db = getAdminDatabase();
 
   try {
     const { data: decision, error: decErr } = await db.from('decisions').select('id, title, metadata, created_by').eq('id', decisionId).single();

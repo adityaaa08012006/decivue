@@ -3,8 +3,9 @@
  * Generates notifications for conflicts, health changes, and items needing review
  */
 
-import { getDatabase } from '@data/database';
+import { getAdminDatabase } from '@data/database';
 import { logger } from '@utils/logger';
+import EmailNotificationHandler from './email-notification-handler';
 
 export type NotificationType =
   | 'ASSUMPTION_CONFLICT'
@@ -24,6 +25,7 @@ interface CreateNotificationParams {
   message: string;
   decisionId?: string;
   assumptionId?: string;
+  organizationId?: string;
   metadata?: Record<string, any>;
 }
 
@@ -33,7 +35,26 @@ export class NotificationService {
    */
   static async create(params: CreateNotificationParams): Promise<void> {
     try {
-      const db = getDatabase();
+      const db = getAdminDatabase();
+
+      // If organizationId not provided, fetch it from decision or assumption
+      let organizationId = params.organizationId;
+
+      if (!organizationId && params.decisionId) {
+        const { data: decision } = await db
+          .from('decisions')
+          .select('organization_id')
+          .eq('id', params.decisionId)
+          .single();
+        organizationId = decision?.organization_id;
+      } else if (!organizationId && params.assumptionId) {
+        const { data: assumption } = await db
+          .from('assumptions')
+          .select('organization_id')
+          .eq('id', params.assumptionId)
+          .single();
+        organizationId = assumption?.organization_id;
+      }
 
       const { error } = await db.from('notifications').insert({
         type: params.type,
@@ -42,6 +63,7 @@ export class NotificationService {
         message: params.message,
         decision_id: params.decisionId,
         assumption_id: params.assumptionId,
+        organization_id: organizationId,
         metadata: params.metadata || {}
       });
 
@@ -51,6 +73,17 @@ export class NotificationService {
       }
 
       logger.info(`Notification created: ${params.type} - ${params.title}`);
+
+      // Send email notifications
+      await EmailNotificationHandler.sendForNotification({
+        type: params.type,
+        severity: params.severity,
+        title: params.title,
+        message: params.message,
+        decisionId: params.decisionId,
+        assumptionId: params.assumptionId,
+        metadata: params.metadata
+      });
     } catch (error) {
       logger.error('Error creating notification', { error });
     }
@@ -61,7 +94,7 @@ export class NotificationService {
    */
   static async checkAssumptionConflicts(): Promise<void> {
     try {
-      const db = getDatabase();
+      const db = getAdminDatabase();
 
       // Get all assumptions with conflicts
       const { data: assumptions, error } = await db.rpc('get_all_assumption_conflicts');
@@ -80,13 +113,25 @@ export class NotificationService {
             .single();
 
           if (!existing) {
+            // Get decision details for context
+            const { data: decision } = await db
+              .from('decisions')
+              .select('id, title')
+              .eq('id', assumption.decision_id)
+              .single();
+
             await this.create({
               type: 'ASSUMPTION_CONFLICT',
               severity: 'WARNING',
               title: 'Assumption Conflict Detected',
               message: `Assumption "${assumption.description}" conflicts with other assumptions`,
               assumptionId: assumption.id,
-              metadata: { conflicts: assumption.conflicts }
+              decisionId: assumption.decision_id,
+              metadata: {
+                conflicts: assumption.conflicts,
+                decisionName: decision?.title,
+                assumptionDescription: assumption.description
+              }
             });
           }
         }
@@ -101,7 +146,7 @@ export class NotificationService {
    */
   static async checkDegradedHealth(): Promise<void> {
     try {
-      const db = getDatabase();
+      const db = getAdminDatabase();
 
       // Get decisions with poor health
       const { data: decisions, error } = await db
@@ -135,7 +180,8 @@ export class NotificationService {
               decisionId: decision.id,
               metadata: {
                 healthSignal: decision.health_signal,
-                lifecycle: decision.lifecycle
+                lifecycle: decision.lifecycle,
+                decisionName: decision.title
               }
             });
           }
@@ -151,7 +197,7 @@ export class NotificationService {
    */
   static async checkNeedsReview(): Promise<void> {
     try {
-      const db = getDatabase();
+      const db = getAdminDatabase();
 
       // Get decisions not reviewed in 30 days
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -188,7 +234,8 @@ export class NotificationService {
               decisionId: decision.id,
               metadata: {
                 lastReviewedAt: decision.last_reviewed_at,
-                daysSinceReview
+                daysSinceReview,
+                decisionName: decision.title
               }
             });
           }
@@ -229,9 +276,83 @@ export class NotificationService {
         decisionId,
         metadata: {
           oldLifecycle,
-          newLifecycle
+          newLifecycle,
+          decisionName: decisionTitle
         }
       });
+    }
+  }
+
+  /**
+   * Check for decisions approaching expiry date
+   */
+  static async checkExpiringDecisions(): Promise<void> {
+    try {
+      const db = getAdminDatabase();
+
+      // Calculate dates
+      const now = new Date();
+      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Get decisions expiring within 30 days
+      const { data: decisions, error } = await db
+        .from('decisions')
+        .select('id, title, expiry_date, lifecycle')
+        .not('expiry_date', 'is', null)
+        .lte('expiry_date', thirtyDaysFromNow)
+        .gte('expiry_date', now.toISOString())
+        .neq('lifecycle', 'RETIRED');
+
+      if (error) throw error;
+
+      if (decisions) {
+        for (const decision of decisions) {
+          // Check if we already have a notification for this expiry
+          const { data: existing } = await db
+            .from('notifications')
+            .select('id')
+            .eq('type', 'NEEDS_REVIEW')
+            .eq('decision_id', decision.id)
+            .eq('is_dismissed', false)
+            .like('message', '%expiring%')
+            .single();
+
+          if (!existing) {
+            const expiryDate = new Date(decision.expiry_date);
+            const daysUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+
+            // Determine severity based on days until expiry
+            let severity: NotificationSeverity = 'INFO';
+            if (daysUntilExpiry <= 7) {
+              severity = 'CRITICAL';
+            } else if (daysUntilExpiry <= 14) {
+              severity = 'WARNING';
+            }
+
+            const expiryDateFormatted = expiryDate.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+
+            await this.create({
+              type: 'NEEDS_REVIEW',
+              severity,
+              title: `Decision Expiring Soon`,
+              message: `"${decision.title}" is expiring in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} on ${expiryDateFormatted}`,
+              decisionId: decision.id,
+              metadata: {
+                expiryDate: decision.expiry_date,
+                daysUntilExpiry,
+                decisionName: decision.title
+              }
+            });
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error checking expiring decisions', { error });
     }
   }
 
@@ -244,6 +365,7 @@ export class NotificationService {
     await this.checkAssumptionConflicts();
     await this.checkDegradedHealth();
     await this.checkNeedsReview();
+    await this.checkExpiringDecisions();
 
     logger.info('Notification checks completed');
   }

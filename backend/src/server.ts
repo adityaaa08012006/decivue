@@ -11,6 +11,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { initializeDatabase } from '@data/database';
 import { registerReEvaluationHandlers } from '@events/handlers/re-evaluation-handler';
+import NotificationScheduler from '@services/scheduler';
 import { logger } from '@utils/logger';
 import { AppError } from '@utils/errors';
 import { authenticate } from './middleware/auth';
@@ -125,12 +126,26 @@ async function startServer() {
     registerReEvaluationHandlers();
     logger.info('Event handlers registered');
 
+    // Start notification scheduler
+    const scheduler = new NotificationScheduler();
+    scheduler.start();
+
     // Start listening
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`API available at http://localhost:${PORT}/api`);
     });
+
+    // Graceful shutdown handler
+    const shutdownHandler = () => {
+      logger.info('Received shutdown signal, gracefully shutting down...');
+      scheduler.stop();
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', shutdownHandler);
+    process.on('SIGINT', shutdownHandler);
   } catch (error) {
     logger.error('Failed to start server', { error });
     process.exit(1);
