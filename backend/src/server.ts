@@ -28,6 +28,7 @@ import notificationRoutes from '@api/routes/notifications';
 import timeSimulationRoutes from '@api/routes/time-simulation';
 import parameterTemplatesRoutes from '@api/routes/parameter-templates';
 import usersRoutes from '@api/routes/users';
+import reportsRoutes from '@api/routes/reports';
 
 // Load environment variables
 dotenv.config();
@@ -87,6 +88,7 @@ app.use('/api/notifications', authenticate, notificationRoutes);
 app.use('/api/simulate-time', authenticate, timeSimulationRoutes);
 app.use('/api/parameter-templates', authenticate, parameterTemplatesRoutes);
 app.use('/api/users', authenticate, usersRoutes);
+app.use('/api/reports', authenticate, reportsRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

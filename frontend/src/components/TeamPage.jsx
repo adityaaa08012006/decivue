@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Mail, Shield, User, Crown, RotateCcw } from 'lucide-react';
+import { Users, UserPlus, Mail, Shield, User, Crown, RotateCcw, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import TeamMemberReportModal from './TeamMemberReportModal';
 
 const TeamPage = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedUserForReport, setSelectedUserForReport] = useState(null);
 
   useEffect(() => {
     fetchTeamMembers();
@@ -42,6 +44,14 @@ const TeamPage = () => {
         Team Member
       </span>
     );
+  };
+
+  const handleGenerateReport = (member) => {
+    setSelectedUserForReport(member);
+  };
+
+  const handleCloseReportModal = () => {
+    setSelectedUserForReport(null);
   };
 
   const formatDate = (dateString) => {
@@ -167,6 +177,16 @@ const TeamPage = () => {
                           <div className="flex items-center gap-2 text-sm text-neutral-gray-600 dark:text-neutral-gray-400">
                             <Mail size={14} />
                             <span>{member.email}</span>
+                        {currentUser?.role === 'lead' && (
+                          <button
+                            onClick={() => handleGenerateReport(member)}
+                            className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-medium"
+                            title="Generate Performance Report"
+                          >
+                            <FileText size={16} />
+                            Generate Report
+                          </button>
+                        )}
                           </div>
                           <p className="text-xs text-neutral-gray-500 dark:text-neutral-gray-500 mt-1">
                             Joined {formatDate(member.createdAt)}
@@ -209,6 +229,14 @@ const TeamPage = () => {
                     <p className="text-xs text-neutral-gray-600 dark:text-neutral-gray-400">Org Leads</p>
                   </div>
                 </div>
+
+      {/* Report Modal */}
+      {selectedUserForReport && (
+        <TeamMemberReportModal
+          user={selectedUserForReport}
+          onClose={handleCloseReportModal}
+        />
+      )}
               </div>
               <div className="bg-white dark:bg-neutral-gray-800 rounded-xl border border-neutral-gray-200 dark:border-neutral-gray-700 p-4">
                 <div className="flex items-center gap-3">

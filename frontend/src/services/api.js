@@ -404,6 +404,18 @@ class ApiService {
   async getOrganizationUsers() {
     return this.request('/users');
   }
+
+  // Reports endpoints
+  async generateTeamMemberReport(userId, startDate = null, endDate = null) {
+    const payload = { userId };
+    if (startDate) payload.startDate = startDate;
+    if (endDate) payload.endDate = endDate;
+
+    return this.request('/reports/team-member', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 export default new ApiService();
