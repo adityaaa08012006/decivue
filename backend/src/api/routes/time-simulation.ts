@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '@data/database';
+import { getAdminDatabase } from '@data/database';
 import { DeterministicEngine } from '@engine/index';
 import { EvaluationInput } from '@engine/types';
 import { logger } from '@utils/logger';
@@ -31,7 +31,7 @@ export function getCurrentTime(): Date {
  */
 router.post('/', async (req: Request, res: Response): Promise<any> => {
   try {
-    const supabase = getDatabase();
+    const supabase = getAdminDatabase();
     const { days} = req.body;
 
     if (!days || typeof days !== 'number' || days <= 0) {
@@ -201,6 +201,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
 
           notifications.push({
             decision_id: decision.id,
+            organization_id: decision.organization_id,
             type: notifType,
             severity,
             title: `Decision ${result.newLifecycle.toLowerCase().replace('_', ' ')}`,
@@ -223,6 +224,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
 
           notifications.push({
             decision_id: decision.id,
+            organization_id: decision.organization_id,
             type: 'HEALTH_DEGRADED',
             severity,
             title: `Health declined by ${healthDrop} points`,
