@@ -72,9 +72,9 @@ export class LLMService {
     
     this.genAI = new GoogleGenerativeAI(apiKey);
     
-    // Use Gemini 1.5 Flash for fast, efficient generation
+    // Use Gemini 2.5 Flash (latest stable model)
     this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7,
         topK: 40,

@@ -5,7 +5,7 @@
 
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '@middleware/auth';
-import { getAuthenticatedDatabase } from '@data/database';
+import { getAuthenticatedDatabase, getAdminDatabase } from '@data/database';
 import { ReportDataAggregator } from '../../services/report-data-aggregator';
 import { ReportGenerator } from '../../services/report-generator';
 import { TeamReportDataAggregator } from '../../services/team-report-data-aggregator';
@@ -181,21 +181,28 @@ export class ReportController {
 
       logger.info(`Generating team member report for user ${userId} from ${start} to ${end}`);
 
-      const db = getAuthenticatedDatabase(req.accessToken!);
+      // Use admin database to bypass RLS for user lookup
+      const adminDb = getAdminDatabase();
 
       // Check if user is in the same organization
-      const { data: targetUser } = await db
+      const { data: targetUser } = await adminDb
         .from('users')
-        .select('id, organization_id')
+        .select('id, organization_id, full_name, email')
         .eq('id', userId)
+        .eq('organization_id', req.user.organizationId)
         .single();
 
-      if (!targetUser || targetUser.organization_id !== req.user.organizationId) {
+      if (!targetUser) {
         return res.status(404).json({
           error: 'User not found',
           message: 'User not found in your organization',
         });
       }
+
+      const userName = targetUser.full_name || targetUser.email;
+
+      // Now use authenticated database for the rest of the queries
+      const db = getAuthenticatedDatabase(req.accessToken!);
 
       // Check for cached report (valid for 24 hours)
       const { data: cachedReport } = await db
@@ -224,6 +231,7 @@ export class ReportController {
       const aggregator = new TeamReportDataAggregator(db);
       const metrics = await aggregator.aggregateTeamMemberMetrics(
         userId,
+        userName,
         req.user.organizationId,
         start,
         end

@@ -57,6 +57,11 @@ CREATE INDEX IF NOT EXISTS idx_team_reports_lookup ON team_member_reports(organi
 -- =====================================================
 ALTER TABLE team_member_reports ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Leads can view org reports" ON team_member_reports;
+DROP POLICY IF EXISTS "Leads can generate reports" ON team_member_reports;
+DROP POLICY IF EXISTS "Allow cleanup of expired reports" ON team_member_reports;
+
 -- Policy: Organization leads can view reports for their organization
 CREATE POLICY "Leads can view org reports"
 ON team_member_reports FOR SELECT

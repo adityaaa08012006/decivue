@@ -13,28 +13,19 @@ export class TeamReportDataAggregator {
   /**
    * Aggregate all metrics needed for a team member performance report
    * @param userId Team member's user ID
+   * @param userName Team member's display name
    * @param organizationId Organization ID
    * @param startDate Start of date range
    * @param endDate End of date range
    */
   async aggregateTeamMemberMetrics(
     userId: string,
+    userName: string,
     organizationId: string,
     startDate: Date,
     endDate: Date
   ): Promise<TeamMemberMetrics> {
     logger.info(`Aggregating metrics for user ${userId} from ${startDate} to ${endDate}`);
-
-    // Fetch user information
-    const { data: user } = await this.db
-      .from('users')
-      .select('id, full_name, email')
-      .eq('id', userId)
-      .single();
-
-    if (!user) {
-      throw new Error(`User not found: ${userId}`);
-    }
 
     // Fetch decisions created by this user in date range
     const { data: decisions } = await this.db
@@ -68,8 +59,8 @@ export class TeamReportDataAggregator {
     const performanceInsights = await this.aggregatePerformanceInsights(userDecisions, userId, organizationId, startDate, endDate);
 
     return {
-      userId: user.id,
-      userName: user.full_name || user.email,
+      userId,
+      userName,
       dateRange: { start: startDate, end: endDate },
       decisionPatterns,
       assumptionsUsage,

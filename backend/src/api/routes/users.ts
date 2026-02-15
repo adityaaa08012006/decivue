@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
-import { getDatabase } from '@data/database';
+import { getAdminDatabase } from '@data/database';
 
 const router = Router();
 
 /**
  * GET /api/users
  * Get all users in the same organization as the authenticated user
+ * Uses admin database to bypass RLS recursion issues
  */
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -17,9 +18,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const db = req.accessToken
-      ? require('@data/database').getAuthenticatedDatabase(req.accessToken)
-      : getDatabase();
+    // Use admin database to bypass RLS recursion
+    // Security: Already authenticated via middleware, filtering by organizationId
+    const db = getAdminDatabase();
 
     // Get all users from the same organization
     const { data: users, error } = await db
