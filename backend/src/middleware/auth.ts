@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { supabase } from '../data/database';
+import { supabase, getAdminDatabase } from '../data/database';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -45,8 +45,9 @@ export async function authenticate(
       });
     }
 
-    // Fetch user profile
-    const { data: profile, error: profileError } = await supabase
+    // Fetch user profile using admin client (bypasses RLS to avoid circular dependency)
+    const adminDb = getAdminDatabase();
+    const { data: profile, error: profileError } = await adminDb
       .from('users')
       .select('id, email, role, organization_id, full_name')
       .eq('id', user.id)
@@ -122,7 +123,8 @@ export async function optionalAuth(
     const { data: { user } } = await supabase.auth.getUser(token);
 
     if (user) {
-      const { data: profile } = await supabase
+      const adminDb = getAdminDatabase();
+      const { data: profile } = await adminDb
         .from('users')
         .select('id, email, role, organization_id, full_name')
         .eq('id', user.id)

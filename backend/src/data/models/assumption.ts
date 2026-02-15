@@ -22,6 +22,7 @@ export interface Assumption {
   description: string;             // Must be unique - assumptions are global
   status: AssumptionStatus;
   validatedAt?: Date;
+  organizationId?: string;         // Organization this assumption belongs to (for multi-tenant filtering)
   metadata?: Record<string, any>;
   createdAt: Date;
 }

@@ -3,9 +3,9 @@
  * HTTP routes for dependency operations
  */
 
-import { Router } from 'express';
-import { Request, Response, NextFunction } from 'express';
-import { getDatabase } from '@data/database';
+import { Router, Response, NextFunction } from 'express';
+import { getAdminDatabase } from '@data/database';
+import { AuthRequest } from '@middleware/auth';
 
 const router = Router();
 
@@ -13,15 +13,31 @@ const router = Router();
  * GET /api/dependencies?decisionId=xxx
  * Get all dependencies for a decision (both depends on and blocks)
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { decisionId } = req.query;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
 
     if (!decisionId) {
       return res.status(400).json({ error: 'decisionId is required' });
     }
 
-    const db = getDatabase();
+    const db = getAdminDatabase();
+
+    // Verify decision belongs to user's organization
+    const { data: decision } = await db
+      .from('decisions')
+      .select('organization_id')
+      .eq('id', decisionId)
+      .single();
+
+    if (!decision || decision.organization_id !== organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     // 1. Get decisions I BLOCK (I am the Source)
     const { data: blocking, error: error1 } = await db
@@ -32,12 +48,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         decisions:target_decision_id (
           id,
           title,
-          lifecycle
+          lifecycle,
+          organization_id
         )
       `)
       .eq('source_decision_id', decisionId);
 
     if (error1) throw error1;
+
+    // Filter to ensure all belong to same organization
+    const filteredBlocking = (blocking || []).filter((d: any) =>
+      d.decisions?.organization_id === organizationId
+    );
 
     // 2. Get decisions I am BLOCKED BY (I am the Target)
     const { data: blockedBy, error: error2 } = await db
@@ -48,16 +70,22 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         decisions:source_decision_id (
           id,
           title,
-          lifecycle
+          lifecycle,
+          organization_id
         )
       `)
       .eq('target_decision_id', decisionId);
 
     if (error2) throw error2;
 
+    // Filter to ensure all belong to same organization
+    const filteredBlockedBy = (blockedBy || []).filter((d: any) =>
+      d.decisions?.organization_id === organizationId
+    );
+
     return res.json({
-      blocking: blocking || [], // Downstream
-      blockedBy: blockedBy || [] // Upstream
+      blocking: filteredBlocking, // Downstream
+      blockedBy: filteredBlockedBy // Upstream
     });
   } catch (error) {
     return next(error);
@@ -68,15 +96,32 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * POST /api/dependencies
  * Create a new dependency
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { sourceDecisionId, targetDecisionId } = req.body;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
 
     if (!sourceDecisionId || !targetDecisionId) {
       return res.status(400).json({ error: 'sourceDecisionId and targetDecisionId are required' });
     }
 
-    const db = getDatabase();
+    const db = getAdminDatabase();
+
+    // Verify both decisions belong to user's organization
+    const [sourceCheck, targetCheck] = await Promise.all([
+      db.from('decisions').select('organization_id').eq('id', sourceDecisionId).single(),
+      db.from('decisions').select('organization_id').eq('id', targetDecisionId).single()
+    ]);
+
+    if (sourceCheck.data?.organization_id !== organizationId ||
+        targetCheck.data?.organization_id !== organizationId) {
+      return res.status(403).json({ error: 'Access denied: Both decisions must belong to your organization' });
+    }
+
     const { data, error } = await db
       .from('dependencies')
       .insert({
@@ -98,10 +143,35 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
  * DELETE /api/dependencies/:id
  * Remove a dependency
  */
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
+
+    // Verify the dependency involves decisions from user's organization
+    const { data: dependency } = await db
+      .from('dependencies')
+      .select(`
+        id,
+        source_decision_id,
+        target_decision_id,
+        source:decisions!dependencies_source_decision_id_fkey(organization_id),
+        target:decisions!dependencies_target_decision_id_fkey(organization_id)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (!dependency ||
+        (dependency.source as any)?.organization_id !== organizationId ||
+        (dependency.target as any)?.organization_id !== organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const { error } = await db
       .from('dependencies')

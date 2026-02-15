@@ -1,5 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { getDatabase } from '../../data/database';
+import { Router, Response, NextFunction } from 'express';
+import { getAdminDatabase } from '../../data/database';
+import { AuthRequest } from '@middleware/auth';
 
 const router = Router();
 
@@ -16,27 +17,35 @@ interface TimelineEvent {
     actor?: string; // "System" or "User" (if we had auth)
 }
 
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const db = getDatabase();
+        const organizationId = req.user?.organizationId;
+
+        if (!organizationId) {
+            return res.status(401).json({ error: 'Organization ID required' });
+        }
+
+        const db = getAdminDatabase();
         const { decisionId, limit = 50 } = req.query;
 
-        // 1. Fetch Decisions (Creation Events)
-        let decisionsQuery = db.from('decisions').select('id, title, description, created_at, lifecycle, health_signal');
+        // 1. Fetch Decisions (Creation Events) - filtered by organization
+        let decisionsQuery = db.from('decisions')
+            .select('id, title, description, created_at, lifecycle, health_signal')
+            .eq('organization_id', organizationId);
         if (decisionId) decisionsQuery = decisionsQuery.eq('id', decisionId);
 
-        // 2. Fetch History (Lifecycle/Health Changes)
+        // 2. Fetch History (Lifecycle/Health Changes) - filtered by organization
         let historyQuery = db.from('evaluation_history').select(`
       id, decision_id, old_lifecycle, new_lifecycle, old_health_signal, new_health_signal, evaluated_at,
-      decisions (title)
-    `);
+      decisions!inner (title, organization_id)
+    `).eq('decisions.organization_id', organizationId);
         if (decisionId) historyQuery = historyQuery.eq('decision_id', decisionId);
 
-        // 3. Fetch Signals (Manual Inputs)
+        // 3. Fetch Signals (Manual Inputs) - filtered by organization
         let signalsQuery = db.from('decision_signals').select(`
       id, decision_id, type, description, impact, created_at, metadata,
-      decisions (title)
-    `);
+      decisions!inner (title, organization_id)
+    `).eq('decisions.organization_id', organizationId);
         if (decisionId) signalsQuery = signalsQuery.eq('decision_id', decisionId);
 
         // Execute parallel
@@ -132,10 +141,27 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 });
 
-router.post('/signals', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/signals', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { decision_id, type, description, impact, metadata } = req.body;
-        const db = getDatabase();
+        const organizationId = req.user?.organizationId;
+
+        if (!organizationId) {
+            return res.status(401).json({ error: 'Organization ID required' });
+        }
+
+        const db = getAdminDatabase();
+
+        // Verify decision belongs to user's organization
+        const { data: decision } = await db
+            .from('decisions')
+            .select('organization_id')
+            .eq('id', decision_id)
+            .single();
+
+        if (!decision || decision.organization_id !== organizationId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
         const { data, error } = await db
             .from('decision_signals')
@@ -144,7 +170,8 @@ router.post('/signals', async (req: Request, res: Response, next: NextFunction) 
                 type,
                 description,
                 impact,
-                metadata
+                metadata,
+                organization_id: organizationId
             })
             .select()
             .single();

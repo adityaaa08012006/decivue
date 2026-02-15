@@ -149,30 +149,25 @@ router.post('/register/create-org', async (req, res) => {
 
     console.log('🎉 REGISTRATION COMPLETE!');
 
-    // 7. Sign in the user to get a valid session
-    console.log('🔑 Step 7: Signing in user to get session...');
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // 7. Return session from signup (no need for second sign-in)
+    console.log('🔑 Step 7: Returning session from signup...');
 
-    if (signInError || !signInData.session) {
-      console.error('❌ Step 7 FAILED: Sign-in error:', signInError);
-      // User and org were created, but couldn't get session
-      // Return error but don't rollback (user can just login)
+    // Use session from the initial signUp call
+    if (!authData.session) {
+      console.error('❌ Step 7 FAILED: No session returned from signup');
+      // This would happen if email confirmation is required
       return res.status(500).json({
-        error: 'Account created but failed to sign in. Please try logging in.',
-        code: 'SIGNIN_AFTER_SIGNUP_FAILED',
-        details: signInError?.message
+        error: 'Account created but email confirmation may be required. Please check your email or try logging in.',
+        code: 'NO_SESSION_FROM_SIGNUP',
       });
     }
 
-    console.log('✅ Step 7 SUCCESS: User signed in with session');
+    console.log('✅ Step 7 SUCCESS: Session available from signup');
 
-    // Return session
+    // Return session from signup
     return res.status(201).json({
       message: 'Organization created successfully',
-      session: signInData.session,
+      session: authData.session,
       user: {
         id: userId,
         email,
@@ -262,26 +257,19 @@ router.post('/register/join-org', async (req, res) => {
       });
     }
 
-    // 4. Sign in the user to get a valid session
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError || !signInData.session) {
-      // User was created, but couldn't get session
-      // Return error but don't rollback (user can just login)
+    // 4. Return session from signup (no need for second sign-in)
+    if (!authData.session) {
+      // This would happen if email confirmation is required
       return res.status(500).json({
-        error: 'Account created but failed to sign in. Please try logging in.',
-        code: 'SIGNIN_AFTER_SIGNUP_FAILED',
-        details: signInError?.message
+        error: 'Account created but email confirmation may be required. Please check your email or try logging in.',
+        code: 'NO_SESSION_FROM_SIGNUP',
       });
     }
 
-    // Return session
+    // Return session from signup
     return res.status(201).json({
       message: 'Successfully joined organization',
-      session: signInData.session,
+      session: authData.session,
       user: {
         id: userId,
         email,
@@ -329,8 +317,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // 2. Fetch user profile with organization
-    const { data: profile, error: profileError } = await supabase
+    // 2. Fetch user profile with organization using admin client (bypasses RLS)
+    const adminDb = getAdminDatabase();
+    const { data: profile, error: profileError } = await adminDb
       .from('users')
       .select(`
         id,
@@ -347,9 +336,11 @@ router.post('/login', async (req, res) => {
       .single();
 
     if (profileError || !profile) {
+      console.error('Profile fetch error:', profileError);
       return res.status(500).json({
         error: 'Failed to fetch user profile',
-        code: 'PROFILE_FETCH_FAILED'
+        code: 'PROFILE_FETCH_FAILED',
+        details: profileError?.message
       });
     }
 
@@ -423,8 +414,9 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
       });
     }
 
-    // Fetch full profile with organization
-    const { data: profile, error } = await supabase
+    // Fetch full profile with organization using admin client (bypasses RLS)
+    const adminDb = getAdminDatabase();
+    const { data: profile, error } = await adminDb
       .from('users')
       .select(`
         id,
@@ -441,9 +433,11 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
       .single();
 
     if (error || !profile) {
+      console.error('Profile fetch error in /auth/me:', error);
       return res.status(404).json({
         error: 'Profile not found',
-        code: 'PROFILE_NOT_FOUND'
+        code: 'PROFILE_NOT_FOUND',
+        details: error?.message
       });
     }
 

@@ -5,7 +5,7 @@
 
 import { Response, NextFunction } from 'express';
 import { DecisionRepository } from '@data/repositories/decision-repository';
-import { getDatabase, getAuthenticatedDatabase } from '@data/database';
+import { getAdminDatabase } from '@data/database';
 import { DeterministicEngine } from '@engine/index';
 import { eventBus } from '@events/event-bus';
 import { getCurrentTime } from '@api/routes/time-simulation';
@@ -28,24 +28,29 @@ export class DecisionController {
    */
   private get repository(): DecisionRepository {
     if (!this._repository) {
-      this._repository = new DecisionRepository(getDatabase());
+      this._repository = new DecisionRepository(getAdminDatabase());
     }
     return this._repository;
   }
 
   /**
    * GET /api/decisions
-   * Get all decisions (filtered by RLS to user's organization)
+   * Get all decisions (filtered by organization)
    */
   async getAll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      // Use authenticated client so RLS policies apply
-      const db = req.accessToken
-        ? getAuthenticatedDatabase(req.accessToken)
-        : getDatabase();
+      const organizationId = req.user?.organizationId;
 
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required'});
+      }
+
+      const db = getAdminDatabase();
       const repository = new DecisionRepository(db);
-      const decisions = await repository.findAll();
+      const allDecisions = await repository.findAll();
+
+      // Filter by organization
+      const decisions = allDecisions.filter((d: any) => d.organizationId === organizationId);
       res.json(decisions);
     } catch (error) {
       next(error);
@@ -54,16 +59,25 @@ export class DecisionController {
 
   /**
    * GET /api/decisions/:id
-   * Get a single decision by ID (filtered by RLS)
+   * Get a single decision by ID (filtered by organization)
    */
   async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const db = req.accessToken
-        ? getAuthenticatedDatabase(req.accessToken)
-        : getDatabase();
+      const organizationId = req.user?.organizationId;
 
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
       const repository = new DecisionRepository(db);
       const decision = await repository.findById(req.params.id);
+
+      // Verify organization ownership
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
       res.json(decision);
     } catch (error) {
       next(error);
@@ -76,9 +90,7 @@ export class DecisionController {
    */
   async create(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const db = req.accessToken
-        ? getAuthenticatedDatabase(req.accessToken)
-        : getDatabase();
+      const db = getAdminDatabase();
 
       // Add organization_id and created_by from authenticated user
       const decisionData = {
@@ -111,11 +123,21 @@ export class DecisionController {
    */
   async update(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const db = req.accessToken
-        ? getAuthenticatedDatabase(req.accessToken)
-        : getDatabase();
+      const organizationId = req.user?.organizationId;
 
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
       const repository = new DecisionRepository(db);
+
+      // Verify ownership before update
+      const existing = await repository.findById(req.params.id);
+      if ((existing as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
       const decision = await repository.update(req.params.id, req.body);
 
       // Emit event
@@ -140,11 +162,21 @@ export class DecisionController {
    */
   async delete(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const db = req.accessToken
-        ? getAuthenticatedDatabase(req.accessToken)
-        : getDatabase();
+      const organizationId = req.user?.organizationId;
 
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
       const repository = new DecisionRepository(db);
+
+      // Verify ownership before delete
+      const existing = await repository.findById(req.params.id);
+      if ((existing as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
       await repository.delete(req.params.id);
       logger.info(`Decision deleted: ${req.params.id}`);
       res.status(204).send();
@@ -161,9 +193,13 @@ export class DecisionController {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const db = req.accessToken
-        ? getAuthenticatedDatabase(req.accessToken)
-        : getDatabase();
+      const organizationId = req.user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
 
       // Update decision to RETIRED lifecycle
       const { data: decision, error } = await db
@@ -174,6 +210,7 @@ export class DecisionController {
           health_signal: 0
         })
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .select()
         .single();
 
@@ -207,7 +244,7 @@ export class DecisionController {
   async evaluate(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const decisionId = req.params.id;
-      const db = getDatabase();
+      const db = getAdminDatabase();
 
       logger.info(`🔄 Starting evaluation for decision: ${decisionId}`);
 
@@ -441,7 +478,7 @@ export class DecisionController {
   async markReviewed(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const db = getDatabase();
+      const db = getAdminDatabase();
 
       // First, check the decision's current state
       const { data: currentDecision } = await db

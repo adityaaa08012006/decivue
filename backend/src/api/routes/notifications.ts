@@ -3,8 +3,9 @@
  * HTTP routes for notification operations
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
-import { getDatabase } from '@data/database';
+import { Router, Response, NextFunction } from 'express';
+import { getAdminDatabase } from '@data/database';
+import { AuthRequest } from '../../middleware/auth';
 
 const router = Router();
 
@@ -12,14 +13,21 @@ const router = Router();
  * GET /api/notifications
  * Get all notifications (with optional filters)
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { unreadOnly, severity, type, limit = 50 } = req.query;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     let query = db
       .from('notifications')
       .select('*')
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
       .limit(parseInt(limit as string));
 
@@ -52,13 +60,20 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * GET /api/notifications/unread-count
  * Get count of unread notifications
  */
-router.get('/unread-count', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/unread-count', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     const { count, error } = await db
       .from('notifications')
       .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
       .eq('is_read', false)
       .eq('is_dismissed', false);
 
@@ -74,15 +89,22 @@ router.get('/unread-count', async (req: Request, res: Response, next: NextFuncti
  * PUT /api/notifications/:id/mark-read
  * Mark a notification as read
  */
-router.put('/:id/mark-read', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id/mark-read', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     const { data, error } = await db
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -98,13 +120,20 @@ router.put('/:id/mark-read', async (req: Request, res: Response, next: NextFunct
  * PUT /api/notifications/mark-all-read
  * Mark all notifications as read
  */
-router.put('/mark-all-read', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/mark-all-read', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     const { error } = await db
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('organization_id', organizationId)
       .eq('is_read', false);
 
     if (error) throw error;
@@ -119,15 +148,22 @@ router.put('/mark-all-read', async (req: Request, res: Response, next: NextFunct
  * PUT /api/notifications/:id/dismiss
  * Dismiss a notification
  */
-router.put('/:id/dismiss', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id/dismiss', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     const { data, error } = await db
       .from('notifications')
       .update({ is_dismissed: true, dismissed_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -143,15 +179,22 @@ router.put('/:id/dismiss', async (req: Request, res: Response, next: NextFunctio
  * DELETE /api/notifications/:id
  * Delete a notification
  */
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     const { error } = await db
       .from('notifications')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('organization_id', organizationId);
 
     if (error) throw error;
 

@@ -190,6 +190,7 @@ export class DecisionRepository {
       lastReviewedAt: new Date(row.last_reviewed_at),
       expiryDate: row.expiry_date ? new Date(row.expiry_date) : undefined,
       createdBy: row.created_by,
+      organizationId: row.organization_id,
       creator: row.creator ? {
         fullName: row.creator.full_name,
         email: row.creator.email

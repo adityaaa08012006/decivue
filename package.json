@@ -1,0 +1,26 @@
+{
+  "name": "decivue-monorepo",
+  "version": "1.0.0",
+  "description": "DECIVUE - Deterministic Decision Monitoring System",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev\"",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "test": "cd backend && npm test",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [
+    "decision-monitoring",
+    "rule-engine",
+    "deterministic"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "resend": "^6.9.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

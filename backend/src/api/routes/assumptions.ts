@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
-import { getDatabase } from '@data/database';
+import { getAdminDatabase } from '@data/database';
 import { AssumptionValidationService } from '../../services/assumption-validation-service';
 import { AssumptionConflictDetector } from '../../services/assumption-conflict-detector';
 import { logger } from '../../utils/logger';
@@ -21,8 +21,8 @@ async function recheckConflictsForAssumption(assumptionId: string, updatedAssump
       category: updatedAssumption.category,
       parameters: updatedAssumption.parameters
     });
-    
-    const db = getDatabase();
+
+    const db = getAdminDatabase();
 
     // Get all unresolved conflicts involving this assumption
     const { data: conflicts, error: conflictsError } = await db
@@ -122,10 +122,16 @@ async function recheckConflictsForAssumption(assumptionId: string, updatedAssump
  *   - scope: Filter by UNIVERSAL or DECISION_SPECIFIC
  *   - includeConflicts: If true, includes conflict information
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { decisionId, scope, includeConflicts } = req.query;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     if (decisionId) {
       // Get assumptions for a specific decision (only explicitly linked via decision_assumptions)
@@ -161,10 +167,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
       return res.json(assumptions);
     } else {
-      // Get all assumptions with their linked decisions
+      // Get all assumptions with their linked decisions (filtered by organization)
       const { data: assumptions, error: assumptionsError } = await db
         .from('assumptions')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (assumptionsError) throw assumptionsError;
@@ -238,7 +245,13 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       return res.status(400).json({ error: 'Description is required' });
     }
 
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     // Create or get existing assumption
     const assumptionData: any = {
@@ -287,16 +300,22 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
  * POST /api/assumptions/:id/link
  * Link an existing assumption to a decision
  */
-router.post('/:id/link', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/link', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { decisionId } = req.body;
+
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
 
     if (!decisionId) {
       return res.status(400).json({ error: 'Decision ID is required' });
     }
 
-    const db = getDatabase();
+    const db = getAdminDatabase();
     const { data, error } = await db
       .from('decision_assumptions')
       .insert({
@@ -324,10 +343,16 @@ router.post('/:id/link', async (req: Request, res: Response, next: NextFunction)
  * Report a conflict between two assumptions
  * Body: { conflictingAssumptionId: string, reason: string }
  */
-router.post('/:id/conflicts', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/conflicts', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { conflictingAssumptionId, reason } = req.body;
+
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
 
     if (!conflictingAssumptionId) {
       return res.status(400).json({ error: 'conflictingAssumptionId is required' });
@@ -337,7 +362,7 @@ router.post('/:id/conflicts', async (req: Request, res: Response, next: NextFunc
       return res.status(400).json({ error: 'conflict reason is required' });
     }
 
-    const db = getDatabase();
+    const db = getAdminDatabase();
 
     // Ensure IDs are ordered to prevent duplicates
     const [aId, bId] = [id, conflictingAssumptionId].sort();
@@ -369,10 +394,10 @@ router.post('/:id/conflicts', async (req: Request, res: Response, next: NextFunc
  * GET /api/assumptions/:id/conflicts
  * Get all conflicts for a specific assumption
  */
-router.get('/:id/conflicts', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id/conflicts', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const db = getDatabase();
+    const db = getAdminDatabase();
 
     const { data, error } = await db.rpc('get_assumption_conflicts', {
       p_assumption_id: id
@@ -391,12 +416,18 @@ router.get('/:id/conflicts', async (req: Request, res: Response, next: NextFunct
  * Update an existing assumption
  * Body: { description?, status?, scope?, metadata? }
  */
-router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { description, status, scope, metadata, category, parameters } = req.body;
 
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     // Get current assumption state for validation
     const { data: currentAssumption } = await db
@@ -489,15 +520,22 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
  * Delete an assumption
  * Note: This will also delete all decision_assumptions links (CASCADE)
  */
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
 
     const { error } = await db
       .from('assumptions')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('organization_id', organizationId);
 
     if (error) throw error;
 

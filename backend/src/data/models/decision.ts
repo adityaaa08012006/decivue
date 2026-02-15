@@ -28,6 +28,7 @@ export interface Decision {
   lastReviewedAt: Date;            // Updated ONLY by explicit human review action
   expiryDate?: Date;               // Optional expiration date - accelerates decay as it approaches/passes
   createdBy?: string;              // User ID who created this decision
+  organizationId?: string;         // Organization this decision belongs to (for multi-tenant filtering)
   creator?: {                      // Creator user information (joined from users table)
     fullName?: string;
     email?: string;
