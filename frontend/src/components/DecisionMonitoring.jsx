@@ -509,7 +509,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-white p-8">
+    <div className="min-h-screen bg-neutral-white dark:bg-neutral-gray-900 p-8">
       {/* Toast Notification */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 transition-all duration-300 ease-out">
@@ -539,22 +539,22 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
       {/* Delete Confirmation Modal */}
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto mb-4">
-              <AlertCircle className="text-red-600" size={32} />
+          <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full mx-auto mb-4">
+              <AlertCircle className="text-red-600 dark:text-red-400" size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-neutral-black mb-2 text-center">
+            <h2 className="text-2xl font-bold text-neutral-black dark:text-white mb-2 text-center">
               Delete Decision?
             </h2>
-            <p className="text-neutral-gray-600 mb-6 text-center">
+            <p className="text-neutral-gray-600 dark:text-neutral-gray-400 mb-6 text-center">
               Are you sure you want to delete{" "}
               <span className="font-semibold">
                 "{deleteConfirmation.title}"
               </span>
               ?
             </p>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-orange-800">
+            <div className="bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700 rounded-lg p-4 mb-6">
+              <p className="text-sm text-orange-800 dark:text-orange-300">
                 <strong>Warning:</strong> This action cannot be undone. All
                 related assumptions, dependencies, and constraints will be
                 unlinked.
@@ -563,13 +563,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirmation(null)}
-                className="flex-1 px-6 py-3 bg-neutral-gray-100 text-neutral-gray-700 font-semibold rounded-xl hover:bg-neutral-gray-200 transition-colors"
+                className="flex-1 px-6 py-3 bg-neutral-gray-100 dark:bg-neutral-gray-700 text-neutral-gray-700 dark:text-neutral-gray-300 font-semibold rounded-xl hover:bg-neutral-gray-200 dark:hover:bg-neutral-gray-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                className="flex-1 px-6 py-3 bg-red-600 dark:bg-red-500 text-white font-semibold rounded-xl hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
               >
                 Delete
               </button>
@@ -591,24 +591,24 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-black mb-2">
+            <h1 className="text-3xl font-bold text-black dark:text-white mb-2">
               Decision Monitoring
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-neutral-gray-400">
               Keep track of how your decisions are doing
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={onAddDecision}
-              className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm font-medium"
+              className="px-4 py-2 bg-primary-blue dark:bg-blue-600 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-sm font-medium"
             >
               <Plus size={18} />
               Add Decision
             </button>
             <button
               onClick={fetchDecisions}
-              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 bg-white dark:bg-neutral-gray-700 border border-gray-300 dark:border-neutral-gray-600 text-gray-700 dark:text-neutral-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-gray-600 transition-colors flex items-center gap-2 shadow-sm"
             >
               <RefreshCw size={18} />
               Refresh
@@ -625,8 +625,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
             onClick={() => setFilterStatus(status)}
             className={`px-5 py-2.5 rounded-lg font-medium transition-all ${
               filterStatus === status
-                ? "bg-blue-500 text-white shadow-md"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
+                : "bg-white dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-gray-600 border border-gray-200 dark:border-neutral-gray-600"
             }`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
@@ -639,16 +639,16 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
       {/* Loading State */}
       {loading && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center shadow-sm">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500 mb-4"></div>
-          <p className="text-gray-700">Loading your decisions...</p>
+        <div className="bg-white dark:bg-neutral-gray-800 rounded-lg border border-gray-200 dark:border-neutral-gray-700 p-12 text-center shadow-sm">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-neutral-gray-700 border-t-blue-500 mb-4"></div>
+          <p className="text-gray-700 dark:text-neutral-gray-300">Loading your decisions...</p>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 shadow-sm">
-          <p className="text-red-800 text-sm">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-4 shadow-sm">
+          <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>
         </div>
       )}
 
@@ -667,7 +667,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
             return (
               <div
                 key={decision.id}
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all"
+                className="bg-white dark:bg-neutral-gray-800 rounded-lg border border-gray-200 dark:border-neutral-gray-700 overflow-hidden hover:shadow-lg transition-all"
               >
                 {/* Decision Header */}
                 <div className="p-6">
@@ -677,7 +677,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                       onClick={() => toggleExpand(decision.id)}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-sm font-mono text-gray-500">
+                        <span className="text-sm font-mono text-gray-500 dark:text-neutral-gray-400">
                           {decision.id.slice(0, 8)}
                         </span>
                         <span
@@ -687,7 +687,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         </span>
                         {/* Assumption Conflict Warning Badge */}
                         {decisionData[decision.id]?.conflicts?.length > 0 && (
-                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-300 flex items-center gap-1">
+                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 flex items-center gap-1">
                             ⚠️ {decisionData[decision.id].conflicts.length}{" "}
                             Assumption Conflict
                             {decisionData[decision.id].conflicts.length > 1
@@ -698,7 +698,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         {/* Decision Conflict Warning Badge */}
                         {decisionData[decision.id]?.decisionConflicts?.length >
                           0 && (
-                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-700 border border-orange-300 flex items-center gap-1">
+                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700 flex items-center gap-1">
                             🔀{" "}
                             {decisionData[decision.id].decisionConflicts.length}{" "}
                             Decision Conflict
@@ -710,7 +710,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         )}
                         {/* Locked Badge */}
                         {decision.lockedAt && (
-                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300 flex items-center gap-1">
+                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-gray-100 dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 border border-gray-300 dark:border-neutral-gray-600 flex items-center gap-1">
                             <Lock size={12} />
                             Locked
                           </span>
@@ -719,10 +719,10 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         {decision.governanceTier && decision.governanceTier !== 'standard' && (
                           <span className={`px-3 py-1 rounded-md text-xs font-bold flex items-center gap-1 ${
                             decision.governanceTier === 'critical' 
-                              ? 'bg-red-100 text-red-700 border border-red-300'
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
                               : decision.governanceTier === 'high_impact'
-                              ? 'bg-orange-100 text-orange-700 border border-orange-300'
-                              : 'bg-blue-100 text-blue-700 border border-blue-300'
+                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
+                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                           }`}>
                             <Shield size={12} />
                             {decision.governanceTier.replace('_', ' ').toUpperCase()}
@@ -740,20 +740,20 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                             if (isExpired) {
                               return (
-                                <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-300 animate-pulse">
+                                <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 animate-pulse">
                                   ⚠️ EXPIRED
                                 </span>
                               );
                             } else if (daysUntilExpiry <= 30) {
                               return (
-                                <span className="px-3 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-300">
+                                <span className="px-3 py-1 rounded-md text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700">
                                   ⏰ {daysUntilExpiry}d to expiry
                                 </span>
                               );
                             }
                             return null;
                           })()}
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-neutral-gray-400">
                           {effectiveLifecycle === "STABLE"
                             ? "active"
                             : effectiveLifecycle === "RETIRED"
@@ -761,7 +761,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               : "planning"}
                         </span>
                       </div>
-                      <h3 className="text-xl font-semibold text-black mb-3">
+                      <h3 className="text-xl font-semibold text-black dark:text-white mb-3">
                         {decision.title}
                       </h3>
 
@@ -779,7 +779,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               getHealthBand(decision.healthSignal).textColor
                             }
                           />
-                          <span className="text-sm text-gray-700">
+                          <span className="text-sm text-gray-700 dark:text-neutral-gray-300">
                             Health:{" "}
                             <span
                               className={`font-semibold ${getHealthBand(decision.healthSignal).textColor}`}
@@ -799,7 +799,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             size={16}
                             className={getFreshnessBand(decayScore).textColor}
                           />
-                          <span className="text-sm text-gray-700">
+                          <span className="text-sm text-gray-700 dark:text-neutral-gray-300">
                             Freshness:{" "}
                             <span
                               className={`font-semibold ${getFreshnessBand(decayScore).textColor}`}
@@ -821,7 +821,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               getConsistencyBand(consistencyScore).textColor
                             }
                           />
-                          <span className="text-sm text-gray-700">
+                          <span className="text-sm text-gray-700 dark:text-neutral-gray-300">
                             Consistency:{" "}
                             <span
                               className={`font-semibold ${getConsistencyBand(consistencyScore).textColor}`}
@@ -856,8 +856,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           }}
                           className={`p-2 rounded-lg transition-colors ${
                             decision.lockedAt
-                              ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                              ? 'text-gray-700 dark:text-neutral-gray-300 bg-gray-100 dark:bg-neutral-gray-700 hover:bg-gray-200 dark:hover:bg-neutral-gray-600'
+                              : 'text-gray-600 dark:text-neutral-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-neutral-gray-700'
                           }`}
                           title={decision.lockedAt ? "Unlock decision (allow editing)" : "Lock decision (prevent editing)"}
                         >
@@ -872,7 +872,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           setEditDecision(decision);
                         }}
                         disabled={decision.lifecycle === "RETIRED" || (decision.lockedAt && !isLead)}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-600 dark:text-neutral-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
                           decision.lifecycle === "RETIRED"
                             ? "Cannot edit retired decisions"
@@ -891,7 +891,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           e.stopPropagation();
                           setSelectedDecisionForVersions(decision);
                         }}
-                        className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-600 dark:text-neutral-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
                         title="View version history"
                       >
                         <History size={18} />
@@ -902,7 +902,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           handleEvaluateNow(decision.id, decision.title);
                         }}
                         disabled={decision.lifecycle === "RETIRED" || (decision.lockedAt && !isLead)}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-600 dark:text-neutral-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
                           decision.lifecycle === "RETIRED"
                             ? "Cannot evaluate retired decisions"
@@ -930,7 +930,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               return daysUntilExpiry < -30;
                             })())
                         }
-                        className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-600 dark:text-neutral-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
                           decision.lockedAt && !isLead
                             ? "Decision is locked (team lead access only)"
@@ -947,7 +947,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           handleRetireDecision(decision);
                         }}
                         disabled={decision.lifecycle === "RETIRED" || (decision.lockedAt && !isLead)}
-                        className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-600 dark:text-neutral-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
                           decision.lifecycle === "RETIRED"
                             ? "Decision is already retired"
@@ -964,7 +964,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           handleDeleteDecision(decision.id, decision.title);
                         }}
                         disabled={decision.lockedAt && !isLead}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-600 dark:text-neutral-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
                           decision.lockedAt && !isLead
                             ? "Decision is locked (team lead access only)"
@@ -975,7 +975,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                       </button>
                       <button
                         onClick={() => toggleExpand(decision.id)}
-                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                        className="text-gray-400 dark:text-neutral-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                       >
                         {expandedDecision === decision.id ? (
                           <ChevronUp size={24} />
@@ -987,14 +987,14 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                   </div>
 
                   {/* Quick Info */}
-                  <div className="mt-4 flex gap-4 text-sm text-gray-500">
+                  <div className="mt-4 flex gap-4 text-sm text-gray-500 dark:text-neutral-gray-400">
                     <span className="flex items-center gap-1.5">
-                      <Clock size={14} className="text-gray-400" />
+                      <Clock size={14} className="text-gray-400 dark:text-neutral-gray-500" />
                       Created:{" "}
                       {new Date(decision.createdAt).toLocaleDateString()}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <Clock size={14} className="text-gray-400" />
+                      <Clock size={14} className="text-gray-400 dark:text-neutral-gray-500" />
                       Last Review:{" "}
                       {new Date(decision.lastReviewedAt).toLocaleDateString()}
                     </span>
@@ -1003,11 +1003,11 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                 {/* Expanded Details */}
                 {expandedDecision === decision.id && (
-                  <div className="border-t border-gray-200 bg-gray-50 p-6 space-y-6">
+                  <div className="border-t border-gray-200 dark:border-neutral-gray-700 bg-gray-50 dark:bg-neutral-gray-800 p-6 space-y-6">
                     {/* Feature 1: Lifecycle Progress */}
                     <div>
-                      <h4 className="font-semibold text-black mb-3 flex items-center gap-2">
-                        <Activity size={18} className="text-blue-600" />
+                      <h4 className="font-semibold text-black dark:text-white mb-3 flex items-center gap-2">
+                        <Activity size={18} className="text-blue-600 dark:text-blue-400" />
                         Lifecycle Stage
                       </h4>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1056,7 +1056,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                     ? "bg-blue-500 text-white"
                                     : isPast
                                       ? "bg-teal-500 text-white"
-                                      : "bg-white text-gray-400 border border-gray-200"
+                                      : "bg-white dark:bg-neutral-gray-700 text-gray-400 dark:text-neutral-gray-500 border border-gray-200 dark:border-neutral-gray-600"
                                 }`}
                               >
                                 {stage}
@@ -1074,13 +1074,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Feature 2: Dependencies */}
                     <div>
-                      <h4 className="font-semibold text-black mb-3 flex items-center gap-2">
-                        <Link2 size={18} className="text-blue-600" />
+                      <h4 className="font-semibold text-black dark:text-white mb-3 flex items-center gap-2">
+                        <Link2 size={18} className="text-blue-600 dark:text-blue-400" />
                         Dependencies
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                          <p className="text-xs text-gray-500 mb-2 font-medium">
+                        <div className="bg-white dark:bg-neutral-gray-800 border border-gray-200 dark:border-neutral-gray-700 p-4 rounded-lg">
+                          <p className="text-xs text-gray-500 dark:text-neutral-gray-400 mb-2 font-medium">
                             Depends On:
                           </p>
                           {decisionData[decision.id]?.dependencies?.dependsOn
@@ -1098,8 +1098,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                     <div
                                       className={`text-xs px-2 py-1 rounded font-mono flex items-center gap-1 ${
                                         isDeprecated
-                                          ? "bg-red-100 text-red-700 border border-red-300"
-                                          : "bg-blue-100 text-blue-700"
+                                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700"
+                                          : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
                                       }`}
                                     >
                                       {isDeprecated && (
@@ -1111,7 +1111,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                         dep.target_decision_id.slice(0, 8)}
                                     </div>
                                     {isDeprecated && (
-                                      <p className="text-xs text-red-600 italic pl-2">
+                                      <p className="text-xs text-red-600 dark:text-red-400 italic pl-2">
                                         {dep.deprecationWarning ||
                                           "This decision is deprecated"}
                                       </p>
@@ -1121,13 +1121,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               })}
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-neutral-gray-400">
                               No dependencies
                             </p>
                           )}
                         </div>
-                        <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                          <p className="text-xs text-gray-500 mb-2 font-medium">
+                        <div className="bg-white dark:bg-neutral-gray-800 border border-gray-200 dark:border-neutral-gray-700 p-4 rounded-lg">
+                          <p className="text-xs text-gray-500 dark:text-neutral-gray-400 mb-2 font-medium">
                             Blocks:
                           </p>
                           {decisionData[decision.id]?.dependencies?.blocks
@@ -1145,8 +1145,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                     <div
                                       className={`text-xs px-2 py-1 rounded font-mono flex items-center gap-1 ${
                                         isDeprecated
-                                          ? "bg-red-100 text-red-700 border border-red-300"
-                                          : "bg-orange-100 text-orange-700"
+                                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700"
+                                          : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
                                       }`}
                                     >
                                       {isDeprecated && (
@@ -1158,7 +1158,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                         dep.source_decision_id.slice(0, 8)}
                                     </div>
                                     {isDeprecated && (
-                                      <p className="text-xs text-red-600 italic pl-2">
+                                      <p className="text-xs text-red-600 dark:text-red-400 italic pl-2">
                                         {dep.deprecationWarning ||
                                           "This decision is deprecated"}
                                       </p>
@@ -1168,7 +1168,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               })}
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-neutral-gray-400">
                               No dependencies
                             </p>
                           )}
@@ -1178,8 +1178,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Feature 3: Assumptions Tracking */}
                     <div>
-                      <h4 className="font-semibold text-black mb-3 flex items-center gap-2">
-                        <Shield size={18} className="text-blue-600" />
+                      <h4 className="font-semibold text-black dark:text-white mb-3 flex items-center gap-2">
+                        <Shield size={18} className="text-blue-600 dark:text-blue-400" />
                         Assumptions
                       </h4>
 
@@ -1189,8 +1189,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                       ).length > 0 && (
                         <div className="mb-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <Shield size={14} className="text-purple-600" />
-                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                            <Shield size={14} className="text-purple-600 dark:text-purple-400" />
+                            <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide">
                               🌐 Universal Rules (Apply to all decisions)
                             </p>
                           </div>
@@ -1212,41 +1212,41 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                     <div
                                       className={`border p-3 rounded-lg ${
                                         isBroken
-                                          ? "border-red-200 bg-red-50"
+                                          ? "border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30"
                                           : isShaky
-                                            ? "border-orange-200 bg-orange-50"
-                                            : "bg-purple-50 border-purple-200"
+                                            ? "border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30"
+                                            : "bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700"
                                       }`}
                                     >
                                       <div className="flex items-start gap-2">
                                         {isValid ? (
                                           <CheckCircle
                                             size={16}
-                                            className="text-purple-600 mt-0.5 flex-shrink-0"
+                                            className="text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0"
                                           />
                                         ) : isShaky ? (
                                           <AlertCircle
                                             size={16}
-                                            className="text-orange-500 mt-0.5 flex-shrink-0"
+                                            className="text-orange-500 dark:text-orange-400 mt-0.5 flex-shrink-0"
                                           />
                                         ) : (
                                           <XCircle
                                             size={16}
-                                            className="text-red-500 mt-0.5 flex-shrink-0"
+                                            className="text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0"
                                           />
                                         )}
                                         <div className="flex-1">
-                                          <p className="text-sm font-medium text-gray-800">
+                                          <p className="text-sm font-medium text-gray-800 dark:text-neutral-gray-200">
                                             {assumption.description}
                                           </p>
                                           <div className="flex items-center gap-3 mt-1">
                                             <span
                                               className={`text-xs font-semibold ${
                                                 isValid
-                                                  ? "text-purple-600"
+                                                  ? "text-purple-600 dark:text-purple-400"
                                                   : isShaky
-                                                    ? "text-orange-600"
-                                                    : "text-red-600"
+                                                    ? "text-orange-600 dark:text-orange-400"
+                                                    : "text-red-600 dark:text-red-400"
                                               }`}
                                             >
                                               {isValid
@@ -1255,11 +1255,11 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                                   ? "⚠ Shaky"
                                                   : "✗ Broken"}
                                             </span>
-                                            <span className="text-xs text-purple-600 font-medium">
+                                            <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
                                               🔒 Universal
                                             </span>
                                             {assumption.validated_at && (
-                                              <span className="text-xs text-gray-500">
+                                              <span className="text-xs text-gray-500 dark:text-neutral-gray-400">
                                                 Checked:{" "}
                                                 {new Date(
                                                   assumption.validated_at,
@@ -1319,8 +1319,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                       ).length > 0 ? (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <Activity size={14} className="text-blue-600" />
-                            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                            <Activity size={14} className="text-blue-600 dark:text-blue-400" />
+                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
                               📌 Decision-Specific
                             </p>
                           </div>
@@ -1343,43 +1343,43 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                 return (
                                   <div key={assumption.id}>
                                     <div
-                                      className={`bg-white border p-3 rounded-lg ${
+                                      className={`bg-white dark:bg-neutral-gray-800 border p-3 rounded-lg ${
                                         isBroken
-                                          ? "border-red-200 bg-red-50"
+                                          ? "border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30"
                                           : isShaky
-                                            ? "border-orange-200 bg-orange-50"
-                                            : "border-gray-200"
+                                            ? "border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30"
+                                            : "border-gray-200 dark:border-neutral-gray-700"
                                       }`}
                                     >
                                       <div className="flex items-start gap-2">
                                         {isValid ? (
                                           <CheckCircle
                                             size={16}
-                                            className="text-teal-600 mt-0.5 flex-shrink-0"
+                                            className="text-teal-600 dark:text-teal-400 mt-0.5 flex-shrink-0"
                                           />
                                         ) : isShaky ? (
                                           <AlertCircle
                                             size={16}
-                                            className="text-orange-500 mt-0.5 flex-shrink-0"
+                                            className="text-orange-500 dark:text-orange-400 mt-0.5 flex-shrink-0"
                                           />
                                         ) : (
                                           <XCircle
                                             size={16}
-                                            className="text-red-500 mt-0.5 flex-shrink-0"
+                                            className="text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0"
                                           />
                                         )}
                                         <div className="flex-1">
-                                          <p className="text-sm text-gray-800">
+                                          <p className="text-sm text-gray-800 dark:text-neutral-gray-200">
                                             {assumption.description}
                                           </p>
                                           <div className="flex items-center gap-3 mt-1">
                                             <span
                                               className={`text-xs font-semibold ${
                                                 isValid
-                                                  ? "text-teal-600"
+                                                  ? "text-teal-600 dark:text-teal-400"
                                                   : isShaky
-                                                    ? "text-orange-600"
-                                                    : "text-red-600"
+                                                    ? "text-orange-600 dark:text-orange-400"
+                                                    : "text-red-600 dark:text-red-400"
                                               }`}
                                             >
                                               {isValid
@@ -1389,7 +1389,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                                   : "✗ Broken"}
                                             </span>
                                             {assumption.validated_at && (
-                                              <span className="text-xs text-gray-500">
+                                              <span className="text-xs text-gray-500 dark:text-neutral-gray-400">
                                                 Checked:{" "}
                                                 {new Date(
                                                   assumption.validated_at,
@@ -1402,21 +1402,21 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                                       {/* Show conflicts */}
                                       {hasConflicts && (
-                                        <div className="mt-2 pt-2 border-t border-red-300">
-                                          <div className="flex items-start gap-2 bg-red-100 p-2 rounded">
+                                        <div className="mt-2 pt-2 border-t border-red-300 dark:border-red-700">
+                                          <div className="flex items-start gap-2 bg-red-100 dark:bg-red-900/30 p-2 rounded">
                                             <AlertCircle
                                               size={14}
-                                              className="text-red-600 mt-0.5 flex-shrink-0"
+                                              className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"
                                             />
                                             <div className="flex-1">
-                                              <p className="text-xs font-semibold text-red-700">
+                                              <p className="text-xs font-semibold text-red-700 dark:text-red-300">
                                                 ⚠️ Conflicts detected:
                                               </p>
                                               {assumption.conflicts.map(
                                                 (conflict) => (
                                                   <p
                                                     key={conflict.conflict_id}
-                                                    className="text-xs text-red-600 mt-1"
+                                                    className="text-xs text-red-600 dark:text-red-400 mt-1"
                                                   >
                                                     • Contradicts: "
                                                     {
@@ -1424,7 +1424,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                                     }
                                                     "
                                                     <br />
-                                                    <span className="text-red-500 text-xs">
+                                                    <span className="text-red-500 dark:text-red-400 text-xs">
                                                       Reason:{" "}
                                                       {conflict.conflict_reason}
                                                     </span>
@@ -1445,8 +1445,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         !decisionData[decision.id]?.assumptions?.filter(
                           (a) => a.scope === "UNIVERSAL",
                         ).length && (
-                          <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                            <p className="text-sm text-gray-600">
+                          <div className="bg-white dark:bg-neutral-gray-800 border border-gray-200 dark:border-neutral-gray-700 p-4 rounded-lg">
+                            <p className="text-sm text-gray-600 dark:text-neutral-gray-400">
                               No assumptions tracked yet
                             </p>
                           </div>
@@ -1457,17 +1457,17 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                     {/* Decision Conflicts */}
                     {decisionData[decision.id]?.decisionConflicts?.length >
                       0 && (
-                      <div className="mt-4 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                      <div className="mt-4 bg-orange-50 dark:bg-orange-900/30 border-2 border-orange-300 dark:border-orange-700 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-3">
-                          <AlertTriangle className="w-5 h-5 text-orange-600" />
-                          <h4 className="font-semibold text-orange-900">
+                          <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                          <h4 className="font-semibold text-orange-900 dark:text-orange-200">
                             Decision Conflicts
                           </h4>
-                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-orange-100 dark:bg-orange-800/50 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full">
                             {decisionData[decision.id].decisionConflicts.length}
                           </span>
                         </div>
-                        <p className="text-sm text-orange-700 mb-3">
+                        <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
                           This decision conflicts with other decisions in your
                           organization. Review and resolve these conflicts to
                           maintain consistency.
@@ -1477,25 +1477,25 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             (conflict) => (
                               <div
                                 key={conflict.id}
-                                className="bg-white rounded-lg p-3 border border-orange-200"
+                                className="bg-white dark:bg-neutral-gray-800 rounded-lg p-3 border border-orange-200 dark:border-orange-700"
                               >
                                 <div className="flex items-start justify-between gap-3 mb-2">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full font-semibold">
+                                      <span className="text-xs px-2 py-1 bg-orange-100 dark:bg-orange-800/50 text-orange-800 dark:text-orange-300 rounded-full font-semibold">
                                         {conflict.conflict_type?.replace(
                                           /_/g,
                                           " ",
                                         )}
                                       </span>
-                                      <span className="text-xs text-orange-600 font-bold">
+                                      <span className="text-xs text-orange-600 dark:text-orange-400 font-bold">
                                         {Math.round(
                                           conflict.confidence_score * 100,
                                         )}
                                         % confidence
                                       </span>
                                     </div>
-                                    <p className="font-medium text-orange-900 mb-2">
+                                    <p className="font-medium text-orange-900 dark:text-orange-200 mb-2">
                                       Conflicts with:{" "}
                                       {conflict.other_decision?.title ||
                                         "Unknown Decision"}
@@ -1507,11 +1507,11 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                           AI Enhanced
                                         </span>
                                       )}
-                                      <p className="text-sm text-gray-700">
+                                      <p className="text-sm text-gray-700 dark:text-neutral-gray-300">
                                         {conflict.explanation}
                                       </p>
                                     </div>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-gray-600 dark:text-neutral-gray-400">
                                       Detected:{" "}
                                       {new Date(
                                         conflict.detected_at,
@@ -1523,12 +1523,12 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             ),
                           )}
                         </div>
-                        <div className="mt-3 pt-3 border-t border-orange-200">
+                        <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-700">
                           <button
                             onClick={() =>
                               (window.location.href = "#decision-conflicts")
                             }
-                            className="text-sm text-orange-600 hover:text-orange-800 font-medium"
+                            className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 font-medium"
                           >
                             → View all decision conflicts
                           </button>
@@ -1538,10 +1538,10 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Constraint Violations */}
                     {decisionData[decision.id]?.violations?.length > 0 && (
-                      <div className="mt-4 bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                      <div className="mt-4 bg-red-50 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-3">
-                          <AlertCircle className="w-5 h-5 text-red-600" />
-                          <h4 className="font-semibold text-red-900">
+                          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                          <h4 className="font-semibold text-red-900 dark:text-red-200">
                             Constraint Violations
                           </h4>
                         </div>
@@ -1550,18 +1550,18 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             (violation) => (
                               <div
                                 key={violation.id}
-                                className="bg-white rounded-lg p-3 border border-red-200"
+                                className="bg-white dark:bg-neutral-gray-800 rounded-lg p-3 border border-red-200 dark:border-red-700"
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1">
-                                    <p className="font-medium text-red-800 mb-1">
+                                    <p className="font-medium text-red-800 dark:text-red-300 mb-1">
                                       {violation.constraints?.name ||
                                         "Constraint"}
                                     </p>
-                                    <p className="text-sm text-red-700 mb-2">
+                                    <p className="text-sm text-red-700 dark:text-red-300 mb-2">
                                       {violation.violation_reason}
                                     </p>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-gray-600 dark:text-neutral-gray-400">
                                       Detected:{" "}
                                       {new Date(
                                         violation.detected_at,
@@ -1575,7 +1575,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                         decision.id,
                                       )
                                     }
-                                    className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors whitespace-nowrap"
+                                    className="px-3 py-1 text-xs bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600 transition-colors whitespace-nowrap"
                                   >
                                     Resolve
                                   </button>
@@ -1589,20 +1589,20 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Organizational Constraints */}
                     {decisionData[decision.id]?.constraints?.length > 0 && (
-                      <div className="mt-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                      <div className="mt-4 bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-700 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-3">
-                          <Shield className="w-5 h-5 text-blue-600" />
-                          <h4 className="font-semibold text-blue-900">
+                          <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <h4 className="font-semibold text-blue-900 dark:text-blue-200">
                             Organizational Constraints
                           </h4>
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
                             {decisionData[decision.id].constraints.length}
                           </span>
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-auto">
+                          <span className="text-xs bg-green-100 dark:bg-green-800/50 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full ml-auto">
                             Auto-Applied
                           </span>
                         </div>
-                        <p className="text-sm text-blue-700 mb-3">
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                           All organizational constraints automatically apply to
                           every decision. These are non-negotiable
                           organizational facts.
@@ -1612,24 +1612,24 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             (constraint) => (
                               <div
                                 key={constraint.id}
-                                className="bg-white rounded-lg p-3 border border-blue-200"
+                                className="bg-white dark:bg-neutral-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700"
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1">
-                                    <p className="font-medium text-blue-900 mb-1">
+                                    <p className="font-medium text-blue-900 dark:text-blue-200 mb-1">
                                       {constraint.name}
                                     </p>
                                     {constraint.description && (
-                                      <p className="text-sm text-gray-700 mb-2">
+                                      <p className="text-sm text-gray-700 dark:text-neutral-gray-300 mb-2">
                                         {constraint.description}
                                       </p>
                                     )}
-                                    <div className="flex items-center gap-3 text-xs text-gray-600">
-                                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-neutral-gray-400">
+                                      <span className="bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
                                         {constraint.constraint_type || "OTHER"}
                                       </span>
                                       {constraint.is_immutable && (
-                                        <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                        <span className="bg-gray-100 dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 px-2 py-0.5 rounded flex items-center gap-1">
                                           <Lock className="w-3 h-3" />
                                           Immutable
                                         </span>
@@ -1646,13 +1646,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Feature 4: Conflicts */}
                     <div>
-                      <h4 className="font-semibold text-black mb-3 flex items-center gap-2">
-                        <AlertCircle size={18} className="text-orange-500" />
+                      <h4 className="font-semibold text-black dark:text-white mb-3 flex items-center gap-2">
+                        <AlertCircle size={18} className="text-orange-500 dark:text-orange-400" />
                         Any conflicts?
                       </h4>
                       {effectiveLifecycle === "AT_RISK" ? (
-                        <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
-                          <div className="flex items-start gap-2 text-orange-700">
+                        <div className="bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700 p-4 rounded-lg">
+                          <div className="flex items-start gap-2 text-orange-700 dark:text-orange-300">
                             <AlertCircle
                               size={16}
                               className="flex-shrink-0 mt-0.5"
@@ -1661,7 +1661,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               <span className="text-sm font-medium">
                                 Decision at risk
                               </span>
-                              <p className="text-xs text-orange-600 mt-1">
+                              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                                 This decision's health is degraded. Review
                                 assumptions and dependencies.
                               </p>
@@ -1669,8 +1669,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-teal-50 border border-teal-200 p-4 rounded-lg">
-                          <div className="flex items-center gap-2 text-teal-700">
+                        <div className="bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 text-teal-700 dark:text-teal-300">
                             <CheckCircle size={16} />
                             <span className="text-sm font-medium">
                               All clear! No conflicts found
@@ -1682,25 +1682,25 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Feature 6: Linked Cause (Mock data) */}
                     <div>
-                      <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                        <Target size={18} className="text-rose-500" />
+                      <h4 className="font-semibold text-slate-800 dark:text-neutral-gray-200 mb-3 flex items-center gap-2">
+                        <Target size={18} className="text-rose-500 dark:text-rose-400" />
                         Is this part of a bigger issue?
                       </h4>
-                      <div className="bg-white border border-slate-200 p-4 rounded-xl">
+                      <div className="bg-white dark:bg-neutral-gray-800 border border-slate-200 dark:border-neutral-gray-700 p-4 rounded-xl">
                         {effectiveLifecycle === "AT_RISK" ||
                         effectiveLifecycle === "INVALIDATED" ? (
-                          <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
-                            <p className="text-sm text-amber-800 font-medium flex items-center gap-2">
+                          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3 rounded-xl">
+                            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium flex items-center gap-2">
                               <AlertCircle size={16} />
                               This might be connected to other problems
                             </p>
-                            <p className="text-xs text-amber-700 mt-1">
+                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                               Check related decisions to see if there's a common
                               cause
                             </p>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 text-emerald-700">
+                          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                             <CheckCircle size={16} />
                             <span className="text-sm">
                               Looking good! No bigger issues spotted
@@ -1712,13 +1712,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
                     {/* Feature 7: Consistency/Drift Details */}
                     <div>
-                      <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                        <Activity size={18} className="text-purple-500" />
+                      <h4 className="font-semibold text-slate-800 dark:text-neutral-gray-200 mb-3 flex items-center gap-2">
+                        <Activity size={18} className="text-purple-500 dark:text-purple-400" />
                         Is this staying on track?
                       </h4>
-                      <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-3">
+                      <div className="bg-white dark:bg-neutral-gray-800 border border-slate-200 dark:border-neutral-gray-700 p-4 rounded-xl space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">
+                          <span className="text-sm text-slate-600 dark:text-neutral-gray-400">
                             Status:
                           </span>
                           <span
@@ -1729,17 +1729,17 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">Drift:</span>
+                          <span className="text-sm text-slate-600 dark:text-neutral-gray-400">Drift:</span>
                           <span
-                            className={`text-sm font-semibold ${drift > 10 ? "text-amber-700" : "text-emerald-700"} cursor-help`}
+                            className={`text-sm font-semibold ${drift > 10 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"} cursor-help`}
                             title={`${drift}% drift from expected`}
                           >
                             {drift > 10 ? "Drifting" : "Stable"}
                           </span>
                         </div>
                         {drift > 10 && (
-                          <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
-                            <p className="text-xs text-amber-800 flex items-center gap-2">
+                          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3 rounded-xl">
+                            <p className="text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
                               <AlertCircle size={14} />
                               Things are drifting a bit. Might want to take
                               another look!
@@ -1752,11 +1752,11 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                     {/* Description */}
                     {decision.description && (
                       <div>
-                        <h4 className="font-semibold text-slate-800 mb-3">
+                        <h4 className="font-semibold text-slate-800 dark:text-neutral-gray-200 mb-3">
                           What's this about?
                         </h4>
-                        <div className="bg-white border border-slate-200 p-4 rounded-xl">
-                          <p className="text-sm text-slate-700 leading-relaxed">
+                        <div className="bg-white dark:bg-neutral-gray-800 border border-slate-200 dark:border-neutral-gray-700 p-4 rounded-xl">
+                          <p className="text-sm text-slate-700 dark:text-neutral-gray-300 leading-relaxed">
                             {decision.description}
                           </p>
                         </div>
@@ -1772,12 +1772,12 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
 
       {/* Empty State */}
       {!loading && !error && filteredDecisions.length === 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center shadow-sm">
-          <Activity size={48} className="text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+        <div className="bg-white dark:bg-neutral-gray-800 rounded-lg border border-gray-200 dark:border-neutral-gray-700 p-12 text-center shadow-sm">
+          <Activity size={48} className="text-gray-300 dark:text-neutral-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-neutral-gray-300 mb-2">
             No decisions here yet
           </h3>
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-neutral-gray-400">
             Try changing your filters or create your first decision!
           </p>
         </div>

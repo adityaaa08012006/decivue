@@ -123,26 +123,26 @@ const NotificationsPage = ({ onNotificationAction }) => {
     const getSeverityColor = (severity) => {
         switch (severity) {
             case 'CRITICAL':
-                return 'bg-red-50 border-red-200 text-red-800';
+                return 'bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300';
             case 'WARNING':
-                return 'bg-orange-50 border-orange-200 text-orange-800';
+                return 'bg-orange-100 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-300';
             case 'INFO':
-                return 'bg-blue-50 border-blue-200 text-blue-800';
+                return 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300';
             default:
-                return 'bg-neutral-gray-50 border-neutral-gray-200 text-neutral-gray-800';
+                return 'bg-gray-50 dark:bg-neutral-gray-800 border-neutral-gray-200 dark:border-neutral-gray-700 text-neutral-gray-800 dark:text-neutral-gray-300';
         }
     };
 
     const getSeverityIconColor = (severity) => {
         switch (severity) {
             case 'CRITICAL':
-                return 'text-red-600';
+                return 'text-red-600 dark:text-red-400';
             case 'WARNING':
-                return 'text-orange-600';
+                return 'text-orange-600 dark:text-orange-400';
             case 'INFO':
-                return 'text-blue-600';
+                return 'text-blue-600 dark:text-blue-400';
             default:
-                return 'text-neutral-gray-600';
+                return 'text-neutral-gray-600 dark:text-neutral-gray-400';
         }
     };
 
@@ -165,34 +165,34 @@ const NotificationsPage = ({ onNotificationAction }) => {
 
     if (loading) {
         return (
-            <div className="flex h-screen bg-neutral-white overflow-hidden">
+            <div className="flex h-screen bg-white dark:bg-neutral-gray-800 overflow-hidden">
                 <div className="flex-1 flex items-center justify-center">
-                    <p className="text-neutral-gray-500">Loading notifications...</p>
+                    <p className="text-neutral-gray-500 dark:text-neutral-gray-400">Loading notifications...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex h-screen bg-neutral-white overflow-hidden">
+        <div className="flex h-screen bg-white dark:bg-neutral-gray-800 overflow-hidden">
             <div className="flex-1 flex flex-col h-full overflow-y-auto">
                 <div className="max-w-4xl mx-auto w-full p-8">
                     {/* Header */}
                     <div className="mb-8">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-neutral-black mb-2 flex items-center gap-3">
-                                    <Bell className="text-primary-blue" size={32} />
+                                <h1 className="text-3xl font-bold text-neutral-black dark:text-white mb-2 flex items-center gap-3">
+                                    <Bell className="text-primary-blue dark:text-blue-400" size={32} />
                                     Notifications
                                 </h1>
-                                <p className="text-neutral-gray-600">
+                                <p className="text-neutral-gray-600 dark:text-neutral-gray-400">
                                     Stay updated on conflicts, health changes, and items needing review
                                 </p>
                             </div>
                             {unreadCount > 0 && (
                                 <button
                                     onClick={handleMarkAllRead}
-                                    className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 font-medium"
+                                    className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 font-medium"
                                 >
                                     <CheckCheck size={18} />
                                     Mark All Read
@@ -206,8 +206,8 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                 onClick={() => setFilter('all')}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     filter === 'all'
-                                        ? 'bg-primary-blue text-white'
-                                        : 'bg-neutral-gray-100 text-neutral-gray-700 hover:bg-neutral-gray-200'
+                                        ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                                        : 'bg-gray-50 dark:bg-neutral-gray-800 text-neutral-gray-700 dark:text-neutral-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-gray-700'
                                 }`}
                             >
                                 All
@@ -216,8 +216,8 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                 onClick={() => setFilter('unread')}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     filter === 'unread'
-                                        ? 'bg-primary-blue text-white'
-                                        : 'bg-neutral-gray-100 text-neutral-gray-700 hover:bg-neutral-gray-200'
+                                        ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                                        : 'bg-gray-50 dark:bg-neutral-gray-800 text-neutral-gray-700 dark:text-neutral-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-gray-700'
                                 }`}
                             >
                                 Unread {unreadCount > 0 && <span className="ml-1">({unreadCount})</span>}
@@ -226,8 +226,8 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                 onClick={() => setFilter('critical')}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     filter === 'critical'
-                                        ? 'bg-primary-blue text-white'
-                                        : 'bg-neutral-gray-100 text-neutral-gray-700 hover:bg-neutral-gray-200'
+                                        ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                                        : 'bg-gray-50 dark:bg-neutral-gray-800 text-neutral-gray-700 dark:text-neutral-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-gray-700'
                                 }`}
                             >
                                 Critical
@@ -238,10 +238,10 @@ const NotificationsPage = ({ onNotificationAction }) => {
                     {/* Notifications List */}
                     <div className="space-y-3">
                         {notifications.length === 0 ? (
-                            <div className="bg-white p-12 rounded-2xl border border-neutral-gray-200 text-center">
-                                <Bell size={48} className="mx-auto text-neutral-gray-300 mb-4" />
-                                <p className="text-neutral-gray-500 font-medium mb-2">No notifications</p>
-                                <p className="text-sm text-neutral-gray-400">
+                            <div className="bg-white dark:bg-neutral-gray-800 p-12 rounded-2xl border border-neutral-gray-200 dark:border-neutral-gray-700 text-center">
+                                <Bell size={48} className="mx-auto text-neutral-gray-300 dark:text-neutral-gray-600 mb-4" />
+                                <p className="text-neutral-gray-500 dark:text-neutral-gray-400 font-medium mb-2">No notifications</p>
+                                <p className="text-sm text-neutral-gray-400 dark:text-neutral-gray-500">
                                     You're all caught up! We'll notify you when something needs your attention.
                                 </p>
                             </div>
@@ -251,7 +251,7 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                     key={notification.id}
                                     className={`border rounded-xl p-5 transition-all ${
                                         notification.is_read
-                                            ? 'bg-white border-neutral-gray-200 opacity-75'
+                                            ? 'bg-white dark:bg-neutral-gray-800 border-neutral-gray-200 dark:border-neutral-gray-700 opacity-75'
                                             : getSeverityColor(notification.severity)
                                     }`}
                                 >
@@ -265,14 +265,14 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between mb-2">
                                                 <div className="flex-1">
-                                                    <h3 className="font-semibold text-neutral-black mb-1">
+                                                    <h3 className="font-semibold text-neutral-black dark:text-white mb-1">
                                                         {notification.title}
                                                     </h3>
-                                                    <p className="text-sm text-neutral-gray-700">
+                                                    <p className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">
                                                         {notification.message}
                                                     </p>
                                                 </div>
-                                                <span className="text-xs text-neutral-gray-500 ml-4">
+                                                <span className="text-xs text-neutral-gray-500 dark:text-neutral-gray-400 ml-4">
                                                     {formatTimestamp(notification.created_at)}
                                                 </span>
                                             </div>
@@ -282,7 +282,7 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                                 {!notification.is_read && (
                                                     <button
                                                         onClick={() => handleMarkRead(notification.id)}
-                                                        className="text-xs px-3 py-1 bg-white border border-neutral-gray-300 rounded-lg hover:bg-neutral-gray-50 transition-colors flex items-center gap-1"
+                                                        className="text-xs px-3 py-1 bg-white dark:bg-neutral-gray-700 border border-neutral-gray-300 dark:border-neutral-gray-600 text-neutral-black dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-gray-650 transition-colors flex items-center gap-1"
                                                     >
                                                         <Check size={14} />
                                                         Mark Read
@@ -291,7 +291,7 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                                 {isLead && notification.type === 'NEEDS_REVIEW' && notification.decision_id && (
                                                     <button
                                                         onClick={() => handleMarkReviewed(notification.decision_id, notification.id)}
-                                                        className="text-xs px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+                                                        className="text-xs px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/40 transition-colors flex items-center gap-1"
                                                     >
                                                         <CheckCheck size={14} />
                                                         Mark as Reviewed
@@ -299,14 +299,14 @@ const NotificationsPage = ({ onNotificationAction }) => {
                                                 )}
                                                 <button
                                                     onClick={() => handleDismiss(notification.id)}
-                                                    className="text-xs px-3 py-1 bg-white border border-neutral-gray-300 rounded-lg hover:bg-neutral-gray-50 transition-colors flex items-center gap-1"
+                                                    className="text-xs px-3 py-1 bg-white dark:bg-neutral-gray-700 border border-neutral-gray-300 dark:border-neutral-gray-600 text-neutral-black dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-gray-650 transition-colors flex items-center gap-1"
                                                 >
                                                     <X size={14} />
                                                     Dismiss
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(notification.id)}
-                                                    className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                                                    className="text-xs px-3 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors flex items-center gap-1"
                                                 >
                                                     <Trash2 size={14} />
                                                     Delete
@@ -324,7 +324,7 @@ const NotificationsPage = ({ onNotificationAction }) => {
             {/* Toast Notification */}
             {toast.show && (
                 <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
-                    toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    toast.type === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                 }`}>
                     {toast.type === 'success' ? <CheckCheck size={18} /> : <X size={18} />}
                     {toast.message}

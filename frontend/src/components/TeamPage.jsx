@@ -152,7 +152,7 @@ const TeamPage = () => {
                     className={`p-4 transition-colors relative ${
                       member.id === currentUser?.id
                         ? 'bg-blue-50/50 dark:bg-blue-900/10'
-                        : 'hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-750'
+                        : 'hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-700'
                     }`}
                   >
                     <div className="flex items-center gap-3">

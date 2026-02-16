@@ -123,7 +123,7 @@ const DecisionConflictsPage = () => {
   });
 
   return (
-    <div className="flex h-screen bg-neutral-white overflow-hidden">
+    <div className="flex h-screen bg-neutral-white dark:bg-neutral-gray-900 overflow-hidden">
       {/* Toast Notification */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 transition-all duration-300 ease-out">
@@ -157,10 +157,10 @@ const DecisionConflictsPage = () => {
             <div className="mb-8">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold text-black mb-2">
+                  <h1 className="text-3xl font-bold text-black dark:text-white mb-2">
                     Decision Conflicts
                   </h1>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-neutral-gray-400">
                     Monitor and resolve contradictions between decisions
                   </p>
                 </div>
@@ -168,14 +168,14 @@ const DecisionConflictsPage = () => {
                   <button
                     onClick={handleDetectConflicts}
                     disabled={detectingConflicts}
-                    className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    className="px-4 py-2 bg-primary-blue dark:bg-blue-600 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     <Shield size={18} />
                     {detectingConflicts ? "Detecting..." : "Detect Conflicts"}
                   </button>
                   <button
                     onClick={fetchConflicts}
-                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2 bg-white dark:bg-neutral-gray-700 border border-gray-300 dark:border-neutral-gray-600 text-gray-700 dark:text-neutral-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-gray-600 transition-colors flex items-center gap-2 shadow-sm"
                   >
                     <RefreshCw
                       size={18}
@@ -195,8 +195,8 @@ const DecisionConflictsPage = () => {
                   onClick={() => setFilterType("all")}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     filterType === "all"
-                      ? "bg-blue-500 text-white shadow-md"
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                      ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
+                      : "bg-white dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-gray-600 border border-gray-200 dark:border-neutral-gray-600"
                   }`}
                 >
                   All Types
@@ -206,7 +206,7 @@ const DecisionConflictsPage = () => {
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     filterType === "CONTRADICTORY"
                       ? "bg-red-500 text-white shadow-md"
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                      : "bg-white dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-gray-600 border border-gray-200 dark:border-neutral-gray-600"
                   }`}
                 >
                   Contradictory
@@ -216,7 +216,7 @@ const DecisionConflictsPage = () => {
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     filterType === "RESOURCE_COMPETITION"
                       ? "bg-orange-500 text-white shadow-md"
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                      : "bg-white dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-gray-600 border border-gray-200 dark:border-neutral-gray-600"
                   }`}
                 >
                   Resource Competition
@@ -226,7 +226,7 @@ const DecisionConflictsPage = () => {
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     filterType === "OBJECTIVE_UNDERMINING"
                       ? "bg-yellow-500 text-white shadow-md"
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                      : "bg-white dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-gray-600 border border-gray-200 dark:border-neutral-gray-600"
                   }`}
                 >
                   Objective Undermining
@@ -236,7 +236,7 @@ const DecisionConflictsPage = () => {
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     filterType === "PREMISE_INVALIDATION"
                       ? "bg-purple-500 text-white shadow-md"
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                      : "bg-white dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-gray-600 border border-gray-200 dark:border-neutral-gray-600"
                   }`}
                 >
                   Premise Invalidation
@@ -246,7 +246,7 @@ const DecisionConflictsPage = () => {
               {/* Search */}
               <div className="relative max-w-md">
                 <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-neutral-gray-500"
                   size={18}
                 />
                 <input
@@ -254,7 +254,7 @@ const DecisionConflictsPage = () => {
                   placeholder="Search decisions or explanations..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-gray-700 border border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-gray-500"
                 />
               </div>
             </div>
@@ -262,39 +262,39 @@ const DecisionConflictsPage = () => {
             {/* Statistics */}
             {conflicts.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="text-2xl font-bold text-neutral-black">
+                <div className="bg-white dark:bg-neutral-gray-800 p-4 rounded-lg border border-gray-200 dark:border-neutral-gray-700 shadow-sm">
+                  <div className="text-2xl font-bold text-neutral-black dark:text-white">
                     {conflicts.length}
                   </div>
-                  <div className="text-sm text-gray-600">Total Conflicts</div>
+                  <div className="text-sm text-gray-600 dark:text-neutral-gray-400">Total Conflicts</div>
                 </div>
-                <div className="bg-red-50 p-4 rounded-lg border border-red-200 shadow-sm">
-                  <div className="text-2xl font-bold text-red-600">
+                <div className="bg-red-50 dark:bg-red-900/30 p-4 rounded-lg border border-red-200 dark:border-red-700 shadow-sm">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                     {
                       conflicts.filter(
                         (c) => c.conflict_type === "CONTRADICTORY",
                       ).length
                     }
                   </div>
-                  <div className="text-sm text-red-700">Contradictory</div>
+                  <div className="text-sm text-red-700 dark:text-red-400">Contradictory</div>
                 </div>
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 shadow-sm">
-                  <div className="text-2xl font-bold text-orange-600">
+                <div className="bg-orange-50 dark:bg-orange-900/30 p-4 rounded-lg border border-orange-200 dark:border-orange-700 shadow-sm">
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                     {
                       conflicts.filter(
                         (c) => c.conflict_type === "RESOURCE_COMPETITION",
                       ).length
                     }
                   </div>
-                  <div className="text-sm text-orange-700">
+                  <div className="text-sm text-orange-700 dark:text-orange-400">
                     Resource Competition
                   </div>
                 </div>
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 shadow-sm">
-                  <div className="text-2xl font-bold text-yellow-600">
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700 shadow-sm">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                     {conflicts.filter((c) => c.confidence_score >= 0.8).length}
                   </div>
-                  <div className="text-sm text-yellow-700">
+                  <div className="text-sm text-yellow-700 dark:text-yellow-400">
                     High Confidence (&gt;80%)
                   </div>
                 </div>
@@ -303,19 +303,19 @@ const DecisionConflictsPage = () => {
 
             {/* Conflicts List */}
             {loading ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-12 text-center shadow-sm">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500 mb-4"></div>
-                <p className="text-gray-700">Loading conflicts...</p>
+              <div className="bg-white dark:bg-neutral-gray-800 rounded-lg border border-gray-200 dark:border-neutral-gray-700 p-12 text-center shadow-sm">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-neutral-gray-700 border-t-blue-500 mb-4"></div>
+                <p className="text-gray-700 dark:text-neutral-gray-300">Loading conflicts...</p>
               </div>
             ) : filteredConflicts.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-12 text-center shadow-sm">
-                <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              <div className="bg-white dark:bg-neutral-gray-800 rounded-lg border border-gray-200 dark:border-neutral-gray-700 p-12 text-center shadow-sm">
+                <AlertTriangle className="w-16 h-16 text-gray-300 dark:text-neutral-gray-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 dark:text-neutral-gray-300 mb-2">
                   {conflicts.length === 0
                     ? "No conflicts detected"
                     : "No matching conflicts"}
                 </h3>
-                <p className="text-gray-500 mb-6">
+                <p className="text-gray-500 dark:text-neutral-gray-400 mb-6">
                   {conflicts.length === 0
                     ? "Run conflict detection to check for contradictions between decisions"
                     : "Try adjusting your filters or search query"}
@@ -324,7 +324,7 @@ const DecisionConflictsPage = () => {
                   <button
                     onClick={handleDetectConflicts}
                     disabled={detectingConflicts}
-                    className="px-6 py-3 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm font-medium disabled:opacity-50"
+                    className="px-6 py-3 bg-primary-blue dark:bg-blue-600 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-500 transition-colors shadow-sm font-medium disabled:opacity-50"
                   >
                     <Shield className="inline mr-2" size={18} />
                     Detect Conflicts
@@ -336,7 +336,7 @@ const DecisionConflictsPage = () => {
                 {filteredConflicts.map((conflict) => (
                   <div
                     key={conflict.id}
-                    className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all overflow-hidden"
+                    className="bg-white dark:bg-neutral-gray-800 rounded-xl border border-gray-200 dark:border-neutral-gray-700 hover:shadow-lg transition-all overflow-hidden"
                   >
                     {/* Conflict Header */}
                     <div className="bg-orange-50 border-b border-orange-100 px-6 py-4">

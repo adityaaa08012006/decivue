@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Trash2, Plus, Check, Shield } from 'lucide-react';
+import { Trash2, Plus, Pencil, Check, X, Flame } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
 const OrganizationProfile = () => {
+    const { user, logout } = useAuth();
     const [loading, setLoading] = useState(true);
     const [orgName, setOrgName] = useState('');
+    const [orgCode, setOrgCode] = useState('');
     const [constraints, setConstraints] = useState([]);
-    const [savingProfile, setSavingProfile] = useState(false);
-    const [profileSaved, setProfileSaved] = useState(false);
-
+    
+    // Edit mode states
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [editingConstraint, setEditingConstraint] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    
     // New constraint form state
-    const [showAddForm, setShowAddForm] = useState(false);
     const [newConstraint, setNewConstraint] = useState({
         name: '',
         description: '',
@@ -29,7 +35,9 @@ const OrganizationProfile = () => {
                 api.getAllConstraints().catch(() => [])
             ]);
 
-            setOrgName(profileData.name || '');
+            // Get org name and code from user context
+            setOrgName(user?.organizations?.name || profileData.name || '');
+            setOrgCode(user?.organizations?.org_code || 'ORG-CODE');
             setConstraints(constraintsData || []);
         } catch (error) {
             console.error("Failed to load data:", error);
@@ -40,15 +48,10 @@ const OrganizationProfile = () => {
 
     const handleSaveProfile = async () => {
         try {
-            setSavingProfile(true);
             await api.updateProfile({ name: orgName });
-            setProfileSaved(true);
-            setTimeout(() => setProfileSaved(false), 3000);
         } catch (error) {
             console.error("Failed to save profile:", error);
             alert('Failed to save profile. Please try again.');
-        } finally {
-            setSavingProfile(false);
         }
     };
 
@@ -77,10 +80,23 @@ const OrganizationProfile = () => {
                 constraintType: 'POLICY',
                 validationConfig: {}
             });
-            setShowAddForm(false);
+            setShowAddModal(false);
         } catch (error) {
             console.error("Failed to create constraint:", error);
             alert('Failed to create constraint. Please try again.');
+        }
+    };
+
+    const handleEditConstraint = async (id, title, description) => {
+        try {
+            await api.updateConstraint(id, { name: title, description });
+            setConstraints(prev => prev.map(c => 
+                c.id === id ? { ...c, name: title, description } : c
+            ));
+            setEditingConstraint(null);
+        } catch (error) {
+            console.error("Failed to update constraint:", error);
+            alert('Failed to update constraint. Please try again.');
         }
     };
 
@@ -98,199 +114,324 @@ const OrganizationProfile = () => {
         }
     };
 
-    const getConstraintTypeColor = (type) => {
-        const colors = {
-            'LEGAL': 'bg-red-100 text-red-800',
-            'BUDGET': 'bg-green-100 text-green-800',
-            'POLICY': 'bg-blue-100 text-blue-800',
-            'TECHNICAL': 'bg-purple-100 text-purple-800',
-            'COMPLIANCE': 'bg-orange-100 text-orange-800',
-            'OTHER': 'bg-gray-100 text-gray-800'
-        };
-        return colors[type] || colors['OTHER'];
+    const startEditing = (constraint) => {
+        setEditingConstraint(constraint.id);
+        setEditTitle(constraint.name);
+        setEditDescription(constraint.description);
     };
 
-    if (loading) return <div className="p-12 text-center text-neutral-gray-500">Loading profile...</div>;
+    const cancelEditing = () => {
+        setEditingConstraint(null);
+        setEditTitle('');
+        setEditDescription('');
+    };
+
+    const saveEdits = () => {
+        if (editTitle.trim() && editDescription.trim()) {
+            handleEditConstraint(editingConstraint, editTitle, editDescription);
+        }
+    };
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] dark:from-neutral-gray-900 dark:via-neutral-gray-900 dark:to-neutral-gray-800">
+            <div className="text-center">
+                <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-700 dark:text-neutral-gray-300 font-medium">Loading organization profile...</p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="flex h-screen bg-neutral-white overflow-hidden">
-            <div className="flex-1 flex flex-col h-full overflow-y-auto">
-                <div className="max-w-4xl mx-auto w-full p-8 md:p-12">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-neutral-black mb-2 flex items-center gap-3">
-                            <Building2 className="text-primary-blue" size={32} />
-                            Organization Profile
-                        </h1>
-                        <p className="text-neutral-gray-600">Define your organization's identity and hard constraints.</p>
-                    </div>
-
-                    {/* Organization Name */}
-                    <div className="bg-white p-8 rounded-2xl border border-neutral-gray-200 shadow-sm mb-6">
-                        <h2 className="text-xl font-bold text-neutral-black mb-4">Organization Name</h2>
-                        <div className="flex gap-4 items-center">
-                            <input
-                                type="text"
-                                className="flex-1 p-4 border border-neutral-gray-200 rounded-xl focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all text-lg"
-                                placeholder="e.g., Acme Corp"
-                                value={orgName}
-                                onChange={e => setOrgName(e.target.value)}
-                            />
-                            <button
-                                onClick={handleSaveProfile}
-                                disabled={savingProfile || !orgName}
-                                className="px-6 py-4 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {savingProfile ? 'Saving...' : profileSaved ? <><Check size={20} /> Saved</> : 'Save'}
+        <div className="min-h-screen w-full bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] dark:from-neutral-gray-900 dark:via-neutral-gray-900 dark:to-neutral-gray-800">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
+                {/* Top Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                    {/* Left - Organization Info */}
+                    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 shadow-lg dark:shadow-2xl">
+                        <div className="border-l-4 border-blue-600 dark:border-blue-400 pl-6">
+                            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">
+                                {orgName || 'Organization'}<br />Name
+                            </h1>
+                            <button className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-1 rounded-full text-sm mt-2 mb-4 hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
+                                {orgCode}
                             </button>
+                            <p className="text-gray-400 dark:text-neutral-gray-500 text-sm uppercase tracking-wide mb-2">
+                                Description of organization
+                            </p>
+                            <div className="space-y-1">
+                                <div className="h-px bg-gray-200 dark:bg-neutral-gray-700 w-full"></div>
+                                <div className="h-px bg-gray-200 dark:bg-neutral-gray-700 w-full"></div>
+                                <div className="h-px bg-gray-200 dark:bg-neutral-gray-700 w-full"></div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Organizational Constraints */}
-                    <div className="bg-white p-8 rounded-2xl border border-neutral-gray-200 shadow-sm mb-6">
-                        <div className="mb-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h2 className="text-xl font-bold text-neutral-black mb-2">Organizational Constraints</h2>
-                                    <p className="text-neutral-gray-600">
-                                        Define hard rules and guardrails that decisions must respect.
-                                    </p>
-                                </div>
-                                {!showAddForm && (
-                                    <button
-                                        onClick={() => setShowAddForm(true)}
-                                        className="px-4 py-2 bg-primary-blue text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
-                                    >
-                                        <Plus size={18} />
-                                        Add Constraint
-                                    </button>
-                                )}
-                            </div>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-sm text-blue-800 flex items-start gap-2">
-                                    <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                    <span><strong>Auto-Applied:</strong> All constraints automatically apply to every decision in your organization. They cannot be selectively disabled.</span>
-                                </p>
-                            </div>
+                    {/* Right - User Profile Card */}
+                    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center border-4 border-blue-600 dark:border-blue-400 shadow-lg dark:shadow-2xl">
+                        <div className="mb-4">
+                            <Flame className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
+                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-blue-400 to-purple-600 dark:from-blue-500 dark:to-purple-700 rounded-full flex items-center justify-center border-4 border-blue-600 dark:border-blue-400 mb-4">
+                            <span className="text-white text-2xl md:text-3xl font-bold">
+                                {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
+                            </span>
+                        </div>
+                        <h2 className="text-lg md:text-xl font-bold mb-1 text-gray-900 dark:text-white">
+                            {user?.full_name || user?.email?.split('@')[0] || 'USER NAME'}
+                        </h2>
+                        <p className="text-gray-600 dark:text-neutral-gray-400 text-xs md:text-sm mb-6 uppercase tracking-wide font-medium">
+                            {user?.role === 'lead' ? 'Organization Leader' : 'Team Member'}
+                        </p>
+                        <button 
+                            onClick={logout}
+                            className="bg-blue-600 dark:bg-blue-500 text-white px-8 py-2 rounded-full text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md"
+                        >
+                            LOGOUT
+                        </button>
+                    </div>
+                </div>
 
-                        {/* Add Constraint Form */}
-                        {showAddForm && (
-                            <div className="mb-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                                <h3 className="font-semibold text-neutral-black mb-4">Add New Constraint</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-                                            Constraint Name *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g., Budget Limit, GDPR Compliance"
-                                            value={newConstraint.name}
-                                            onChange={e => setNewConstraint({ ...newConstraint, name: e.target.value })}
-                                            className="w-full p-3 border border-neutral-gray-200 rounded-lg focus:border-primary-blue focus:ring-1 focus:ring-primary-blue"
-                                        />
+                {/* Bottom - Organizational Constraints */}
+                <div className="bg-gradient-to-br from-blue-600 to-blue-800 dark:from-neutral-gray-800 dark:to-neutral-gray-900 rounded-2xl p-6 md:p-8 text-white shadow-xl dark:shadow-2xl dark:border dark:border-neutral-gray-700">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                        <h2 className="text-lg md:text-xl font-semibold uppercase tracking-wide">
+                            Organizational Constraints
+                        </h2>
+                        <button 
+                            onClick={() => setShowAddModal(true)}
+                            className="bg-white dark:bg-blue-600 text-blue-700 dark:text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+                        >
+                            ADD CONSTRAINTS <Plus className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    {constraints.length > 0 ? (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-6">
+                                {constraints.slice(0, 3).map((constraint) => (
+                                    <div key={constraint.id} className="group relative">
+                                        {editingConstraint !== constraint.id ? (
+                                            <>
+                                                <p className="text-sm leading-relaxed">
+                                                    <strong className="block mb-1">{constraint.name}</strong>
+                                                    {constraint.description}
+                                                </p>
+                                                <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => startEditing(constraint)}
+                                                        className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Pencil className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteConstraint(constraint.id)}
+                                                        className="p-1.5 bg-white/10 hover:bg-red-500/20 rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={editTitle}
+                                                    onChange={(e) => setEditTitle(e.target.value)}
+                                                    className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40"
+                                                    placeholder="Title"
+                                                />
+                                                <textarea
+                                                    value={editDescription}
+                                                    onChange={(e) => setEditDescription(e.target.value)}
+                                                    className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40 resize-none"
+                                                    rows={3}
+                                                    placeholder="Description"
+                                                />
+                                                <div className="flex gap-1 justify-end">
+                                                    <button
+                                                        onClick={cancelEditing}
+                                                        className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={saveEdits}
+                                                        className="p-1.5 bg-green-600 hover:bg-green-700 rounded transition-colors"
+                                                    >
+                                                        <Check className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-                                            Description/Rule *
-                                        </label>
-                                        <textarea
-                                            placeholder="Describe the constraint rule (e.g., 'All decisions must stay under $500K budget')"
-                                            value={newConstraint.description}
-                                            onChange={e => setNewConstraint({ ...newConstraint, description: e.target.value })}
-                                            className="w-full p-3 border border-neutral-gray-200 rounded-lg focus:border-primary-blue focus:ring-1 focus:ring-primary-blue resize-none"
-                                            rows="3"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-                                            Constraint Type
-                                        </label>
-                                        <select
-                                            value={newConstraint.constraintType}
-                                            onChange={e => setNewConstraint({ ...newConstraint, constraintType: e.target.value })}
-                                            className="w-full p-3 border border-neutral-gray-200 rounded-lg focus:border-primary-blue focus:ring-1 focus:ring-primary-blue"
-                                        >
-                                            <option value="POLICY">POLICY</option>
-                                            <option value="BUDGET">BUDGET</option>
-                                            <option value="LEGAL">LEGAL</option>
-                                            <option value="TECHNICAL">TECHNICAL</option>
-                                            <option value="COMPLIANCE">COMPLIANCE</option>
-                                            <option value="OTHER">OTHER</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex gap-3 justify-end pt-2">
-                                        <button
-                                            onClick={() => {
-                                                setShowAddForm(false);
-                                                setNewConstraint({ name: '', description: '', constraintType: 'POLICY', validationConfig: {} });
-                                            }}
-                                            className="px-4 py-2 border border-neutral-gray-300 text-neutral-gray-700 font-medium rounded-lg hover:bg-neutral-gray-50 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleAddConstraint}
-                                            className="px-4 py-2 bg-primary-blue text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors"
-                                        >
-                                            Create Constraint
-                                        </button>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
-                        )}
 
-                        {/* Constraints List */}
-                        <div className="space-y-3">
-                            {constraints.length === 0 && !showAddForm && (
-                                <div className="text-center py-12 text-neutral-gray-500 border-2 border-dashed border-neutral-gray-200 rounded-xl">
-                                    <Shield className="w-12 h-12 mx-auto mb-3 text-neutral-gray-400" />
-                                    <p className="font-medium mb-1">No constraints defined yet</p>
-                                    <p className="text-sm">Add organizational constraints to ensure decisions respect your non-negotiable rules.</p>
+                            {constraints.length > 3 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-6">
+                                    {constraints.slice(3).map((constraint) => (
+                                        <div key={constraint.id} className="group relative">
+                                            {editingConstraint !== constraint.id ? (
+                                                <>
+                                                    <p className="text-sm leading-relaxed">
+                                                        <strong className="block mb-1">{constraint.name}</strong>
+                                                        {constraint.description}
+                                                    </p>
+                                                    <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => startEditing(constraint)}
+                                                            className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil className="w-3 h-3" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteConstraint(constraint.id)}
+                                                            className="p-1.5 bg-white/10 hover:bg-red-500/20 rounded transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <input
+                                                        type="text"
+                                                        value={editTitle}
+                                                        onChange={(e) => setEditTitle(e.target.value)}
+                                                        className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40"
+                                                        placeholder="Title"
+                                                    />
+                                                    <textarea
+                                                        value={editDescription}
+                                                        onChange={(e) => setEditDescription(e.target.value)}
+                                                        className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40 resize-none"
+                                                        rows={3}
+                                                        placeholder="Description"
+                                                    />
+                                                    <div className="flex gap-1 justify-end">
+                                                        <button
+                                                            onClick={cancelEditing}
+                                                            className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                        <button
+                                                            onClick={saveEdits}
+                                                            className="p-1.5 bg-green-600 hover:bg-green-700 rounded transition-colors"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
-
-                            {constraints.map((constraint) => (
-                                <div key={constraint.id} className="flex gap-4 items-start p-5 bg-neutral-gray-50 rounded-xl border border-neutral-gray-200 hover:border-neutral-gray-300 transition-colors">
-                                    <div className="flex-1">
-                                        <div className="flex items-start gap-3 mb-2">
-                                            <h3 className="font-semibold text-neutral-black text-lg">{constraint.name}</h3>
-                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${getConstraintTypeColor(constraint.constraint_type)}`}>
-                                                {constraint.constraint_type}
-                                            </span>
-                                        </div>
-                                        <p className="text-neutral-gray-600 text-sm mb-2">{constraint.description}</p>
-                                        <div className="text-xs text-neutral-gray-500">
-                                            Created {new Date(constraint.created_at).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleDeleteConstraint(constraint.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Delete constraint"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            ))}
+                        </>
+                    ) : (
+                        <div className="text-center py-12 mb-6">
+                            <p className="text-white/60 dark:text-neutral-gray-400 mb-2">No constraints defined yet</p>
+                            <p className="text-white/40 dark:text-neutral-gray-500 text-sm">
+                                Add organizational constraints to ensure decisions respect your rules.
+                            </p>
                         </div>
+                    )}
 
-                        {/* Examples */}
-                        {constraints.length === 0 && !showAddForm && (
-                            <div className="bg-blue-50 p-4 rounded-xl mt-4">
-                                <p className="text-sm font-semibold text-blue-900 mb-2">Examples:</p>
-                                <ul className="text-xs text-blue-800 space-y-1">
-                                    <li>• "Annual Budget: Cannot exceed $2M in total spending"</li>
-                                    <li>• "Team Size: Limited to 25 full-time employees"</li>
-                                    <li>• "Compliance: Must comply with SOC 2 Type II requirements"</li>
-                                    <li>• "Data Residency: All data must stay within EU regions"</li>
-                                </ul>
-                            </div>
-                        )}
+                    <div className="border-t border-white/20 dark:border-neutral-gray-600 pt-4 mt-6">
+                        <p className="text-xs italic text-blue-100 dark:text-neutral-gray-400 text-center">
+                            All constraints automatically apply to every decision in your organization. They cannot be selectively disabled.
+                        </p>
                     </div>
                 </div>
             </div>
+
+            {/* Add Constraint Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl">
+                        <div className="px-6 md:px-8 py-6 border-b border-blue-100 dark:border-neutral-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-neutral-gray-700 dark:to-neutral-gray-800">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Add New Constraint</h2>
+                                <button
+                                    onClick={() => setShowAddModal(false)}
+                                    className="p-2 hover:bg-white/60 dark:hover:bg-neutral-gray-600 rounded-lg transition-colors"
+                                >
+                                    <X className="text-gray-600 dark:text-neutral-gray-300" size={24} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 md:p-8 space-y-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+                                    Constraint Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newConstraint.name}
+                                    onChange={(e) => setNewConstraint({ ...newConstraint, name: e.target.value })}
+                                    placeholder='e.g., "Annual Budget Limit"'
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700 placeholder:text-gray-400 dark:placeholder:text-neutral-gray-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+                                    Description *
+                                </label>
+                                <textarea
+                                    value={newConstraint.description}
+                                    onChange={(e) => setNewConstraint({ ...newConstraint, description: e.target.value })}
+                                    placeholder='e.g., "All projects must stay within $500K annual budget"'
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors resize-none text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700 placeholder:text-gray-400 dark:placeholder:text-neutral-gray-500"
+                                    rows={4}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+                                    Constraint Type
+                                </label>
+                                <select
+                                    value={newConstraint.constraintType}
+                                    onChange={(e) => setNewConstraint({ ...newConstraint, constraintType: e.target.value })}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700"
+                                >
+                                    <option value="POLICY">Policy</option>
+                                    <option value="BUDGET">Budget</option>
+                                    <option value="LEGAL">Legal</option>
+                                    <option value="TECHNICAL">Technical</option>
+                                    <option value="COMPLIANCE">Compliance</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-neutral-gray-700 dark:to-neutral-gray-800 rounded-b-2xl flex gap-3 justify-end border-t border-blue-100 dark:border-neutral-gray-700">
+                            <button
+                                onClick={() => {
+                                    setShowAddModal(false);
+                                    setNewConstraint({ name: '', description: '', constraintType: 'POLICY', validationConfig: {} });
+                                }}
+                                className="px-6 py-3 border-2 border-blue-200 dark:border-neutral-gray-600 text-gray-700 dark:text-neutral-gray-300 font-semibold rounded-lg hover:bg-white dark:hover:bg-neutral-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddConstraint}
+                                className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md"
+                            >
+                                Create Constraint
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

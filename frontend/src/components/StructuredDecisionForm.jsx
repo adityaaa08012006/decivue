@@ -713,13 +713,13 @@ const StructuredDecisionForm = ({
         <button
           onClick={handleSubmit}
           disabled={!formData.title.trim() || !formData.category || loading}
-          className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
+          className="flex-1 bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-neutral-gray-700 disabled:cursor-not-allowed font-semibold transition-colors"
         >
           Continue
         </button>
         <button
           onClick={onCancel}
-          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
+          className="px-6 py-3 bg-gray-200 dark:bg-neutral-gray-700 text-gray-700 dark:text-neutral-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-neutral-gray-600 font-semibold transition-colors"
         >
           Cancel
         </button>

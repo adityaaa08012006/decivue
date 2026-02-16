@@ -127,11 +127,11 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       className={`flex items-center justify-between px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
         item.active
           ? "bg-primary-blue text-white"
-          : "text-neutral-gray-700 hover:bg-neutral-gray-100"
+          : "text-neutral-gray-700 dark:text-neutral-gray-300 hover:bg-neutral-gray-100 dark:hover:bg-neutral-gray-700"
       }`}
     >
       <div className="flex items-center gap-2">
-        <div className={item.active ? "text-white" : "text-neutral-gray-600"}>
+        <div className={item.active ? "text-white" : "text-neutral-gray-600 dark:text-neutral-gray-400"}>
           {getIcon(item.icon)}
         </div>
         <span className="text-sm font-medium">{item.label}</span>

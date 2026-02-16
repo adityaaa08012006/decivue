@@ -93,7 +93,7 @@ const DecisionLogTable = ({ onNavigate }) => {
   const getStatusBadge = (status) => {
     const statusStyles = {
       Approved: 'bg-status-green text-white',
-      Pending: 'bg-status-gray text-white',
+      Pending: 'bg-status-gray dark:bg-neutral-gray-600 text-white',
       Declined: 'bg-primary-red text-white',
       Disregarded: 'bg-primary-blue text-white',
     };
@@ -107,9 +107,9 @@ const DecisionLogTable = ({ onNavigate }) => {
 
   const getTierBadge = (tier) => {
     const tierStyles = {
-      'standard': 'bg-gray-100 text-gray-700',
-      'high_impact': 'bg-orange-100 text-orange-700',
-      'critical': 'bg-red-100 text-red-700',
+      'standard': 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+      'high_impact': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+      'critical': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
     };
 
     const tierLabels = {
@@ -126,14 +126,14 @@ const DecisionLogTable = ({ onNavigate }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-gray-200 p-6">
+    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl border border-neutral-gray-200 dark:border-neutral-gray-700 p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-neutral-black">
+        <h2 className="text-2xl font-bold text-neutral-black dark:text-white">
           {isLead ? 'Pending Approvals' : 'Decision log'}
         </h2>
         <button 
           onClick={isLead ? fetchPendingApprovals : fetchDecisions}
-          className="px-3 py-2 text-sm text-primary-blue hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2"
+          className="px-3 py-2 text-sm text-primary-blue dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center gap-2"
         >
           <RotateCcw size={16} />
           Refresh
@@ -142,23 +142,23 @@ const DecisionLogTable = ({ onNavigate }) => {
 
       {(loading || authLoading) && (
         <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-blue"></div>
-          <p className="mt-2 text-neutral-gray-600">{authLoading ? 'Initializing...' : 'Loading...'}</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-blue dark:border-blue-400"></div>
+          <p className="mt-2 text-neutral-gray-600 dark:text-neutral-gray-400">{authLoading ? 'Initializing...' : 'Loading...'}</p>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <p className="text-red-800 text-sm">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>
         </div>
       )}
 
       {/* TEAM LEAD VIEW - Pending Approvals */}
       {isLead && !authLoading && !loading && !error && pendingApprovals.length === 0 && (
         <div className="text-center py-8">
-          <CheckCircle className="mx-auto text-green-500 mb-3" size={48} />
-          <p className="text-neutral-gray-600 font-medium">No pending approvals</p>
-          <p className="text-sm text-neutral-gray-500 mt-1">All edit requests have been processed</p>
+          <CheckCircle className="mx-auto text-green-500 dark:text-green-400 mb-3" size={48} />
+          <p className="text-neutral-gray-600 dark:text-neutral-gray-400 font-medium">No pending approvals</p>
+          <p className="text-sm text-neutral-gray-500 dark:text-neutral-gray-500 mt-1">All edit requests have been processed</p>
         </div>
       )}
 
@@ -166,23 +166,23 @@ const DecisionLogTable = ({ onNavigate }) => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-gray-300">
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+              <tr className="border-b border-neutral-gray-300 dark:border-neutral-gray-600">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Decision
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Tier
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Requested By
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Justification
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Requested
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Actions
                 </th>
               </tr>
@@ -191,15 +191,15 @@ const DecisionLogTable = ({ onNavigate }) => {
               {pendingApprovals.map((approval) => (
                 <tr
                   key={approval.auditId}
-                  className="border-b border-neutral-gray-200 last:border-b-0 hover:bg-neutral-gray-50 transition-colors"
+                  className="border-b border-neutral-gray-200 dark:border-neutral-gray-700 last:border-b-0 hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-700 transition-colors"
                 >
                   <td className="py-4 px-4">
                     <div>
-                      <span className="text-sm font-medium text-neutral-black bg-blue-50 px-3 py-1.5 rounded block mb-1">
+                      <span className="text-sm font-medium text-neutral-black dark:text-white bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded block mb-1">
                         {approval.decisionTitle}
                       </span>
                       {approval.decisionDescription && (
-                        <span className="text-xs text-neutral-gray-600">
+                        <span className="text-xs text-neutral-gray-600 dark:text-neutral-gray-400">
                           {approval.decisionDescription.substring(0, 60)}
                           {approval.decisionDescription.length > 60 ? '...' : ''}
                         </span>
@@ -211,17 +211,17 @@ const DecisionLogTable = ({ onNavigate }) => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="text-sm">
-                      <div className="font-medium text-neutral-black">{approval.requestedBy}</div>
-                      <div className="text-xs text-neutral-gray-600">{approval.requestedByEmail}</div>
+                      <div className="font-medium text-neutral-black dark:text-white">{approval.requestedBy}</div>
+                      <div className="text-xs text-neutral-gray-600 dark:text-neutral-gray-400">{approval.requestedByEmail}</div>
                     </div>
                   </td>
                   <td className="py-4 px-4 max-w-xs">
-                    <p className="text-sm text-neutral-gray-700 line-clamp-2">
+                    <p className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300 line-clamp-2">
                       {approval.justification}
                     </p>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-1 text-xs text-neutral-gray-600">
+                    <div className="flex items-center gap-1 text-xs text-neutral-gray-600 dark:text-neutral-gray-400">
                       <Clock size={12} />
                       {new Date(approval.requestedAt).toLocaleDateString()}
                     </div>
@@ -255,7 +255,7 @@ const DecisionLogTable = ({ onNavigate }) => {
       {/* MEMBER VIEW - Decision Log (no action buttons) */}
       {!isLead && !authLoading && !loading && !error && decisions.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-neutral-gray-600">No decisions found. Create your first decision!</p>
+          <p className="text-neutral-gray-600 dark:text-neutral-gray-400">No decisions found. Create your first decision!</p>
         </div>
       )}
 
@@ -263,11 +263,11 @@ const DecisionLogTable = ({ onNavigate }) => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-gray-300">
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+              <tr className="border-b border-neutral-gray-300 dark:border-neutral-gray-600">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Decision
                 </th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black">
+                <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
                   Status
                 </th>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-neutral-black dark:text-white">
@@ -286,10 +286,10 @@ const DecisionLogTable = ({ onNavigate }) => {
                 <tr
                   key={decision.id}
                   onClick={() => handleView(decision.id)}
-                  className="border-b border-neutral-gray-200 last:border-b-0 hover:bg-neutral-gray-50 transition-colors cursor-pointer"
+                  className="border-b border-neutral-gray-200 dark:border-neutral-gray-700 last:border-b-0 hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-700 transition-colors cursor-pointer"
                 >
                   <td className="py-4 px-4">
-                    <span className="text-sm text-neutral-black bg-blue-50 px-3 py-1.5 rounded">
+                    <span className="text-sm text-neutral-black dark:text-white bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded">
                       {decision.title}
                     </span>
                   </td>

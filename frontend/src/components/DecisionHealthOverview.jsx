@@ -8,25 +8,25 @@ const HorizontalProgressCard = ({ title, value, total, status }) => {
   const statusColors = {
     danger: {
       filled: 'bg-gradient-to-r from-red-400 to-red-500',
-      empty: 'bg-red-100',
-      text: 'text-neutral-black'
+      empty: 'bg-red-100 dark:bg-red-900/20',
+      text: 'text-neutral-black dark:text-white'
     },
     success: {
       filled: 'bg-gradient-to-r from-green-400 to-green-500',
-      empty: 'bg-green-100',
-      text: 'text-neutral-black'
+      empty: 'bg-green-100 dark:bg-green-900/20',
+      text: 'text-neutral-black dark:text-white'
     },
     warning: {
       filled: 'bg-gradient-to-r from-amber-400 to-amber-500',
-      empty: 'bg-amber-100',
-      text: 'text-neutral-black'
+      empty: 'bg-amber-100 dark:bg-amber-900/20',
+      text: 'text-neutral-black dark:text-white'
     }
   };
 
   const colors = statusColors[status] || statusColors.success;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-gray-200">
+    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 shadow-sm border border-neutral-gray-200 dark:border-neutral-gray-700">
       {/* Progress Bar */}
       <div className="flex gap-2 mb-4">
         <div className={`h-2 rounded-full ${colors.filled}`} style={{ width: `${percentage}%` }}></div>
@@ -34,7 +34,7 @@ const HorizontalProgressCard = ({ title, value, total, status }) => {
       </div>
       
       {/* Label */}
-      <div className="text-sm font-medium text-neutral-gray-600 mb-2">
+      <div className="text-sm font-medium text-neutral-gray-600 dark:text-neutral-gray-400 mb-2">
         {title}
       </div>
       
@@ -104,10 +104,10 @@ const DecisionHealthOverview = () => {
     <div className="mb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <button className="px-4 py-2 bg-white border border-neutral-gray-300 rounded-lg text-sm font-medium text-neutral-black hover:bg-neutral-gray-50 transition-colors">
+        <button className="px-4 py-2 bg-white dark:bg-neutral-gray-700 border border-neutral-gray-300 dark:border-neutral-gray-600 rounded-lg text-sm font-medium text-neutral-black dark:text-white hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-600 transition-colors">
           Decision Health Overview
         </button>
-        <button className="px-4 py-2 bg-white border border-neutral-gray-300 rounded-lg text-sm font-medium text-neutral-black hover:bg-neutral-gray-50 transition-colors flex items-center gap-2">
+        <button className="px-4 py-2 bg-white dark:bg-neutral-gray-700 border border-neutral-gray-300 dark:border-neutral-gray-600 rounded-lg text-sm font-medium text-neutral-black dark:text-white hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-600 transition-colors flex items-center gap-2">
           Daily
           <ChevronDown size={16} />
         </button>

@@ -278,14 +278,14 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-8 max-w-3xl w-full mx-4 shadow-2xl animate-fade-in-up max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-8 max-w-3xl w-full mx-4 shadow-2xl animate-fade-in-up max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-neutral-black mb-2">
+            <h2 className="text-2xl font-bold text-neutral-black dark:text-white mb-2">
               {currentStep === 1 ? 'Add New Decision' : 'Link Relationships'}
             </h2>
-            <p className="text-neutral-gray-600">
+            <p className="text-neutral-gray-600 dark:text-neutral-gray-400">
               {currentStep === 1
                 ? 'Provide basic information about your decision'
                 : 'Link assumptions, dependencies, and constraints (optional)'}
@@ -293,9 +293,9 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-neutral-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-neutral-gray-100 dark:hover:bg-neutral-gray-700 rounded-lg transition-colors"
           >
-            <X size={20} className="text-neutral-gray-500" />
+            <X size={20} className="text-neutral-gray-500 dark:text-neutral-gray-400" />
           </button>
         </div>
 
@@ -303,19 +303,19 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
         <div className="flex items-center gap-2 mb-8">
           <div
             className={`flex-1 h-1.5 rounded-full ${
-              currentStep >= 1 ? 'bg-primary-blue' : 'bg-neutral-gray-200'
+              currentStep >= 1 ? 'bg-primary-blue dark:bg-blue-500' : 'bg-neutral-gray-200 dark:bg-neutral-gray-700'
             }`}
           />
           <div
             className={`flex-1 h-1.5 rounded-full ${
-              currentStep >= 2 ? 'bg-primary-blue' : 'bg-neutral-gray-200'
+              currentStep >= 2 ? 'bg-primary-blue dark:bg-blue-500' : 'bg-neutral-gray-200 dark:bg-neutral-gray-700'
             }`}
           />
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300 text-sm">
             {error}
           </div>
         )}
@@ -347,15 +347,15 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
         {currentStep === 2 && (
           <div className="space-y-6">
             {/* Assumptions Section */}
-            <div className="p-6 bg-blue-50 rounded-xl border border-blue-100">
+            <div className="p-6 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Target className="text-primary-blue" size={20} />
-                  <h3 className="font-bold text-neutral-black">Assumptions</h3>
+                  <Target className="text-primary-blue dark:text-blue-400" size={20} />
+                  <h3 className="font-bold text-neutral-black dark:text-white">Assumptions</h3>
                 </div>
                 <button
                   onClick={() => setShowStructuredForm(!showStructuredForm)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-gray-700 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                   title="Use structured dropdowns for better conflict detection"
                 >
                   <Layers size={16} />
@@ -365,14 +365,14 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
 
               {/* Existing assumptions - shown in both modes */}
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
                   Link Existing Assumptions
                 </label>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {existingAssumptions.map((assumption) => (
                     <label
                       key={assumption.id}
-                      className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
+                      className="flex items-start gap-2 p-3 bg-white dark:bg-neutral-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/40 cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -385,11 +385,11 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                         className="mt-1"
                       />
                       <div className="flex-1">
-                        <span className="text-sm text-neutral-gray-700">
+                        <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">
                           {assumption.description}
                         </span>
                         {assumption.category && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                          <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
                             {assumption.category}
                           </span>
                         )}
@@ -397,7 +397,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                     </label>
                   ))}
                   {existingAssumptions.length === 0 && (
-                    <p className="text-sm text-neutral-gray-500 italic">
+                    <p className="text-sm text-neutral-gray-500 dark:text-neutral-gray-400 italic">
                       No existing assumptions available
                     </p>
                   )}
@@ -408,13 +408,13 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                 <>
                   {/* Add new assumptions - Simple mode */}
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
                       Add New Assumptions (Quick Entry)
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        className="flex-1 p-3 border border-neutral-gray-300 rounded-lg focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all text-sm"
+                        className="flex-1 p-3 bg-white dark:bg-neutral-gray-700 text-gray-900 dark:text-white border border-neutral-gray-300 dark:border-neutral-gray-600 rounded-lg focus:border-primary-blue dark:focus:border-blue-500 focus:ring-1 focus:ring-primary-blue dark:focus:ring-blue-500 transition-all text-sm placeholder:text-neutral-gray-500 dark:placeholder:text-neutral-gray-400"
                         placeholder="Enter new assumption..."
                         value={newAssumptionText}
                         onChange={(e) => setNewAssumptionText(e.target.value)}
@@ -427,7 +427,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                       />
                       <button
                         onClick={addNewAssumption}
-                        className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        className="px-4 py-2 bg-primary-blue dark:bg-blue-500 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-600 transition-colors"
                       >
                         <Plus size={16} />
                       </button>
@@ -437,21 +437,21 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                         {formData.newAssumptions.map((assumption, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between p-2 bg-white rounded-lg text-sm"
+                            className="flex items-center justify-between p-2 bg-white dark:bg-neutral-gray-700 rounded-lg text-sm"
                           >
                             <div className="flex-1">
-                              <span className="text-neutral-gray-700">
+                              <span className="text-neutral-gray-700 dark:text-neutral-gray-300">
                                 {typeof assumption === 'string' ? assumption : assumption.description}
                               </span>
                               {typeof assumption === 'object' && assumption.category && (
-                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
                                   {assumption.category}
                                 </span>
                               )}
                             </div>
                             <button
                               onClick={() => removeNewAssumption(index)}
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                             >
                               <X size={14} />
                             </button>
@@ -459,37 +459,37 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       💡 Tip: Use Structured Mode for better conflict detection
                     </p>
                   </div>
                 </>
               ) : (
-                <div className="bg-white p-4 rounded-lg">
+                <div className="bg-white dark:bg-neutral-gray-800 p-4 rounded-lg">
                   {/* Show list of new assumptions added so far */}
                   {formData.newAssumptions.length > 0 && (
                     <div className="mb-4 space-y-2">
-                      <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
                         New Assumptions to Create
                       </label>
                       {formData.newAssumptions.map((assumption, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-2 bg-blue-50 rounded-lg text-sm"
+                          className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/40 rounded-lg text-sm"
                         >
                           <div className="flex-1">
-                            <span className="text-neutral-gray-700">
+                            <span className="text-neutral-gray-700 dark:text-neutral-gray-300">
                               {typeof assumption === 'string' ? assumption : assumption.description}
                             </span>
                             {typeof assumption === 'object' && assumption.category && (
-                              <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                              <span className="ml-2 text-xs bg-blue-600 dark:bg-blue-500 text-white px-2 py-0.5 rounded">
                                 {assumption.category}
                               </span>
                             )}
                           </div>
                           <button
                             onClick={() => removeNewAssumption(index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                           >
                             <X size={14} />
                           </button>
@@ -517,15 +517,15 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             {/* Dependencies Section */}
-            <div className="p-6 bg-orange-50 rounded-xl border border-orange-100">
+            <div className="p-6 bg-orange-50 dark:bg-orange-900/30 rounded-xl border border-orange-100 dark:border-orange-800">
               <div className="flex items-center gap-2 mb-4">
-                <Link2 className="text-status-orange" size={20} />
-                <h3 className="font-bold text-neutral-black">Dependencies</h3>
+                <Link2 className="text-status-orange dark:text-orange-400" size={20} />
+                <h3 className="font-bold text-neutral-black dark:text-white">Dependencies</h3>
               </div>
 
               {/* Depends On */}
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
                   This decision depends on
                 </label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -540,13 +540,13 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                         onChange={() => toggleSelection('dependsOn', decision.id)}
                         className="mt-1"
                       />
-                      <span className="text-sm text-neutral-gray-700">
+                      <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">
                         {decision.title}
                       </span>
                     </label>
                   ))}
                   {existingDecisions.length === 0 && (
-                    <p className="text-sm text-neutral-gray-500 italic">
+                    <p className="text-sm text-neutral-gray-500 dark:text-neutral-gray-400 italic">
                       No existing decisions available
                     </p>
                   )}
@@ -555,14 +555,14 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
 
               {/* Blocks */}
               <div>
-                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
                   This decision blocks
                 </label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {existingDecisions.map((decision) => (
                     <label
                       key={decision.id}
-                      className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-orange-50 cursor-pointer transition-colors"
+                      className="flex items-start gap-2 p-3 bg-white dark:bg-neutral-gray-700 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/40 cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -585,18 +585,18 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             {/* Constraints Section */}
-            <div className="p-6 bg-purple-50 rounded-xl border border-purple-100">
+            <div className="p-6 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-100 dark:border-purple-800">
               <div className="flex items-center gap-2 mb-4">
-                <Shield className="text-purple-600" size={20} />
-                <h3 className="font-bold text-neutral-black">Constraints</h3>
+                <Shield className="text-purple-600 dark:text-purple-400" size={20} />
+                <h3 className="font-bold text-neutral-black dark:text-white">Constraints</h3>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
                   Organizational Constraints
                 </label>
                 {existingConstraints.length > 0 ? (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <div className="flex items-start gap-2 text-blue-800 mb-3">
                       <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -605,7 +605,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                         <p className="text-sm font-medium mb-1">
                           All organizational constraints automatically apply
                         </p>
-                        <p className="text-xs text-blue-700">
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
                           These {existingConstraints.length} constraint{existingConstraints.length !== 1 ? 's' : ''} will be validated when you create this decision. They represent non-negotiable organizational facts.
                         </p>
                       </div>
@@ -614,17 +614,17 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                       {existingConstraints.map((constraint) => (
                         <div
                           key={constraint.id}
-                          className="flex items-start gap-2 p-2 bg-white rounded border border-blue-100"
+                          className="flex items-start gap-2 p-2 bg-white dark:bg-neutral-gray-800 rounded border border-blue-100 dark:border-blue-800"
                         >
-                          <svg className="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <div className="flex-1">
-                            <div className="text-xs font-medium text-neutral-black">
+                            <div className="text-xs font-medium text-neutral-black dark:text-white">
                               {constraint.name}
                             </div>
                             {constraint.description && (
-                              <div className="text-xs text-neutral-gray-600 mt-0.5">
+                              <div className="text-xs text-neutral-gray-600 dark:text-neutral-gray-400 mt-0.5">
                                 {constraint.description}
                               </div>
                             )}
@@ -634,7 +634,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-neutral-gray-500 border-2 border-dashed border-neutral-gray-200 rounded-xl">
+                  <div className="text-center py-6 text-neutral-gray-500 dark:text-neutral-gray-400 border-2 border-dashed border-neutral-gray-200 dark:border-neutral-gray-700 rounded-xl">
                     <p className="text-sm">No constraints available</p>
                     <p className="text-xs mt-1">You can add constraints in Organization Profile</p>
                   </div>
@@ -646,7 +646,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="flex justify-between gap-3 pt-4">
               <button
                 onClick={handleBack}
-                className="px-6 py-2.5 text-neutral-gray-600 font-medium hover:bg-neutral-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                className="px-6 py-2.5 text-neutral-gray-600 dark:text-neutral-gray-400 font-medium hover:bg-neutral-gray-100 dark:hover:bg-neutral-gray-700 rounded-lg transition-colors flex items-center gap-2"
               >
                 <ArrowLeft size={16} />
                 Back
@@ -654,7 +654,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="px-6 py-2.5 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-2.5 bg-primary-blue dark:bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -676,20 +676,20 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       {/* No Assumptions Warning Modal */}
       {showNoAssumptionsWarning && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+          <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 bg-amber-100 rounded-full flex-shrink-0">
-                <Shield size={24} className="text-amber-600" />
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-full flex-shrink-0">
+                <Shield size={24} className="text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-black mb-2">
+                <h3 className="text-xl font-bold text-black dark:text-white mb-2">
                   No Assumptions Added
                 </h3>
-                <p className="text-gray-700 text-sm leading-relaxed">
+                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
                   This decision has no assumptions linked to it. Without assumptions, 
                   the system cannot monitor the decision's health or detect potential risks.
                 </p>
-                <p className="text-gray-700 text-sm leading-relaxed mt-3">
+                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mt-3">
                   <strong>Recommendation:</strong> Add at least one assumption to enable 
                   effective decision monitoring and conflict detection.
                 </p>
@@ -698,13 +698,13 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowNoAssumptionsWarning(false)}
-                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                className="flex-1 px-4 py-3 bg-gray-100 dark:bg-neutral-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-neutral-gray-600 transition-colors"
               >
                 Add Assumptions
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex-1 px-4 py-3 bg-amber-500 text-white font-semibold rounded-xl hover:bg-amber-600 transition-colors"
+                className="flex-1 px-4 py-3 bg-amber-500 dark:bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors"
               >
                 Continue Anyway
               </button>
