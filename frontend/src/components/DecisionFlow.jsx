@@ -125,11 +125,30 @@ const EventCard = ({ event, isLast }) => {
                                                         <AlertTriangle size={12} /> Blocked By
                                                     </h4>
                                                     <div className="flex flex-col gap-2">
-                                                        {dependencies.blockedBy.map(dep => (
-                                                            <div key={dep.id} className="p-2 bg-white border border-red-100 rounded shadow-sm text-xs border-l-2 border-l-red-400">
-                                                                {dep.decisions.title}
-                                                            </div>
-                                                        ))}
+                                                        {dependencies.blockedBy.map(dep => {
+                                                            const isDeprecated = dep.isDeprecated || 
+                                                                dep.decisions?.lifecycle === 'INVALIDATED' || 
+                                                                dep.decisions?.lifecycle === 'RETIRED';
+                                                            return (
+                                                                <div key={dep.id} className={`p-2 bg-white border rounded shadow-sm text-xs border-l-2 ${
+                                                                    isDeprecated 
+                                                                        ? 'border-red-300 bg-red-50 border-l-red-600' 
+                                                                        : 'border-red-100 border-l-red-400'
+                                                                }`}>
+                                                                    <div className="flex items-center gap-1">
+                                                                        {isDeprecated && <span title="Deprecated decision">⚠️</span>}
+                                                                        <span className={isDeprecated ? 'text-red-700 font-semibold' : ''}>
+                                                                            {dep.decisions.title}
+                                                                        </span>
+                                                                    </div>
+                                                                    {isDeprecated && (
+                                                                        <p className="text-xs text-red-600 italic mt-1">
+                                                                            {dep.deprecationWarning || 'This decision is deprecated'}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             )}
@@ -141,11 +160,30 @@ const EventCard = ({ event, isLast }) => {
                                                         <Activity size={12} /> Blocking
                                                     </h4>
                                                     <div className="flex flex-col gap-2">
-                                                        {dependencies.blocking.map(dep => (
-                                                            <div key={dep.id} className="p-2 bg-white border border-orange-100 rounded shadow-sm text-xs border-l-2 border-l-orange-400">
-                                                                {dep.decisions.title}
-                                                            </div>
-                                                        ))}
+                                                        {dependencies.blocking.map(dep => {
+                                                            const isDeprecated = dep.isDeprecated || 
+                                                                dep.decisions?.lifecycle === 'INVALIDATED' || 
+                                                                dep.decisions?.lifecycle === 'RETIRED';
+                                                            return (
+                                                                <div key={dep.id} className={`p-2 bg-white border rounded shadow-sm text-xs border-l-2 ${
+                                                                    isDeprecated 
+                                                                        ? 'border-red-300 bg-red-50 border-l-red-600' 
+                                                                        : 'border-orange-100 border-l-orange-400'
+                                                                }`}>
+                                                                    <div className="flex items-center gap-1">
+                                                                        {isDeprecated && <span title="Deprecated decision">⚠️</span>}
+                                                                        <span className={isDeprecated ? 'text-red-700 font-semibold' : ''}>
+                                                                            {dep.decisions.title}
+                                                                        </span>
+                                                                    </div>
+                                                                    {isDeprecated && (
+                                                                        <p className="text-xs text-red-600 italic mt-1">
+                                                                            {dep.deprecationWarning || 'This decision is deprecated'}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             )}

@@ -8,6 +8,7 @@ import { getAdminDatabase } from '@data/database';
 import { DeterministicEngine } from '@engine/index';
 import { EvaluationInput } from '@engine/types';
 import { logger } from '@utils/logger';
+import { AssumptionValidationService } from '../../services/assumption-validation-service';
 
 const router = Router();
 
@@ -166,7 +167,7 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
       if (result.changesDetected) {
         logger.info(`Updating decision ${decision.id}: health ${decision.health_signal} -> ${result.newHealthSignal}, lifecycle ${decision.lifecycle} -> ${result.newLifecycle}`);
 
-        const { data: updateData, error: updateError } = await supabase
+        const { error: updateError } = await supabase
           .from('decisions')
           .update({
             health_signal: result.newHealthSignal,
@@ -181,6 +182,11 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
         }
 
         logger.info(`Successfully updated decision ${decision.id}`);
+
+        // If decision was deprecated, check and deprecate orphaned assumptions
+        if (result.newLifecycle === 'INVALIDATED' || result.newLifecycle === 'RETIRED') {
+          await AssumptionValidationService.deprecateOrphanedAssumptions(decision.id);
+        }
 
         // Create notifications for significant changes
         const notifications = [];

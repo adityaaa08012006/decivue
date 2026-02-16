@@ -372,6 +372,13 @@ class ApiService {
     });
   }
 
+  // Reset time simulation
+  async resetTimeSimulation() {
+    return this.request('/simulate-time/reset', {
+      method: 'DELETE',
+    });
+  }
+
   // Get current simulated time
   async getCurrentTime() {
     return this.request('/simulate-time/current');

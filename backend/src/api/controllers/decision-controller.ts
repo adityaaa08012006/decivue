@@ -13,6 +13,7 @@ import { EventType } from '@events/event-types';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@utils/logger';
 import { AuthRequest } from '@middleware/auth';
+import { AssumptionValidationService } from '@services/assumption-validation-service';
 
 export class DecisionController {
   private _repository?: DecisionRepository;
@@ -230,6 +231,9 @@ export class DecisionController {
         newLifecycle: 'RETIRED'
       });
 
+      // Check and deprecate orphaned decision-specific assumptions
+      await AssumptionValidationService.deprecateOrphanedAssumptions(id);
+
       logger.info(`Decision retired: ${id}`);
       return res.json(decision);
     } catch (error) {
@@ -444,6 +448,11 @@ export class DecisionController {
         newHealth: result.newHealthSignal,
         healthChange: result.newHealthSignal - decision.health_signal
       });
+
+      // If decision was deprecated, check and deprecate orphaned assumptions
+      if (result.newLifecycle === 'INVALIDATED' || result.newLifecycle === 'RETIRED') {
+        await AssumptionValidationService.deprecateOrphanedAssumptions(decisionId);
+      }
 
       // Return updated decision
       const { data: updatedDecision } = await db

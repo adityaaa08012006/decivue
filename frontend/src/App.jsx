@@ -77,6 +77,36 @@ function AppContent() {
     }
   };
 
+  const handleResetTime = async () => {
+    try {
+      setSimulating(true);
+      setShowTimeSimMenu(false);
+      setSimulationResult(null);
+
+      await api.resetTimeSimulation();
+
+      setSimulationResult({
+        success: true,
+        reset: true,
+      });
+
+      // Refresh the dashboard
+      setRefreshKey(prev => prev + 1);
+
+      // Auto-dismiss result after 3 seconds
+      setTimeout(() => setSimulationResult(null), 3000);
+    } catch (error) {
+      console.error('Time reset failed:', error);
+      setSimulationResult({
+        success: false,
+        error: error.message || 'Reset failed',
+      });
+      setTimeout(() => setSimulationResult(null), 5000);
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   // Show loading while checking auth
   if (loading) {
     return (
@@ -160,6 +190,13 @@ function AppContent() {
                           {option.label}
                         </button>
                       ))}
+                      <div className="border-t border-gray-100 dark:border-neutral-gray-700 my-2"></div>
+                      <button
+                        onClick={handleResetTime}
+                        className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                      >
+                        Reset to Real Time
+                      </button>
                     </div>
                   )}
                 </div>
@@ -174,23 +211,31 @@ function AppContent() {
                 }`}>
                   {simulationResult.success ? (
                     <div>
-                      <h3 className="font-bold text-green-900 dark:text-green-300 mb-2">
-                        🕐 Time Jump: +{simulationResult.days} days completed
-                      </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-green-800 dark:text-green-400">
-                        <div>
-                          <span className="font-semibold">{simulationResult.evaluatedCount}</span> decisions evaluated
-                        </div>
-                        <div>
-                          <span className="font-semibold">{simulationResult.healthChanges}</span> health changes
-                        </div>
-                        <div>
-                          <span className="font-semibold">{simulationResult.lifecycleChanges}</span> lifecycle changes
-                        </div>
-                        <div>
-                          <span className="font-semibold">{simulationResult.newNotifications}</span> new notifications
-                        </div>
-                      </div>
+                      {simulationResult.reset ? (
+                        <h3 className="font-bold text-green-900 dark:text-green-300">
+                          ⏰ Time simulation reset to real time
+                        </h3>
+                      ) : (
+                        <>
+                          <h3 className="font-bold text-green-900 dark:text-green-300 mb-2">
+                            🕐 Time Jump: +{simulationResult.days} days completed
+                          </h3>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-green-800 dark:text-green-400">
+                            <div>
+                              <span className="font-semibold">{simulationResult.evaluatedCount}</span> decisions evaluated
+                            </div>
+                            <div>
+                              <span className="font-semibold">{simulationResult.healthChanges}</span> health changes
+                            </div>
+                            <div>
+                              <span className="font-semibold">{simulationResult.lifecycleChanges}</span> lifecycle changes
+                            </div>
+                            <div>
+                              <span className="font-semibold">{simulationResult.newNotifications}</span> new notifications
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className="text-red-900 dark:text-red-300">
