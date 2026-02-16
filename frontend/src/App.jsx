@@ -38,6 +38,11 @@ function AppContent() {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleNotificationAction = () => {
+    // Trigger refresh when notifications are updated
+    setRefreshKey(prev => prev + 1);
+  };
+
   const handleTimeSimulation = async (days) => {
     try {
       setSimulating(true);
@@ -210,7 +215,7 @@ function AppContent() {
             />
           )}
           {currentView === 'assumptions' && <AssumptionsPage />}
-          {currentView === 'notifications' && <NotificationsPage />}
+          {currentView === 'notifications' && <NotificationsPage onNotificationAction={handleNotificationAction} />}
           {currentView === 'profile' && <OrganizationProfile />}
           {currentView === 'flow' && <DecisionFlow key={`flow-${refreshKey}`} />}
           {currentView === 'team' && <TeamPage />}

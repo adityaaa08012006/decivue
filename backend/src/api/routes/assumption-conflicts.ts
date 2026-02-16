@@ -105,6 +105,18 @@ router.post('/detect', async (req: Request, res: Response, next: NextFunction) =
       });
 
       if (!existing) {
+        // Get organization_id from assumptionA
+        const { data: assumptionData } = await db
+          .from('assumptions')
+          .select('organization_id')
+          .eq('id', minId)
+          .single();
+
+        if (!assumptionData) {
+          logger.warn('Could not find assumption for conflict', { assumptionId: minId });
+          continue;
+        }
+
         // Create new conflict record
         const { data: newConflict, error: insertError } = await db
           .from('assumption_conflicts')
@@ -113,6 +125,7 @@ router.post('/detect', async (req: Request, res: Response, next: NextFunction) =
             assumption_b_id: maxId,
             conflict_type: conflict.conflictType,
             confidence_score: conflict.confidenceScore,
+            organization_id: assumptionData.organization_id,
             metadata: { reason: conflict.reason },
           })
           .select()

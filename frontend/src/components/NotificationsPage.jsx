@@ -16,7 +16,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
-const NotificationsPage = () => {
+const NotificationsPage = ({ onNotificationAction }) => {
     const { isLead } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +47,7 @@ const NotificationsPage = () => {
         try {
             await api.markNotificationRead(id);
             fetchNotifications();
+            onNotificationAction?.(); // Trigger immediate refresh of unread count
         } catch (error) {
             console.error('Failed to mark notification as read:', error);
         }
@@ -56,6 +57,7 @@ const NotificationsPage = () => {
         try {
             await api.markAllNotificationsRead();
             fetchNotifications();
+            onNotificationAction?.(); // Trigger immediate refresh of unread count
         } catch (error) {
             console.error('Failed to mark all as read:', error);
         }
@@ -65,6 +67,7 @@ const NotificationsPage = () => {
         try {
             await api.dismissNotification(id);
             fetchNotifications();
+            onNotificationAction?.(); // Trigger immediate refresh of unread count
         } catch (error) {
             console.error('Failed to dismiss notification:', error);
         }
@@ -74,6 +77,7 @@ const NotificationsPage = () => {
         try {
             await api.deleteNotification(id);
             fetchNotifications();
+            onNotificationAction?.(); // Trigger immediate refresh of unread count
         } catch (error) {
             console.error('Failed to delete notification:', error);
         }
@@ -83,6 +87,7 @@ const NotificationsPage = () => {
         try {
             await api.markDecisionReviewed(decisionId);
             await fetchNotifications();
+            onNotificationAction?.(); // Trigger immediate refresh of unread count
             showToast('success', 'Decision marked as reviewed');
         } catch (error) {
             console.error('Failed to mark decision as reviewed:', error);

@@ -282,6 +282,113 @@ export class AssumptionConflictDetector {
       }
     }
 
+    // BUDGET conflicts (uppercase category)
+    if (assumptionA.category === 'BUDGET') {
+      // Check for budget range conflicts (min/max)
+      if (paramsA.type && paramsB.type && paramsA.budget !== undefined && paramsB.budget !== undefined) {
+        // Maximum budget less than minimum budget
+        if (paramsA.type === 'maximum' && paramsB.type === 'minimum' && paramsA.budget < paramsB.budget) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.99,
+            reason: `Maximum budget (${paramsA.currency || '$'}${paramsA.budget}) is less than minimum budget (${paramsB.currency || '$'}${paramsB.budget})`
+          };
+        }
+        if (paramsA.type === 'minimum' && paramsB.type === 'maximum' && paramsA.budget > paramsB.budget) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.99,
+            reason: `Minimum budget (${paramsA.currency || '$'}${paramsA.budget}) is greater than maximum budget (${paramsB.currency || '$'}${paramsB.budget})`
+          };
+        }
+        
+        // Conflicting fixed budgets
+        if (paramsA.type === 'fixed' && paramsB.type === 'fixed' && paramsA.budget !== paramsB.budget) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.95,
+            reason: `Conflicting fixed budgets: ${paramsA.currency || '$'}${paramsA.budget} vs ${paramsB.currency || '$'}${paramsB.budget}`
+          };
+        }
+      }
+    }
+
+    // TIMELINE conflicts (uppercase category)
+    if (assumptionA.category === 'TIMELINE') {
+      if (paramsA.duration !== undefined && paramsB.duration !== undefined && paramsA.unit === paramsB.unit) {
+        // Minimum duration greater than deadline
+        if (paramsA.type === 'minimum' && paramsB.type === 'deadline' && paramsA.duration > paramsB.duration) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.98,
+            reason: `Minimum duration (${paramsA.duration} ${paramsA.unit}) exceeds deadline (${paramsB.duration} ${paramsB.unit})`
+          };
+        }
+        if (paramsA.type === 'deadline' && paramsB.type === 'minimum' && paramsA.duration < paramsB.duration) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.98,
+            reason: `Deadline (${paramsA.duration} ${paramsA.unit}) is less than minimum duration (${paramsB.duration} ${paramsB.unit})`
+          };
+        }
+        
+        // Maximum duration less than minimum duration
+        if (paramsA.type === 'maximum' && paramsB.type === 'minimum' && paramsA.duration < paramsB.duration) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.97,
+            reason: `Maximum duration (${paramsA.duration} ${paramsA.unit}) is less than minimum duration (${paramsB.duration} ${paramsB.unit})`
+          };
+        }
+        if (paramsA.type === 'minimum' && paramsB.type === 'maximum' && paramsA.duration > paramsB.duration) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.97,
+            reason: `Minimum duration (${paramsA.duration} ${paramsA.unit}) exceeds maximum duration (${paramsB.duration} ${paramsB.unit})`
+          };
+        }
+      }
+    }
+
+    // RESOURCE conflicts (uppercase category)
+    if (assumptionA.category === 'RESOURCE') {
+      if (paramsA.resourceType === paramsB.resourceType && 
+          paramsA.quantity !== undefined && 
+          paramsB.quantity !== undefined) {
+        // Required resources exceed available resources
+        if (paramsA.type === 'required' && paramsB.type === 'available' && paramsA.quantity > paramsB.quantity) {
+          return {
+            conflictType: 'INCOMPATIBLE',
+            confidenceScore: 0.96,
+            reason: `Required ${paramsA.resourceType} (${paramsA.quantity}) exceeds available (${paramsB.quantity})`
+          };
+        }
+        if (paramsA.type === 'available' && paramsB.type === 'required' && paramsA.quantity < paramsB.quantity) {
+          return {
+            conflictType: 'INCOMPATIBLE',
+            confidenceScore: 0.96,
+            reason: `Available ${paramsA.resourceType} (${paramsA.quantity}) is less than required (${paramsB.quantity})`
+          };
+        }
+        
+        // Maximum less than minimum
+        if (paramsA.type === 'maximum' && paramsB.type === 'minimum' && paramsA.quantity < paramsB.quantity) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.95,
+            reason: `Maximum ${paramsA.resourceType} (${paramsA.quantity}) is less than minimum (${paramsB.quantity})`
+          };
+        }
+        if (paramsA.type === 'minimum' && paramsB.type === 'maximum' && paramsA.quantity > paramsB.quantity) {
+          return {
+            conflictType: 'CONTRADICTORY',
+            confidenceScore: 0.95,
+            reason: `Minimum ${paramsA.resourceType} (${paramsA.quantity}) exceeds maximum (${paramsB.quantity})`
+          };
+        }
+      }
+    }
+
     return null;
   }
 
