@@ -22,7 +22,7 @@ import AssumptionsPage from "./components/AssumptionsPage";
 import DecisionConflictsPage from "./components/DecisionConflictsPage";
 import OrganizationProfile from "./components/OrganizationProfile";
 import NotificationsPage from "./components/NotificationsPage";
-import { DecisionFlowGraph } from "./components/DecisionFlowGraph";
+import DecisionFlowGraph from "./components/DecisionFlowGraph/index";
 import SettingsPage from "./components/SettingsPage";
 import TeamPage from "./components/TeamPage";
 import AddDecisionModal from "./components/AddDecisionModal";
