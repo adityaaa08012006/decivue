@@ -11,6 +11,7 @@ export default {
         primary: {
           red: '#E53761',
           blue: '#3788E5',
+          accent: '#1d4ed8', // Deep blue accent for landing page
         },
         neutral: {
           black: '#000000',
@@ -38,6 +39,34 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.6s ease-out',
+        'fade-in-up': 'fadeInUp 0.8s ease-out',
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'glow': 'glow 3s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(30px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        pulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
+        glow: {
+          '0%, 100%': { opacity: '0.5' },
+          '50%': { opacity: '1' },
+        },
+      },
+      boxShadow: {
+        'primary-glow': '0 0 30px rgba(59, 130, 246, 0.3), 0 10px 40px rgba(0, 0, 0, 0.3)',
+        'primary-glow-lg': '0 0 50px rgba(59, 130, 246, 0.4), 0 20px 60px rgba(0, 0, 0, 0.4)',
       },
     },
   },
