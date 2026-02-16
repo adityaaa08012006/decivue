@@ -53,8 +53,32 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
         api.getDecisions().catch(() => []),
         api.getAllConstraints().catch(() => []),
       ]);
-      setExistingAssumptions(assumptions);
-      setExistingDecisions(decisions);
+      
+      // Filter out BROKEN assumptions AND decision-specific assumptions 
+      // where ALL linked decisions are deprecated
+      const activeAssumptions = assumptions.filter(a => {
+        // Remove if explicitly BROKEN
+        if (a.status === 'BROKEN') return false;
+        
+        // For decision-specific assumptions, check if all decisions are deprecated
+        if (a.scope === 'DECISION_SPECIFIC' && a.impactedDecisions?.length > 0) {
+          const allDeprecated = a.impactedDecisions.every(d => 
+            d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED'
+          );
+          // Don't show if all decisions are deprecated
+          if (allDeprecated) return false;
+        }
+        
+        return true;
+      });
+      
+      setExistingAssumptions(activeAssumptions);
+      
+      // Filter out deprecated decisions (INVALIDATED or RETIRED)
+      const activeDecisions = decisions.filter(
+        d => d.lifecycle !== 'INVALIDATED' && d.lifecycle !== 'RETIRED'
+      );
+      setExistingDecisions(activeDecisions);
       setExistingConstraints(constraints);
     } catch (err) {
       console.error('Failed to load data:', err);

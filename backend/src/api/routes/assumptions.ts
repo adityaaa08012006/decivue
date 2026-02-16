@@ -183,7 +183,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
           assumption_id,
           decisions (
             id,
-            title
+            title,
+            lifecycle
           )
         `);
 
@@ -196,13 +197,14 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       }
 
       // Build a map of assumption_id -> decision objects
-      const linkMap = new Map<string, Array<{ id: string; title: string }>>();
+      const linkMap = new Map<string, Array<{ id: string; title: string; lifecycle: string }>>();
       (links || []).forEach((link: any) => {
         if (link.decisions) {
           const existing = linkMap.get(link.assumption_id) || [];
           existing.push({
             id: link.decisions.id,
-            title: link.decisions.title
+            title: link.decisions.title,
+            lifecycle: link.decisions.lifecycle
           });
           linkMap.set(link.assumption_id, existing);
         }
@@ -213,6 +215,14 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         const impactedDecisions = linkMap.get(a.id) || [];
         const decisionTitles = impactedDecisions.map(d => d.title);
 
+        // Check if any linked decisions are deprecated
+        const deprecatedDecisions = impactedDecisions.filter(d => 
+          d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED'
+        );
+        const hasDeprecatedDecisions = deprecatedDecisions.length > 0;
+        const allDecisionsDeprecated = impactedDecisions.length > 0 && 
+                                        deprecatedDecisions.length === impactedDecisions.length;
+
         return {
           ...a,
           decisionCount: impactedDecisions.length,
@@ -221,7 +231,15 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
             : decisionTitles.length > 0
               ? decisionTitles.join(', ')
               : 'Unlinked',
-          impactedDecisions: impactedDecisions
+          impactedDecisions: impactedDecisions,
+          hasDeprecatedDecisions,
+          allDecisionsDeprecated,
+          deprecatedDecisionCount: deprecatedDecisions.length,
+          deprecationWarning: hasDeprecatedDecisions 
+            ? allDecisionsDeprecated
+              ? `All ${deprecatedDecisions.length} linked decision(s) are deprecated. This assumption should be marked as BROKEN.`
+              : `${deprecatedDecisions.length} of ${impactedDecisions.length} linked decision(s) are deprecated.`
+            : undefined
         };
       });
 
@@ -276,6 +294,20 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 
     // Link to decision if requested
     if (linkToDecisionId && assumption) {
+      // Validate decision is not deprecated
+      const { data: decision } = await db
+        .from('decisions')
+        .select('lifecycle, title')
+        .eq('id', linkToDecisionId)
+        .single();
+
+      if (decision && (decision.lifecycle === 'INVALIDATED' || decision.lifecycle === 'RETIRED')) {
+        return res.status(400).json({
+          error: 'Cannot link to deprecated decision',
+          message: `The decision "${decision.title}" is ${decision.lifecycle.toLowerCase()}. Deprecated decisions cannot have new assumptions linked.`
+        });
+      }
+
       const { error: linkError } = await db
         .from('decision_assumptions')
         .insert({
@@ -316,6 +348,114 @@ router.post('/:id/link', async (req: AuthRequest, res: Response, next: NextFunct
     }
 
     const db = getAdminDatabase();
+
+    // Get assumption details including all linked decisions
+    const { data: assumption } = await db
+      .from('assumptions')
+      .select(`
+        id,
+        status,
+        description,
+        scope,
+        decision_assumptions (
+          decision_id,
+          decisions (
+            id,
+            lifecycle
+          )
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (!assumption) {
+      return res.status(404).json({ error: 'Assumption not found' });
+    }
+
+    // Check if this is a DECISION_SPECIFIC assumption with only deprecated decisions  
+    if (assumption.scope === 'DECISION_SPECIFIC' && assumption.status === 'BROKEN') {
+      // If it's BROKEN, check if we're linking to an active decision to "revive" it
+      const { data: targetDecision } = await db
+        .from('decisions')
+        .select('lifecycle')
+        .eq('id', decisionId)
+        .single();
+
+      if (targetDecision && (targetDecision.lifecycle === 'INVALIDATED' || targetDecision.lifecycle === 'RETIRED')) {
+        return res.status(400).json({
+          error: 'Cannot link deprecated assumption to deprecated decision',
+          message: `Both the assumption and decision are deprecated. Cannot create this link.`
+        });
+      }
+
+      // Target decision is active - allow the link and revive the assumption
+      await db
+        .from('assumptions')
+        .update({ 
+          status: 'VALID',
+          validated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+    } else if (assumption.status === 'BROKEN') {
+      // BROKEN non-DECISION_SPECIFIC assumptions shouldn't be linkable
+      return res.status(400).json({
+        error: 'Cannot link deprecated assumption',
+        message: `The assumption "${assumption.description}" is BROKEN/deprecated and cannot be linked to decisions.`
+      });
+    }
+
+    // Also check if all existing linked decisions are deprecated (auto-deprecate if needed)
+    if (assumption.scope === 'DECISION_SPECIFIC' && assumption.status !== 'BROKEN') {
+      const linkedDecisions = assumption.decision_assumptions || [];
+      
+      if (linkedDecisions.length > 0) {
+        const allDeprecated = linkedDecisions.every((da: any) => 
+          da.decisions?.lifecycle === 'INVALIDATED' || 
+          da.decisions?.lifecycle === 'RETIRED'
+        );
+
+        // If all existing decisions are deprecated, check the target decision
+        if (allDeprecated) {
+          const { data: targetDecision } = await db
+            .from('decisions')
+            .select('lifecycle')
+            .eq('id', decisionId)
+            .single();
+
+          if (targetDecision && (targetDecision.lifecycle === 'INVALIDATED' || targetDecision.lifecycle === 'RETIRED')) {
+            // Target is also deprecated - mark assumption as BROKEN and block
+            await db
+              .from('assumptions')
+              .update({ 
+                status: 'BROKEN',
+                validated_at: new Date().toISOString()
+              })
+              .eq('id', id);
+
+            return res.status(400).json({
+              error: 'Cannot link deprecated assumption',
+              message: `The assumption "${assumption.description}" was auto-deprecated because all its linked decisions are deprecated.`
+            });
+          }
+          // Target is active - allow the link (assumption will have an active decision)
+        }
+      }
+    }
+
+    // Validate decision is not deprecated
+    const { data: decision } = await db
+      .from('decisions')
+      .select('lifecycle, title')
+      .eq('id', decisionId)
+      .single();
+
+    if (decision && (decision.lifecycle === 'INVALIDATED' || decision.lifecycle === 'RETIRED')) {
+      return res.status(400).json({
+        error: 'Cannot link to deprecated decision',
+        message: `The decision "${decision.title}" is ${decision.lifecycle.toLowerCase()}. Deprecated decisions cannot have new assumptions linked.`
+      });
+    }
+
     const { data, error } = await db
       .from('decision_assumptions')
       .insert({

@@ -747,11 +747,28 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           <p className="text-xs text-gray-500 mb-2 font-medium">Depends On:</p>
                           {decisionData[decision.id]?.dependencies?.dependsOn?.length > 0 ? (
                             <div className="space-y-1">
-                              {decisionData[decision.id].dependencies.dependsOn.map(dep => (
-                                <div key={dep.id} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">
-                                  {dep.decisions?.title || dep.target_decision_id.slice(0, 8)}
-                                </div>
-                              ))}
+                              {decisionData[decision.id].dependencies.dependsOn.map(dep => {
+                                const isDeprecated = dep.isDeprecated || 
+                                  dep.decisions?.lifecycle === 'INVALIDATED' || 
+                                  dep.decisions?.lifecycle === 'RETIRED';
+                                return (
+                                  <div key={dep.id} className="space-y-1">
+                                    <div className={`text-xs px-2 py-1 rounded font-mono flex items-center gap-1 ${
+                                      isDeprecated 
+                                        ? 'bg-red-100 text-red-700 border border-red-300' 
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {isDeprecated && <span title="Deprecated decision">⚠️</span>}
+                                      {dep.decisions?.title || dep.target_decision_id.slice(0, 8)}
+                                    </div>
+                                    {isDeprecated && (
+                                      <p className="text-xs text-red-600 italic pl-2">
+                                        {dep.deprecationWarning || 'This decision is deprecated'}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-600">No dependencies</p>
@@ -761,11 +778,28 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           <p className="text-xs text-gray-500 mb-2 font-medium">Blocks:</p>
                           {decisionData[decision.id]?.dependencies?.blocks?.length > 0 ? (
                             <div className="space-y-1">
-                              {decisionData[decision.id].dependencies.blocks.map(dep => (
-                                <div key={dep.id} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-mono">
-                                  {dep.decisions?.title || dep.source_decision_id.slice(0, 8)}
-                                </div>
-                              ))}
+                              {decisionData[decision.id].dependencies.blocks.map(dep => {
+                                const isDeprecated = dep.isDeprecated || 
+                                  dep.decisions?.lifecycle === 'INVALIDATED' || 
+                                  dep.decisions?.lifecycle === 'RETIRED';
+                                return (
+                                  <div key={dep.id} className="space-y-1">
+                                    <div className={`text-xs px-2 py-1 rounded font-mono flex items-center gap-1 ${
+                                      isDeprecated 
+                                        ? 'bg-red-100 text-red-700 border border-red-300' 
+                                        : 'bg-orange-100 text-orange-700'
+                                    }`}>
+                                      {isDeprecated && <span title="Deprecated decision">⚠️</span>}
+                                      {dep.decisions?.title || dep.source_decision_id.slice(0, 8)}
+                                    </div>
+                                    {isDeprecated && (
+                                      <p className="text-xs text-red-600 italic pl-2">
+                                        {dep.deprecationWarning || 'This decision is deprecated'}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-600">No dependencies</p>

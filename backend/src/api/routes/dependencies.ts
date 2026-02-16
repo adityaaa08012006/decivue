@@ -83,9 +83,24 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       d.decisions?.organization_id === organizationId
     );
 
+    // Check for deprecated decisions and add warnings
+    const addDeprecationWarnings = (dependencies: any[]) => {
+      return dependencies.map((dep: any) => {
+        const isDeprecated = dep.decisions?.lifecycle === 'INVALIDATED' || 
+                            dep.decisions?.lifecycle === 'RETIRED';
+        return {
+          ...dep,
+          isDeprecated,
+          deprecationWarning: isDeprecated 
+            ? `This decision is ${dep.decisions?.lifecycle.toLowerCase()}. Consider unlinking or deprecating both decisions.`
+            : undefined
+        };
+      });
+    };
+
     return res.json({
-      blocking: filteredBlocking, // Downstream
-      blockedBy: filteredBlockedBy // Upstream
+      blocking: addDeprecationWarnings(filteredBlocking), // Downstream
+      blockedBy: addDeprecationWarnings(filteredBlockedBy) // Upstream
     });
   } catch (error) {
     return next(error);
@@ -111,15 +126,31 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 
     const db = getAdminDatabase();
 
-    // Verify both decisions belong to user's organization
+    // Verify both decisions belong to user's organization AND check lifecycle
     const [sourceCheck, targetCheck] = await Promise.all([
-      db.from('decisions').select('organization_id').eq('id', sourceDecisionId).single(),
-      db.from('decisions').select('organization_id').eq('id', targetDecisionId).single()
+      db.from('decisions').select('organization_id, lifecycle, title').eq('id', sourceDecisionId).single(),
+      db.from('decisions').select('organization_id, lifecycle, title').eq('id', targetDecisionId).single()
     ]);
 
     if (sourceCheck.data?.organization_id !== organizationId ||
         targetCheck.data?.organization_id !== organizationId) {
       return res.status(403).json({ error: 'Access denied: Both decisions must belong to your organization' });
+    }
+
+    // Check if either decision is deprecated
+    const sourceIsDeprecated = sourceCheck.data?.lifecycle === 'INVALIDATED' || 
+                               sourceCheck.data?.lifecycle === 'RETIRED';
+    const targetIsDeprecated = targetCheck.data?.lifecycle === 'INVALIDATED' || 
+                               targetCheck.data?.lifecycle === 'RETIRED';
+
+    if (sourceIsDeprecated || targetIsDeprecated) {
+      const deprecatedDecision = sourceIsDeprecated ? sourceCheck.data : targetCheck.data;
+      return res.status(400).json({ 
+        error: 'Cannot link to deprecated decision',
+        message: `The decision "${deprecatedDecision?.title}" is ${deprecatedDecision?.lifecycle.toLowerCase()}. Deprecated decisions cannot be linked to other decisions.`,
+        deprecatedDecisionId: sourceIsDeprecated ? sourceDecisionId : targetDecisionId,
+        lifecycle: deprecatedDecision?.lifecycle
+      });
     }
 
     const { data, error } = await db

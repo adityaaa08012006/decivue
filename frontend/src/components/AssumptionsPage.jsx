@@ -58,7 +58,11 @@ const AssumptionsPage = () => {
                 api.getAssumptionConflicts(false) // Only fetch unresolved conflicts
             ]);
             setAssumptions(assumptionsData);
-            setDecisions(decisionsData);
+            // Filter out deprecated decisions (INVALIDATED or RETIRED)
+            const activeDecisions = decisionsData.filter(
+                d => d.lifecycle !== 'INVALIDATED' && d.lifecycle !== 'RETIRED'
+            );
+            setDecisions(activeDecisions);
             setConflicts(conflictsData || []);
         } catch (error) {
             console.error("Failed to fetch data:", error);
@@ -469,18 +473,33 @@ const AssumptionsPage = () => {
                                                             </span>
                                                         </div>
                                                         <div className="space-y-1">
-                                                            {assumption.impactedDecisions?.slice(0, 3).map((d, idx) => (
-                                                                <div key={idx} className="flex items-center gap-2 text-sm text-gray-600 pl-2">
-                                                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                                                                    {d.title}
-                                                                </div>
-                                                            ))}
+                                                            {assumption.impactedDecisions?.slice(0, 3).map((d, idx) => {
+                                                                const isDeprecated = d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED';
+                                                                return (
+                                                                    <div key={idx} className={`flex items-center gap-2 text-sm pl-2 ${
+                                                                        isDeprecated ? 'text-red-600 font-semibold' : 'text-gray-600'
+                                                                    }`}>
+                                                                        <div className={`w-1.5 h-1.5 rounded-full ${
+                                                                            isDeprecated ? 'bg-red-500' : 'bg-gray-400'
+                                                                        }`}></div>
+                                                                        {isDeprecated && <span title="Deprecated decision">⚠️</span>}
+                                                                        {d.title}
+                                                                        {isDeprecated && <span className="text-xs text-red-500">({d.lifecycle})</span>}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                             {assumption.scope !== 'UNIVERSAL' && assumption.decisionCount > 3 && (
                                                                 <div className="pl-4 text-sm text-gray-500">
                                                                     +{assumption.decisionCount - 3} more
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        {assumption.deprecationWarning && (
+                                                            <div className="mt-3 flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                                                                <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                                                                <span>{assumption.deprecationWarning}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -502,43 +521,73 @@ const AssumptionsPage = () => {
                                                 <div className="col-span-1"></div>
                                             </div>
                                             <div className="divide-y divide-gray-100">
-                                                {decisionAssumptions.map((assumption) => (
-                                                    <div key={assumption.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors group">
-                                                        <div className="col-span-6 text-sm text-gray-900 font-medium">
-                                                            {assumption.description}
+                                                {decisionAssumptions.map((assumption) => {
+                                                    const hasDeprecationWarning = assumption.hasDeprecatedDecisions || false;
+                                                    return (
+                                                        <div key={assumption.id} className={`grid grid-cols-12 gap-4 px-6 py-4 items-start hover:bg-gray-50 transition-colors group ${
+                                                            hasDeprecationWarning ? 'bg-red-50/30' : ''
+                                                        }`}>
+                                                            <div className="col-span-6">
+                                                                <div className="text-sm text-gray-900 font-medium mb-1">
+                                                                    {assumption.description}
+                                                                </div>
+                                                                {assumption.deprecationWarning && (
+                                                                    <div className="flex items-start gap-1 text-xs text-red-600 mt-2">
+                                                                        <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+                                                                        <span>{assumption.deprecationWarning}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="col-span-3">
+                                                                <div className="space-y-1">
+                                                                    {assumption.impactedDecisions?.slice(0, 2).map((d, idx) => {
+                                                                        const isDeprecated = d.lifecycle === 'INVALIDATED' || d.lifecycle === 'RETIRED';
+                                                                        return (
+                                                                            <div key={idx} className={`text-sm flex items-center gap-1 ${
+                                                                                isDeprecated ? 'text-red-600 font-semibold' : 'text-gray-600'
+                                                                            }`}>
+                                                                                {isDeprecated && <span title="Deprecated decision">⚠️</span>}
+                                                                                {d.title}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                    {assumption.decisionCount > 2 && (
+                                                                        <div className="text-xs text-gray-500">
+                                                                            +{assumption.decisionCount - 2} more
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="col-span-2">
+                                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(assumption.status)}`}>
+                                                                    {getStatusLabel(assumption.status)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="col-span-1 flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEditAssumption(assumption);
+                                                                    }}
+                                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                    title="Edit assumption"
+                                                                >
+                                                                    <Edit2 size={18} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteAssumption(assumption.id, assumption.description);
+                                                                    }}
+                                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                    title="Delete assumption"
+                                                                >
+                                                                    <Trash2 size={18} />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div className="col-span-3 text-sm text-gray-600">
-                                                            {assumption.linkedDecisionTitle || assumption.impactedDecisions?.[0]?.title || 'Unlinked'}
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(assumption.status)}`}>
-                                                                {getStatusLabel(assumption.status)}
-                                                            </span>
-                                                        </div>
-                                                        <div className="col-span-1 flex justify-end gap-2">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEditAssumption(assumption);
-                                                                }}
-                                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                                title="Edit assumption"
-                                                            >
-                                                                <Edit2 size={18} />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteAssumption(assumption.id, assumption.description);
-                                                                }}
-                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                title="Delete assumption"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </section>
