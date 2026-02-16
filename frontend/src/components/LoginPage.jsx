@@ -31,7 +31,8 @@ export default function LoginPage({ onNavigateToRegister }) {
     setLoading(true);
 
     console.log('🔑 Attempting login...');
-    const result = await login(email, password);
+    // Pass rememberMe state to login function
+    const result = await login(email, password, rememberMe);
 
     if (!result.success) {
       console.error('❌ Login failed:', result.error);

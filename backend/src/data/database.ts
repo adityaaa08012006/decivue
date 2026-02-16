@@ -23,8 +23,18 @@ export function initializeDatabase(): SupabaseClient {
     );
   }
 
-  // Regular client (uses anon key)
-  supabase = createClient(supabaseUrl, supabaseKey);
+  // Regular client (uses anon key) with increased timeout
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    global: {
+      fetch: (url, options = {}) => {
+        return fetch(url, {
+          ...options,
+          // Increase timeout from default 10s to 30s
+          signal: AbortSignal.timeout(30000)
+        });
+      }
+    }
+  });
   logger.info('Supabase client initialized');
 
   // Admin client (uses service role key for admin operations)
@@ -33,6 +43,14 @@ export function initializeDatabase(): SupabaseClient {
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      global: {
+        fetch: (url, options = {}) => {
+          return fetch(url, {
+            ...options,
+            signal: AbortSignal.timeout(30000)
+          });
+        }
       }
     });
     logger.info('Supabase admin client initialized');

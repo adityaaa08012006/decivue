@@ -2,57 +2,112 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Shield, AlertTriangle, CheckCircle, Lock, Pause } from 'lucide-react';
 
-const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium' }) => {
+const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', onHover }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
   const radius = size === 'large' ? 12 : 8;
   const innerRadius = size === 'large' ? 7 : 5;
   
   return (
-    <g>
-      {/* Outer ring with subtle glow */}
+    <g 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ cursor: 'pointer' }}
+    >
+      {/* Outer ripple effect - enhanced breathing */}
       <motion.circle
         cx={cx}
         cy={cy}
         r={radius + 4}
         fill="none"
         stroke={color}
-        strokeWidth="1.5"
+        strokeWidth="2"
         opacity="0.15"
         initial={{ scale: 1, opacity: 0.15 }}
-        animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.3, 0.15] }}
-        transition={{ duration: 3, repeat: Infinity, delay }}
+        animate={{ 
+          scale: isHovered ? [1.5, 2, 1.5] : [1, 1.4, 1], 
+          opacity: isHovered ? [0.3, 0.5, 0.3] : [0.15, 0.3, 0.15] 
+        }}
+        transition={{ duration: isHovered ? 1.5 : 3, repeat: Infinity, delay }}
       />
-      {/* Middle soft ring */}
-      <circle 
+      
+      {/* Second ripple layer */}
+      <motion.circle
+        cx={cx}
+        cy={cy}
+        r={radius + 8}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        opacity="0.1"
+        initial={{ scale: 1, opacity: 0.1 }}
+        animate={{ 
+          scale: [1, 1.6, 1], 
+          opacity: [0.1, 0.25, 0.1] 
+        }}
+        transition={{ duration: 4, repeat: Infinity, delay: delay + 0.5 }}
+      />
+      
+      {/* Middle glow ring with enhanced hover */}
+      <motion.circle 
         cx={cx} 
         cy={cy} 
         r={radius} 
-        fill={`${color}15`} 
-        stroke={`${color}40`} 
-        strokeWidth="1"
+        fill={`${color}20`} 
+        stroke={`${color}50`} 
+        strokeWidth="1.5"
+        animate={isHovered ? { scale: [1, 1.1, 1] } : {}}
+        transition={{ duration: 0.6, repeat: isHovered ? Infinity : 0 }}
       />
-      {/* Inner solid circle */}
-      <circle 
+      
+      {/* Inner solid circle with enhanced glow */}
+      <motion.circle 
         cx={cx} 
         cy={cy} 
         r={innerRadius} 
-        fill={color} 
-        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.08))"
+        fill={color}
+        filter={isHovered ? "drop-shadow(0 0 12px rgba(147, 197, 253, 0.6))" : "drop-shadow(0 2px 4px rgba(0,0,0,0.08))"}
+        animate={isHovered ? { scale: [1, 1.15, 1] } : {}}
+        transition={{ duration: 0.8, repeat: isHovered ? Infinity : 0 }}
       />
+      
+      {/* Hover star burst effect */}
+      {isHovered && (
+        <>
+          {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+            <motion.line
+              key={i}
+              x1={cx}
+              y1={cy}
+              x2={cx + Math.cos(angle * Math.PI / 180) * (radius + 20)}
+              y2={cy + Math.sin(angle * Math.PI / 180) * (radius + 20)}
+              stroke={color}
+              strokeWidth="1"
+              opacity="0.4"
+              initial={{ opacity: 0, pathLength: 0 }}
+              animate={{ opacity: [0, 0.4, 0], pathLength: [0, 1, 1] }}
+              transition={{ duration: 1, repeat: Infinity, delay: i * 0.1 }}
+            />
+          ))}
+        </>
+      )}
     </g>
   );
 };
 
 const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', delay = 0, containerWidth, containerHeight }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  
   const colorMap = {
-    green: { dot: '#86EFAC', stroke: '#86EFAC' },
-    blue: { dot: '#93C5FD', stroke: '#93C5FD' },
-    red: { dot: '#FCA5A5', stroke: '#FCA5A5' },
-    orange: { dot: '#FCD34D', stroke: '#FCD34D' },
-    gray: { dot: '#CBD5E1', stroke: '#CBD5E1' },
+    green: { dot: '#86EFAC', stroke: '#86EFAC', glow: 'rgba(134, 239, 172, 0.2)' },
+    blue: { dot: '#93C5FD', stroke: '#93C5FD', glow: 'rgba(147, 197, 253, 0.2)' },
+    red: { dot: '#FCA5A5', stroke: '#FCA5A5', glow: 'rgba(252, 165, 165, 0.2)' },
+    orange: { dot: '#FCD34D', stroke: '#FCD34D', glow: 'rgba(252, 211, 77, 0.2)' },
+    gray: { dot: '#CBD5E1', stroke: '#CBD5E1', glow: 'rgba(203, 213, 225, 0.2)' },
   };
 
   const dotColor = colorMap[color]?.dot || colorMap.blue.dot;
   const stemColor = colorMap[color]?.stroke || colorMap.blue.stroke;
+  const glowColor = colorMap[color]?.glow || colorMap.blue.glow;
 
   // Calculate absolute positions for connector
   const labelAbsX = (labelX / 100) * containerWidth;
@@ -64,11 +119,11 @@ const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', 
 
   return (
     <>
-      {/* Connector Stem - subtle 2px vertical line */}
+      {/* Connector Stem - enhanced with gradient */}
       {showConnector && (
         <motion.div
           initial={{ opacity: 0, scaleY: 0 }}
-          animate={{ opacity: 0.3, scaleY: 1 }}
+          animate={{ opacity: isHovered ? 0.6 : 0.3, scaleY: 1 }}
           transition={{ delay: delay + 0.2, duration: 0.4, ease: "easeOut" }}
           className="absolute z-10"
           style={{
@@ -76,35 +131,59 @@ const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', 
             top: labelAbsY < nodeY ? `${labelY}%` : `${(nodeY / containerHeight) * 100}%`,
             width: '2px',
             height: `${Math.abs(labelAbsY - nodeY)}px`,
-            backgroundColor: stemColor,
+            background: `linear-gradient(to bottom, ${stemColor}, transparent)`,
             transform: 'translateX(-50%)',
             transformOrigin: 'top',
           }}
         />
       )}
       
-      {/* Label Pill */}
+      {/* Glassmorphism Label Pill */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
+        whileHover={{ scale: 1.05, y: -2 }}
         transition={{ delay, duration: 0.5, ease: "easeOut" }}
-        className="absolute bg-white rounded-full shadow-md py-2 px-3.5 flex items-center gap-2 border border-gray-200 z-20"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="absolute rounded-full py-2 px-3.5 flex items-center gap-2 z-20"
         style={{
           left: `${labelX}%`,
           top: `${labelY}%`,
           transform: 'translate(-50%, -50%)',
-          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.06)',
+          background: isHovered 
+            ? `linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85))` 
+            : 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: `1.5px solid ${isHovered ? stemColor : 'rgba(255, 255, 255, 0.5)'}`,
+          boxShadow: isHovered 
+            ? `0 8px 32px ${glowColor}, 0 2px 8px rgba(0, 0, 0, 0.1)` 
+            : '0 4px 16px rgba(15, 23, 42, 0.08)',
           fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          cursor: 'pointer',
         }}
       >
-        <div 
+        {/* Pulsing dot */}
+        <motion.div 
           className="w-2 h-2 rounded-full"
           style={{ backgroundColor: dotColor }}
+          animate={isHovered ? { scale: [1, 1.3, 1] } : {}}
+          transition={{ duration: 0.8, repeat: isHovered ? Infinity : 0 }}
         />
         <span className="text-xs font-medium whitespace-nowrap text-gray-800" style={{ letterSpacing: '0.01em' }}>
           {text}
         </span>
-        {icon && <div className="text-gray-500" style={{ fontSize: '13px' }}>{icon}</div>}
+        {icon && (
+          <motion.div 
+            className="text-gray-500" 
+            style={{ fontSize: '13px' }}
+            animate={isHovered ? { rotate: [0, 5, -5, 0] } : {}}
+            transition={{ duration: 0.5, repeat: isHovered ? Infinity : 0 }}
+          >
+            {icon}
+          </motion.div>
+        )}
       </motion.div>
     </>
   );
@@ -234,21 +313,42 @@ export const DecisionFlowGraph = () => {
   return (
     <div className="w-full relative overflow-visible py-8">
       
+      {/* Animated Gradient Mesh Background */}
+      <div className="absolute inset-0 overflow-hidden rounded-3xl" style={{ zIndex: 0 }}>
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(circle at 20% 50%, rgba(134, 239, 172, 0.08), transparent 50%), radial-gradient(circle at 80% 50%, rgba(147, 197, 253, 0.08), transparent 50%), radial-gradient(circle at 50% 80%, rgba(196, 181, 253, 0.08), transparent 50%)',
+          }}
+          animate={{
+            background: [
+              'radial-gradient(circle at 20% 50%, rgba(134, 239, 172, 0.08), transparent 50%), radial-gradient(circle at 80% 50%, rgba(147, 197, 253, 0.08), transparent 50%), radial-gradient(circle at 50% 80%, rgba(196, 181, 253, 0.08), transparent 50%)',
+              'radial-gradient(circle at 40% 60%, rgba(134, 239, 172, 0.12), transparent 50%), radial-gradient(circle at 60% 40%, rgba(147, 197, 253, 0.12), transparent 50%), radial-gradient(circle at 50% 70%, rgba(196, 181, 253, 0.12), transparent 50%)',
+              'radial-gradient(circle at 20% 50%, rgba(134, 239, 172, 0.08), transparent 50%), radial-gradient(circle at 80% 50%, rgba(147, 197, 253, 0.08), transparent 50%), radial-gradient(circle at 50% 80%, rgba(196, 181, 253, 0.08), transparent 50%)',
+            ],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      
         {/* Timeline Date Markers */}
-        <div className="flex justify-between px-12 mb-8">
+        <div className="flex justify-between px-12 mb-8 relative" style={{ zIndex: 10 }}>
           {timelineDates.map((date, i) => (
-            <span 
+            <motion.span 
               key={i} 
               className="text-sm font-medium text-gray-400 tracking-wide"
               style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1, duration: 0.5 }}
             >
               {date.text}
-            </span>
+            </motion.span>
           ))}
         </div>
 
         {/* Graph Area */}
-        <div className="relative w-full" style={{ height: `${height}px` }}>
+        <div className="relative w-full" style={{ height: `${height}px`, zIndex: 10 }}>
           <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
             <defs>
               {/* Gradient for the main line - softer pastel colors */}
@@ -260,14 +360,21 @@ export const DecisionFlowGraph = () => {
                 <stop offset="100%" stopColor="#CBD5E1" />
               </linearGradient>
               
-              {/* Subtle glow filter */}
+              {/* Enhanced glow filter */}
               <filter id="glow">
-                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
                 <feMerge>
                   <feMergeNode in="coloredBlur"/>
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+              
+              {/* Shimmer gradient for particles */}
+              <linearGradient id="particleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#93C5FD" stopOpacity="0.6" />
+                <stop offset="50%" stopColor="#A5B4FC" stopOpacity="1" />
+                <stop offset="100%" stopColor="#C4B5FD" stopOpacity="0.6" />
+              </linearGradient>
             </defs>
 
             {/* Base subtle line */}
@@ -315,21 +422,60 @@ export const DecisionFlowGraph = () => {
               );
             })}
 
-            {/* Glowing Moving Particle */}
-            <motion.circle
-              r="4"
-              fill="#93C5FD"
-              filter="drop-shadow(0 0 8px rgba(147, 197, 253, 0.6))"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <motion.animateMotion
-                dur="5s"
-                repeatCount="indefinite"
-                path={pathD}
-              />
-            </motion.circle>
+            {/* Multiple Flowing Particles - Constellation Effect */}
+            {[0, 1.2, 2.5, 4, 5.5].map((startDelay, i) => (
+              <motion.circle
+                key={i}
+                r={i === 0 ? 5 : 3}
+                fill={i === 0 ? "#93C5FD" : "url(#particleGradient)"}
+                filter="drop-shadow(0 0 8px rgba(147, 197, 253, 0.8))"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 1, 0] }}
+                transition={{ 
+                  delay: startDelay, 
+                  duration: 6,
+                  times: [0, 0.1, 0.9, 1],
+                  repeat: Infinity,
+                  repeatDelay: 1
+                }}
+              >
+                <motion.animateMotion
+                  dur={`${6 + i}s`}
+                  repeatCount="indefinite"
+                  path={pathD}
+                  begin={`${startDelay}s`}
+                />
+              </motion.circle>
+            ))}
+            
+            {/* Reverse flowing particles for dynamic effect */}
+            {[0.8, 3.2].map((startDelay, i) => (
+              <motion.circle
+                key={`reverse-${i}`}
+                r={2.5}
+                fill="#C4B5FD"
+                filter="drop-shadow(0 0 6px rgba(196, 181, 253, 0.7))"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.8, 0.8, 0] }}
+                transition={{ 
+                  delay: startDelay, 
+                  duration: 7,
+                  times: [0, 0.1, 0.9, 1],
+                  repeat: Infinity,
+                  repeatDelay: 2
+                }}
+              >
+                <motion.animateMotion
+                  dur="8s"
+                  repeatCount="indefinite"
+                  path={pathD}
+                  begin={`${startDelay}s`}
+                  keyPoints="1;0"
+                  keyTimes="0;1"
+                  calcMode="linear"
+                />
+              </motion.circle>
+            ))}
           </svg>
 
           {/* Event Labels (Positioned outside SVG for better styling) */}
@@ -350,17 +496,28 @@ export const DecisionFlowGraph = () => {
           ))}
         </div>
 
-        {/* Status Badges at Bottom */}
-        <div className="flex justify-center gap-4 mt-16" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-          <div className="px-5 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
-            Stable
-          </div>
-          <div className="px-5 py-2 rounded-full bg-amber-50 border border-amber-300 text-amber-700 text-sm font-medium">
-            At Risk
-          </div>
-          <div className="px-5 py-2 rounded-full bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
-            Critical
-          </div>
+        {/* Enhanced Status Badges at Bottom */}
+        <div className="flex justify-center gap-4 mt-16 relative" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif', zIndex: 10 }}>
+          {[
+            { label: 'Stable', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', glow: 'rgba(134, 239, 172, 0.3)' },
+            { label: 'At Risk', bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-700', glow: 'rgba(252, 211, 77, 0.3)' },
+            { label: 'Critical', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', glow: 'rgba(252, 165, 165, 0.3)' }
+          ].map((badge, i) => (
+            <motion.div
+              key={badge.label}
+              className={`px-5 py-2 rounded-full ${badge.bg} border ${badge.border} ${badge.text} text-sm font-medium`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ 
+                scale: 1.05,
+                boxShadow: `0 4px 20px ${badge.glow}`,
+              }}
+              transition={{ delay: 2.8 + i * 0.1, duration: 0.5 }}
+              style={{ cursor: 'pointer' }}
+            >
+              {badge.label}
+            </motion.div>
+          ))}
         </div>
     </div>
   );

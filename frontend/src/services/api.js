@@ -19,10 +19,15 @@ class ApiService {
   // Helper method for making requests
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    const headers = {
+    
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    const isFormData = options.body instanceof FormData;
+    const headers = isFormData ? {} : {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+    
+    // Merge with any additional headers
+    Object.assign(headers, options.headers || {});
 
     // Add auth token if available
     if (this.authToken) {
@@ -596,6 +601,37 @@ class ApiService {
   async getPendingApprovals() {
     console.log('API: Requesting pending approvals from /decisions/governance/pending-approvals');
     return this.request('/decisions/governance/pending-approvals');
+  }
+
+  // ============================================================================
+  // DECISION IMPORT APIs
+  // ============================================================================
+
+  // Import decisions from document (AI extraction)
+  async importDecisionsFromDocument(formData, signal = null) {
+    return this.request('/decisions/import/parse', {
+      method: 'POST',
+      body: formData,
+      signal
+    });
+  }
+
+  // Import decisions from template (CSV/Excel)
+  async importDecisionsFromTemplate(formData, signal = null) {
+    return this.request('/decisions/import/template', {
+      method: 'POST',
+      body: formData,
+      signal
+    });
+  }
+
+  // Bulk import validated decisions
+  async bulkImportDecisions(data, signal = null) {
+    return this.request('/decisions/import/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      signal
+    });
   }
 }
 

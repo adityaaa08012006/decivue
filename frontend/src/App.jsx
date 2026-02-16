@@ -5,6 +5,7 @@ import {
   PanelRightOpen,
   Clock,
   ChevronDown,
+  Upload,
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -26,6 +27,7 @@ import DecisionFlowGraph from "./components/DecisionFlowGraph/index";
 import SettingsPage from "./components/SettingsPage";
 import TeamPage from "./components/TeamPage";
 import AddDecisionModal from "./components/AddDecisionModal";
+import ImportDecisionsModal from "./components/ImportDecisionsModal";
 import api from "./services/api";
 
 function AppContent() {
@@ -48,6 +50,7 @@ function AppContent() {
   const [showTimeSimMenu, setShowTimeSimMenu] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Persist authView to sessionStorage
   useEffect(() => {
@@ -359,6 +362,15 @@ function AppContent() {
                     </div>
                   )}
                 </div>
+
+                {/* Import from Document Button */}
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm font-medium"
+                >
+                  <Upload size={20} />
+                  Import from Document
+                </button>
               </div>
 
               {/* Simulation Result Toast */}
@@ -464,6 +476,16 @@ function AppContent() {
         isOpen={showAddDecisionModal}
         onClose={() => setShowAddDecisionModal(false)}
         onSuccess={handleDecisionCreated}
+      />
+
+      {/* Import Decisions Modal */}
+      <ImportDecisionsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => {
+          // Refresh decisions after successful import
+          setRefreshTrigger((prev) => prev + 1);
+        }}
       />
     </div>
   );

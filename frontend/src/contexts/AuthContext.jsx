@@ -43,8 +43,13 @@ export function AuthProvider({ children }) {
 
       const { session: newSession } = response;
 
-      // Update stored session
-      localStorage.setItem('decivue_session', JSON.stringify(newSession));
+      // Update stored session - maintain the same storage type (local vs session)
+      if (localStorage.getItem('decivue_session')) {
+        localStorage.setItem('decivue_session', JSON.stringify(newSession));
+      } else {
+        sessionStorage.setItem('decivue_session', JSON.stringify(newSession));
+      }
+      
       api.setAuthToken(newSession.access_token);
       setSession(newSession);
 
@@ -86,11 +91,12 @@ export function AuthProvider({ children }) {
     return () => clearTimeout(refreshTimer);
   }, [session]);
 
-  // Initialize auth from localStorage
+  // Initialize auth from storage
   useEffect(() => {
     const initAuth = async () => {
-      const storedSession = localStorage.getItem('decivue_session');
-      const storedUser = localStorage.getItem('decivue_user');
+      // Check localStorage first (remember me), then sessionStorage
+      const storedSession = localStorage.getItem('decivue_session') || sessionStorage.getItem('decivue_session');
+      const storedUser = localStorage.getItem('decivue_user') || sessionStorage.getItem('decivue_user');
 
       if (storedSession && storedUser) {
         try {
@@ -171,7 +177,7 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
       const response = await api.post('/auth/login', { email, password });
       const { session, user } = response;
@@ -183,9 +189,16 @@ export function AuthProvider({ children }) {
         expiresIn: session?.expires_in
       });
 
-      // Store in localStorage
-      localStorage.setItem('decivue_session', JSON.stringify(session));
-      localStorage.setItem('decivue_user', JSON.stringify(user));
+      // Clear any existing sessions from both storages to prevent conflicts
+      localStorage.removeItem('decivue_session');
+      localStorage.removeItem('decivue_user');
+      sessionStorage.removeItem('decivue_session');
+      sessionStorage.removeItem('decivue_user');
+
+      // Store in appropriate storage based on rememberMe
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('decivue_session', JSON.stringify(session));
+      storage.setItem('decivue_user', JSON.stringify(user));
 
       // Set auth token for API calls
       api.setAuthToken(session.access_token);
@@ -202,6 +215,8 @@ export function AuthProvider({ children }) {
       // Clear any stale session data on failed login to prevent conflicts
       localStorage.removeItem('decivue_session');
       localStorage.removeItem('decivue_user');
+      sessionStorage.removeItem('decivue_session');
+      sessionStorage.removeItem('decivue_user');
       api.setAuthToken(null);
       
       return {
@@ -277,6 +292,8 @@ export function AuthProvider({ children }) {
     } finally {
       localStorage.removeItem('decivue_session');
       localStorage.removeItem('decivue_user');
+      sessionStorage.removeItem('decivue_session');
+      sessionStorage.removeItem('decivue_user');
       api.setAuthToken(null);
       setSession(null);
       setUser(null);

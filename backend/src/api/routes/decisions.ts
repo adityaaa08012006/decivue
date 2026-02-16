@@ -5,9 +5,42 @@
 
 import { Router } from 'express';
 import { DecisionController } from '../controllers/decision-controller';
+import { ImportController } from '../controllers/import-controller';
+import multer from 'multer';
 
 const router = Router();
 const controller = new DecisionController();
+const importController = new ImportController();
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+    
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(pdf|txt|md|docx|csv|xlsx|xls)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, TXT, MD, DOCX, CSV, and XLS files are allowed.'));
+    }
+  },
+});
+
+// Import endpoints (before other routes)
+router.post('/import/parse', upload.single('document'), importController.parseDocument.bind(importController));
+router.post('/import/template', upload.single('template'), importController.parseTemplate.bind(importController));
+router.post('/import/bulk', importController.bulkImport.bind(importController));
 
 // Bind methods to preserve 'this' context
 router.get('/', controller.getAll.bind(controller));
