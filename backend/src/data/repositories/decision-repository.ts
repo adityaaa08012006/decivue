@@ -30,6 +30,16 @@ export class DecisionRepository {
       insertData.expiry_date = data.expiry_date;
     }
 
+    // Extract category and parameters from metadata if present
+    if (data.metadata) {
+      if (data.metadata.category) {
+        insertData.category = data.metadata.category;
+      }
+      if (data.metadata.parameters) {
+        insertData.parameters = data.metadata.parameters;
+      }
+    }
+
     const { data: decision, error } = await this.db
       .from('decisions')
       .insert(insertData)

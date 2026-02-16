@@ -12,12 +12,13 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import StructuredAssumptionForm from './StructuredAssumptionForm';
+import StructuredDecisionForm from './StructuredDecisionForm';
 
 const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [showStructuredForm, setShowStructuredForm] = useState(false);
+  const [showStructuredForm, setShowStructuredForm] = useState(true);
   const [showNoAssumptionsWarning, setShowNoAssumptionsWarning] = useState(false);
 
   // Form data
@@ -25,6 +26,8 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
     title: '',
     description: '',
     expiryDate: '', // New field for expiry date
+    category: '', // Decision category (Strategic Initiative, Budget & Financial, etc.)
+    parameters: {}, // Structured parameters for conflict detection
     selectedAssumptions: [], // Existing assumption IDs
     newAssumptions: [], // New assumptions to create
     dependsOn: [], // Decision IDs this decision depends on
@@ -91,6 +94,8 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       title: '',
       description: '',
       expiryDate: '',
+      category: '',
+      parameters: {},
       selectedAssumptions: [],
       newAssumptions: [],
       dependsOn: [],
@@ -98,7 +103,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       selectedConstraints: [],
     });
     setNewAssumptionText('');
-    setShowStructuredForm(false); // Ensure simple mode is default
+    setShowStructuredForm(true); // Ensure structured mode is default
     setShowNoAssumptionsWarning(false); // Reset warning
     setError(null);
   };
@@ -180,6 +185,14 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
       // Add expiry_date if provided
       if (formData.expiryDate) {
         decisionData.expiry_date = new Date(formData.expiryDate).toISOString();
+      }
+
+      // Add metadata (category and parameters) if provided
+      if (formData.category) {
+        decisionData.metadata = {
+          category: formData.category,
+          parameters: formData.parameters || {}
+        };
       }
 
       const decision = await api.createDecision(decisionData);
@@ -309,74 +322,27 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
         )}
 
-        {/* Step 1: Basic Information */}
+        {/* Step 1: Structured Decision Form */}
         {currentStep === 1 && (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                Decision Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                className="w-full p-4 border border-neutral-gray-300 rounded-xl focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all"
-                placeholder="e.g., Migrate to Microservices Architecture"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                className="w-full p-4 border border-neutral-gray-300 rounded-xl focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all resize-none"
-                rows="5"
-                placeholder="Provide context, rationale, and expected outcomes for this decision..."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                Expiry Date (Optional)
-              </label>
-              <input
-                type="date"
-                className="w-full p-4 border border-neutral-gray-300 rounded-xl focus:border-primary-blue focus:ring-1 focus:ring-primary-blue transition-all"
-                value={formData.expiryDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, expiryDate: e.target.value })
-                }
-              />
-              <p className="text-xs text-neutral-gray-500 mt-2">
-                When set, health will decay faster as this date approaches and passes
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={handleClose}
-                className="px-6 py-2.5 text-neutral-gray-600 font-medium hover:bg-neutral-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={!formData.title.trim()}
-                className="px-6 py-2.5 bg-primary-blue text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                Next: Link Relationships
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
+          <StructuredDecisionForm
+            onSubmit={(decisionData) => {
+              // Update formData with structured decision data
+              setFormData({
+                ...formData,
+                title: decisionData.title,
+                description: decisionData.description,
+                category: decisionData.metadata?.category || '',
+                parameters: decisionData.metadata?.parameters || {},
+                expiryDate: decisionData.expiry_date 
+                  ? new Date(decisionData.expiry_date).toISOString().split('T')[0] 
+                  : ''
+              });
+              // Move to next step
+              setError(null);
+              setCurrentStep(2);
+            }}
+            onCancel={handleClose}
+          />
         )}
 
         {/* Step 2: Link Relationships */}
@@ -399,49 +365,49 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                 </button>
               </div>
 
+              {/* Existing assumptions - shown in both modes */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                  Link Existing Assumptions
+                </label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {existingAssumptions.map((assumption) => (
+                    <label
+                      key={assumption.id}
+                      className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.selectedAssumptions.includes(
+                          assumption.id
+                        )}
+                        onChange={() =>
+                          toggleSelection('selectedAssumptions', assumption.id)
+                        }
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm text-neutral-gray-700">
+                          {assumption.description}
+                        </span>
+                        {assumption.category && (
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            {assumption.category}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                  {existingAssumptions.length === 0 && (
+                    <p className="text-sm text-neutral-gray-500 italic">
+                      No existing assumptions available
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {!showStructuredForm ? (
                 <>
-                  {/* Existing assumptions */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
-                      Link Existing Assumptions
-                    </label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {existingAssumptions.map((assumption) => (
-                        <label
-                          key={assumption.id}
-                          className="flex items-start gap-2 p-3 bg-white rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.selectedAssumptions.includes(
-                              assumption.id
-                            )}
-                            onChange={() =>
-                              toggleSelection('selectedAssumptions', assumption.id)
-                            }
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
-                            <span className="text-sm text-neutral-gray-700">
-                              {assumption.description}
-                            </span>
-                            {assumption.category && (
-                              <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                {assumption.category}
-                              </span>
-                            )}
-                          </div>
-                        </label>
-                      ))}
-                      {existingAssumptions.length === 0 && (
-                        <p className="text-sm text-neutral-gray-500 italic">
-                          No existing assumptions available
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Add new assumptions - Simple mode */}
                   <div>
                     <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
@@ -502,6 +468,38 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                 </>
               ) : (
                 <div className="bg-white p-4 rounded-lg">
+                  {/* Show list of new assumptions added so far */}
+                  {formData.newAssumptions.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <label className="block text-sm font-semibold text-neutral-gray-700 mb-2">
+                        New Assumptions to Create
+                      </label>
+                      {formData.newAssumptions.map((assumption, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-blue-50 rounded-lg text-sm"
+                        >
+                          <div className="flex-1">
+                            <span className="text-neutral-gray-700">
+                              {typeof assumption === 'string' ? assumption : assumption.description}
+                            </span>
+                            {typeof assumption === 'object' && assumption.category && (
+                              <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                                {assumption.category}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeNewAssumption(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
                   <StructuredAssumptionForm
                     onSubmit={async (assumptionData) => {
                       // Add to newAssumptions list as structured data
@@ -512,7 +510,7 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                           assumptionData, // Store full structured data
                         ],
                       }));
-                      setShowStructuredForm(false);
+                      // Don't close structured form, let user add more
                     }}
                     onCancel={() => setShowStructuredForm(false)}
                   />
