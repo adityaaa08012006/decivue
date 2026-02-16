@@ -94,6 +94,12 @@ export class DecisionConflictDetector {
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
+    console.log(
+      "[DEBUG] GEMINI_API_KEY exists:",
+      !!apiKey,
+      "Length:",
+      apiKey?.length,
+    );
     if (apiKey) {
       try {
         this.genAI = new GoogleGenerativeAI(apiKey);
@@ -199,14 +205,15 @@ Generate a professional, actionable explanation that clearly states the conflict
           category: decisionA.category,
           confidence: structuredResult.confidenceScore,
         });
-        
-        const { explanation, aiGenerated } = await this.generateDetailedExplanation(
-          decisionA,
-          decisionB,
-          structuredResult.conflictType,
-          structuredResult.explanation,
-        );
-        
+
+        const { explanation, aiGenerated } =
+          await this.generateDetailedExplanation(
+            decisionA,
+            decisionB,
+            structuredResult.conflictType,
+            structuredResult.explanation,
+          );
+
         return {
           ...structuredResult,
           explanation,
@@ -231,14 +238,15 @@ Generate a professional, actionable explanation that clearly states the conflict
         decisionB: decisionB.id,
         confidence: resourceResult.confidenceScore,
       });
-      
-      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
-        decisionA,
-        decisionB,
-        resourceResult.conflictType,
-        resourceResult.explanation,
-      );
-      
+
+      const { explanation, aiGenerated } =
+        await this.generateDetailedExplanation(
+          decisionA,
+          decisionB,
+          resourceResult.conflictType,
+          resourceResult.explanation,
+        );
+
       return {
         ...resourceResult,
         explanation,
@@ -259,14 +267,15 @@ Generate a professional, actionable explanation that clearly states the conflict
         decisionB: decisionB.id,
         confidence: contradictoryResult.confidenceScore,
       });
-      
-      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
-        decisionA,
-        decisionB,
-        contradictoryResult.conflictType,
-        contradictoryResult.explanation,
-      );
-      
+
+      const { explanation, aiGenerated } =
+        await this.generateDetailedExplanation(
+          decisionA,
+          decisionB,
+          contradictoryResult.conflictType,
+          contradictoryResult.explanation,
+        );
+
       return {
         ...contradictoryResult,
         explanation,
@@ -287,14 +296,15 @@ Generate a professional, actionable explanation that clearly states the conflict
         decisionB: decisionB.id,
         confidence: underminingResult.confidenceScore,
       });
-      
-      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
-        decisionA,
-        decisionB,
-        underminingResult.conflictType,
-        underminingResult.explanation,
-      );
-      
+
+      const { explanation, aiGenerated } =
+        await this.generateDetailedExplanation(
+          decisionA,
+          decisionB,
+          underminingResult.conflictType,
+          underminingResult.explanation,
+        );
+
       return {
         ...underminingResult,
         explanation,
@@ -315,14 +325,15 @@ Generate a professional, actionable explanation that clearly states the conflict
         decisionB: decisionB.id,
         confidence: premiseResult.confidenceScore,
       });
-      
-      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
-        decisionA,
-        decisionB,
-        premiseResult.conflictType,
-        premiseResult.explanation,
-      );
-      
+
+      const { explanation, aiGenerated } =
+        await this.generateDetailedExplanation(
+          decisionA,
+          decisionB,
+          premiseResult.conflictType,
+          premiseResult.explanation,
+        );
+
       return {
         ...premiseResult,
         explanation,
@@ -336,11 +347,13 @@ Generate a professional, actionable explanation that clearly states the conflict
   /**
    * Detect conflicts in a list of decisions (compare all pairs)
    */
-  public async detectConflictsInList(decisions: Decision[]): Promise<Array<{
-    decisionA: Decision;
-    decisionB: Decision;
-    conflict: ConflictDetectionResult;
-  }>> {
+  public async detectConflictsInList(decisions: Decision[]): Promise<
+    Array<{
+      decisionA: Decision;
+      decisionB: Decision;
+      conflict: ConflictDetectionResult;
+    }>
+  > {
     const conflicts: Array<{
       decisionA: Decision;
       decisionB: Decision;

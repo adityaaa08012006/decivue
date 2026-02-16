@@ -5,34 +5,38 @@
  * (Restart trigger 2)
  */
 
-import express, { Application, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
-import { initializeDatabase } from '@data/database';
-import { registerReEvaluationHandlers } from '@events/handlers/re-evaluation-handler';
-import NotificationScheduler from '@services/scheduler';
-import { logger } from '@utils/logger';
-import { AppError } from '@utils/errors';
-import { authenticate } from './middleware/auth';
-import authRoutes from '@api/routes/auth';
-import decisionRoutes from '@api/routes/decisions';
-import assumptionRoutes from '@api/routes/assumptions';
-import dependencyRoutes from '@api/routes/dependencies';
-import constraintRoutes from '@api/routes/constraints';
-import constraintViolationsRoutes from '@api/routes/constraint-violations';
-import assumptionConflictsRoutes from '@api/routes/assumption-conflicts';
-import decisionConflictsRoutes from '@api/routes/decision-conflicts';
-import profileRoutes from '@api/routes/profile';
-import timelineRoutes from '@api/routes/timeline';
-import notificationRoutes from '@api/routes/notifications';
-import timeSimulationRoutes from '@api/routes/time-simulation';
-import parameterTemplatesRoutes from '@api/routes/parameter-templates';
-import usersRoutes from '@api/routes/users';
-import reportsRoutes from '@api/routes/reports';
+// Load environment variables FIRST before any other imports
+import dotenv from "dotenv";
+import path from "path";
 
-// Load environment variables
-dotenv.config();
+// Load from backend directory root (where .env is located)
+const envPath = path.resolve(process.cwd(), ".env");
+dotenv.config({ path: envPath });
+
+import express, { Application, Request, Response, NextFunction } from "express";
+import cors from "cors";
+import helmet from "helmet";
+import { initializeDatabase } from "@data/database";
+import { registerReEvaluationHandlers } from "@events/handlers/re-evaluation-handler";
+import NotificationScheduler from "@services/scheduler";
+import { logger } from "@utils/logger";
+import { AppError } from "@utils/errors";
+import { authenticate } from "./middleware/auth";
+import authRoutes from "@api/routes/auth";
+import decisionRoutes from "@api/routes/decisions";
+import assumptionRoutes from "@api/routes/assumptions";
+import dependencyRoutes from "@api/routes/dependencies";
+import constraintRoutes from "@api/routes/constraints";
+import constraintViolationsRoutes from "@api/routes/constraint-violations";
+import assumptionConflictsRoutes from "@api/routes/assumption-conflicts";
+import decisionConflictsRoutes from "@api/routes/decision-conflicts";
+import profileRoutes from "@api/routes/profile";
+import timelineRoutes from "@api/routes/timeline";
+import notificationRoutes from "@api/routes/notifications";
+import timeSimulationRoutes from "@api/routes/time-simulation";
+import parameterTemplatesRoutes from "@api/routes/parameter-templates";
+import usersRoutes from "@api/routes/users";
+import reportsRoutes from "@api/routes/reports";
 
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
@@ -50,53 +54,53 @@ app.use((_req: Request, _res: Response, next: NextFunction) => {
 });
 
 // Health check endpoint
-app.get('/health', (_req: Request, res: Response) => {
+app.get("/health", (_req: Request, res: Response) => {
   res.json({
-    status: 'ok',
+    status: "ok",
     timestamp: new Date().toISOString(),
-    service: 'decivue-backend'
+    service: "decivue-backend",
   });
 });
 
 // API Routes
-app.get('/api', (_req: Request, res: Response) => {
+app.get("/api", (_req: Request, res: Response) => {
   res.json({
-    message: 'DECIVUE API - Deterministic Decision Monitoring System',
-    version: '1.0.0',
+    message: "DECIVUE API - Deterministic Decision Monitoring System",
+    version: "1.0.0",
     endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      decisions: '/api/decisions',
-      assumptions: '/api/assumptions',
-      constraints: '/api/constraints'
-    }
+      health: "/health",
+      auth: "/api/auth",
+      decisions: "/api/decisions",
+      assumptions: "/api/assumptions",
+      constraints: "/api/constraints",
+    },
   });
 });
 
 // Public routes (no authentication required)
-app.use('/api/auth', authRoutes);
+app.use("/api/auth", authRoutes);
 
 // Protected routes (authentication required)
-app.use('/api/decisions', authenticate, decisionRoutes);
-app.use('/api/assumptions', authenticate, assumptionRoutes);
-app.use('/api/dependencies', authenticate, dependencyRoutes);
-app.use('/api/constraints', authenticate, constraintRoutes);
-app.use('/api/constraint-violations', authenticate, constraintViolationsRoutes);
-app.use('/api/assumption-conflicts', authenticate, assumptionConflictsRoutes);
-app.use('/api/decision-conflicts', authenticate, decisionConflictsRoutes);
-app.use('/api/profile', authenticate, profileRoutes);
-app.use('/api/timeline', authenticate, timelineRoutes);
-app.use('/api/notifications', authenticate, notificationRoutes);
-app.use('/api/simulate-time', authenticate, timeSimulationRoutes);
-app.use('/api/parameter-templates', authenticate, parameterTemplatesRoutes);
-app.use('/api/users', authenticate, usersRoutes);
-app.use('/api/reports', authenticate, reportsRoutes);
+app.use("/api/decisions", authenticate, decisionRoutes);
+app.use("/api/assumptions", authenticate, assumptionRoutes);
+app.use("/api/dependencies", authenticate, dependencyRoutes);
+app.use("/api/constraints", authenticate, constraintRoutes);
+app.use("/api/constraint-violations", authenticate, constraintViolationsRoutes);
+app.use("/api/assumption-conflicts", authenticate, assumptionConflictsRoutes);
+app.use("/api/decision-conflicts", authenticate, decisionConflictsRoutes);
+app.use("/api/profile", authenticate, profileRoutes);
+app.use("/api/timeline", authenticate, timelineRoutes);
+app.use("/api/notifications", authenticate, notificationRoutes);
+app.use("/api/simulate-time", authenticate, timeSimulationRoutes);
+app.use("/api/parameter-templates", authenticate, parameterTemplatesRoutes);
+app.use("/api/users", authenticate, usersRoutes);
+app.use("/api/reports", authenticate, reportsRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
-    error: 'Not Found',
-    message: `Route ${_req.method} ${_req.path} not found`
+    error: "Not Found",
+    message: `Route ${_req.method} ${_req.path} not found`,
   });
 });
 
@@ -105,15 +109,18 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       error: err.name,
-      message: err.message
+      message: err.message,
     });
   }
 
-  logger.error('Unhandled error', { error: err.message, stack: err.stack });
+  logger.error("Unhandled error", { error: err.message, stack: err.stack });
 
   return res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    error: "Internal Server Error",
+    message:
+      process.env.NODE_ENV === "development"
+        ? err.message
+        : "Something went wrong",
   });
 });
 
@@ -124,11 +131,11 @@ async function startServer() {
   try {
     // Initialize database connection
     initializeDatabase();
-    logger.info('Database initialized');
+    logger.info("Database initialized");
 
     // Register event handlers
     registerReEvaluationHandlers();
-    logger.info('Event handlers registered');
+    logger.info("Event handlers registered");
 
     // Start notification scheduler
     const scheduler = new NotificationScheduler();
@@ -137,44 +144,49 @@ async function startServer() {
     // Start listening
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
-      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || "development"}`);
       logger.info(`API available at http://localhost:${PORT}/api`);
     });
 
     // Graceful shutdown handler
     const shutdownHandler = () => {
-      logger.info('Received shutdown signal, gracefully shutting down...');
+      logger.info("Received shutdown signal, gracefully shutting down...");
       scheduler.stop();
       process.exit(0);
     };
 
-    process.on('SIGTERM', shutdownHandler);
-    process.on('SIGINT', shutdownHandler);
+    process.on("SIGTERM", shutdownHandler);
+    process.on("SIGINT", shutdownHandler);
   } catch (error) {
-    logger.error('Failed to start server', { error });
+    logger.error("Failed to start server", { error });
     process.exit(1);
   }
 }
 
 // Handle uncaught errors
-process.on('uncaughtException', (error: Error) => {
-  logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
+process.on("uncaughtException", (error: Error) => {
+  logger.error("Uncaught Exception", {
+    error: error.message,
+    stack: error.stack,
+  });
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason: any) => {
-  logger.error('Unhandled Rejection', {
+process.on("unhandledRejection", (reason: any) => {
+  logger.error("Unhandled Rejection", {
     reason: reason,
-    message: reason?.message || 'Unknown error',
-    stack: reason?.stack || 'No stack trace',
-    details: reason?.details || 'No details'
+    message: reason?.message || "Unknown error",
+    stack: reason?.stack || "No stack trace",
+    details: reason?.details || "No details",
   });
 
   // In development, don't exit - just log the error
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     process.exit(1);
   } else {
-    logger.warn('⚠️ Server continuing despite unhandled rejection (development mode)');
+    logger.warn(
+      "⚠️ Server continuing despite unhandled rejection (development mode)",
+    );
   }
 });
 

@@ -11,7 +11,15 @@ import { logger } from "@utils/logger";
 import { AuthRequest } from "../../middleware/auth";
 
 const router = Router();
-const detector = new DecisionConflictDetector();
+
+// Lazy-load detector to ensure env vars are loaded first
+let detector: DecisionConflictDetector | null = null;
+function getDetector(): DecisionConflictDetector {
+  if (!detector) {
+    detector = new DecisionConflictDetector();
+  }
+  return detector;
+}
 
 /**
  * GET /api/decision-conflicts
@@ -94,7 +102,7 @@ router.post(
       }
 
       // Detect conflicts
-      const detectedConflicts = await detector.detectConflictsInList(
+      const detectedConflicts = await getDetector().detectConflictsInList(
         decisions.map((d) => ({
           id: d.id,
           title: d.title,
