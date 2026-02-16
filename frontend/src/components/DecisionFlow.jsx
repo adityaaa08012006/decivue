@@ -388,18 +388,25 @@ const DecisionFlow = () => {
 
       for (const decision of decisionsData || []) {
         try {
-          // Fetch assumptions linked to this decision
+          // Fetch assumptions linked to this decision via decision_assumptions junction table
+          // Backend queries: decision_assumptions -> assumptions (filtered by organization_id)
+          // This ensures proper linkage for all future decisions
           const linkedAssumptions = await api.getAssumptions(
             decision.id,
             false,
           );
 
-          console.log(
-            `Decision ${decision.title} - Linked assumptions:`,
-            linkedAssumptions,
-          );
+          console.log(`\n=== Decision: ${decision.title} ===`);
+          console.log(`Total linked assumptions:`, linkedAssumptions.length);
+          linkedAssumptions.forEach((a, idx) => {
+            console.log(
+              `  [${idx + 1}] ${a.description?.substring(0, 60)}... | scope: "${a.scope}" | id: ${a.id}`,
+            );
+          });
 
-          // Separate decision-specific and organizational assumptions
+          // Separate by scope field from assumptions table:
+          // - DECISION_SPECIFIC: unique to this decision
+          // - UNIVERSAL (or null): organizational assumptions shared across decisions
           const decisionSpecific = linkedAssumptions.filter(
             (a) => a.scope === "DECISION_SPECIFIC",
           );
@@ -411,12 +418,10 @@ const DecisionFlow = () => {
           decisionOrgAssumpMap[decision.id] = orgAssumpsForDecision;
 
           console.log(
-            `Decision ${decision.title} - Decision-specific:`,
-            decisionSpecific.length,
+            `  ✓ Decision-specific count: ${decisionSpecific.length}`,
           );
           console.log(
-            `Decision ${decision.title} - Organizational:`,
-            orgAssumpsForDecision.length,
+            `  ✓ Organizational count: ${orgAssumpsForDecision.length}`,
           );
 
           // Track which decisions each org assumption is linked to
