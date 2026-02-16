@@ -1,0 +1,46 @@
+Decision Document - Q1 2026 Strategic Initiatives
+
+Decision 1: Cloud Migration Strategy
+We have decided to migrate our core infrastructure to AWS cloud services by Q2 2026. This decision was made to improve scalability, reduce operational costs, and enable better disaster recovery capabilities. The migration will be phased over 3 months starting March 2026.
+
+Key assumptions:
+- AWS pricing remains stable or decreases
+- Our team can acquire necessary cloud skills within 2 months
+- Current on-premise contracts can be terminated without penalties
+- Data transfer costs will not exceed $50k
+
+Decision 2: Increase Marketing Budget for Product Launch
+We decided to allocate an additional $200,000 to the Q2 marketing budget specifically for the new product launch campaign. This increase represents a 40% boost from the original planned budget and will focus on digital advertising and influencer partnerships.
+
+Key assumptions:
+- Market conditions remain favorable for product launches
+- Target ROI of 3x on marketing spend is achievable
+- Competition does not launch similar products in Q2
+- Digital advertising costs remain within current market rates
+
+Decision 3: Implement Remote-First Work Policy
+Effective March 1, 2026, we are adopting a permanent remote-first work policy. Employees will have the option to work from home full-time, with optional office access for collaboration. This decision aims to improve work-life balance, reduce office overhead costs, and access talent from broader geographic regions.
+
+Key assumptions:
+- Team productivity will remain at or above current levels
+- Collaboration tools (Zoom, Slack, Miro) are sufficient for remote work
+- Office lease can be downsized without early termination penalties
+- Employee satisfaction will increase leading to better retention
+
+Decision 4: Adopt TypeScript for All New Projects
+Going forward, all new software projects will be developed using TypeScript instead of plain JavaScript. This technical decision is aimed at reducing runtime errors, improving code maintainability, and providing better developer experience through enhanced IDE support.
+
+Key assumptions:
+- Development team is willing to learn TypeScript
+- Migration time for existing JavaScript code is manageable
+- TypeScript tooling integrates well with our current build pipeline
+- Increased compile time does not significantly impact developer productivity
+
+Decision 5: Partner with External Vendor for Customer Support
+We decided to outsource Tier 1 customer support to a specialized external vendor starting April 2026. This will allow our internal team to focus on complex technical issues while the vendor handles routine inquiries. The contract is for 12 months with an option to extend.
+
+Key assumptions:
+- Vendor can maintain our quality standards for customer interactions
+- Cost savings will offset the vendor fees within 6 months
+- Knowledge transfer to vendor can be completed in 4 weeks
+- Customer satisfaction scores will not decline below current baseline
