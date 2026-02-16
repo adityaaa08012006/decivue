@@ -180,21 +180,6 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
                   />
                 </div>
               </div>
-              
-              {/* Floating Health Indicator */}
-              <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-xl rounded-2xl p-3 border border-gray-200 shadow-xl">
-                <div className="text-xs text-gray-600 mb-1.5">Decision Flow</div>
-                <div className="flex items-center gap-2">
-                  {[38, 45, 52, 48, 55, 50, 58].map((height, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1">
-                      <div 
-                        className="w-2 bg-gradient-to-t from-[#1d4ed8] to-[#3b82f6] rounded-full transition-all duration-300 hover:scale-110" 
-                        style={{ height: `${height}px` }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>

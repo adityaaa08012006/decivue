@@ -124,13 +124,13 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   const MenuItem = ({ item }) => (
     <div
       onClick={() => onNavigate && onNavigate(item.id)}
-      className={`flex items-center justify-between px-4 py-2 rounded-lg cursor-pointer transition-all ${
+      className={`flex items-center justify-between px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
         item.active
           ? "bg-primary-blue text-white"
           : "text-neutral-gray-700 hover:bg-neutral-gray-100"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <div className={item.active ? "text-white" : "text-neutral-gray-600"}>
           {getIcon(item.icon)}
         </div>
@@ -152,27 +152,27 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   );
 
   return (
-    <div className="w-60 h-screen bg-neutral-white dark:bg-neutral-gray-800 border-r border-neutral-gray-200 dark:border-neutral-gray-700 flex flex-col p-4">
+    <div className="w-56 h-screen bg-neutral-white dark:bg-neutral-gray-800 border-r border-neutral-gray-200 dark:border-neutral-gray-700 flex flex-col p-3">
       {/* Logo */}
-      <div className="flex items-center gap-2 mb-4 px-2 flex-shrink-0">
-        <div className="w-8 h-8 flex items-center justify-center">
-          <img src="/assets/logo.png" alt="Decivue" className="w-8 h-8" />
+      <div className="flex items-center gap-2 mb-3 px-2 flex-shrink-0">
+        <div className="w-7 h-7 flex items-center justify-center">
+          <img src="/assets/logo.png" alt="Decivue" className="w-7 h-7" />
         </div>
-        <span className="text-xl font-bold text-neutral-black dark:text-white">
+        <span className="text-lg font-bold text-neutral-black dark:text-white">
           Decivue
         </span>
       </div>
 
       {/* User Info */}
       {user && (
-        <div className="px-2 py-3 mb-4 border-b border-neutral-gray-200 dark:border-neutral-gray-700 flex-shrink-0">
+        <div className="px-2 py-2 mb-3 border-b border-neutral-gray-200 dark:border-neutral-gray-700 flex-shrink-0">
           <p className="text-sm font-semibold text-neutral-black dark:text-white truncate">
             {user.fullName}
           </p>
           <p className="text-xs text-neutral-gray-500 dark:text-neutral-gray-400 truncate">
             {user.email}
           </p>
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
             <span
               className={`text-xs px-2 py-1 rounded font-medium ${
                 user.role === "lead"
@@ -194,8 +194,8 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       {/* Content - No scrolling */}
       <div className="flex-1 flex flex-col">
         {/* MENU Section */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-1.5 px-2">
             MENU
           </p>
           <div className="space-y-0.5">
@@ -205,11 +205,11 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-2" />
+        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-1.5" />
 
         {/* ANALYTICS Section */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-1.5 px-2">
             ANALYTICS
           </p>
           <div className="space-y-0.5">
@@ -219,10 +219,10 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-2" />
+        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-1.5" />
 
         {/* Other Items */}
-        <div className="mb-4">
+        <div className="mb-3">
           <div className="space-y-0.5">
             {otherItems.map((item) => (
               <MenuItem key={item.id} item={item} />
@@ -230,11 +230,11 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-2" />
+        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-1.5" />
 
         {/* HELP Section */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-1.5 px-2">
             HELP
           </p>
           <div className="space-y-0.5">
@@ -246,12 +246,12 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       </div>
 
       {/* Log out - Fixed at bottom */}
-      <div className="flex-shrink-0 pt-3 border-t border-neutral-gray-200 dark:border-neutral-gray-700">
+      <div className="flex-shrink-0 pt-2 border-t border-neutral-gray-200 dark:border-neutral-gray-700">
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 px-4 py-2 text-primary-red dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 text-primary-red dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-all"
         >
-          <LogOut size={20} strokeWidth={2} />
+          <LogOut size={18} strokeWidth={2} />
           <span className="text-sm font-medium">Log out</span>
         </button>
       </div>
