@@ -124,10 +124,16 @@ class ApiService {
     });
   }
 
-  async markDecisionReviewed(id, reviewComment = null, reviewType = 'routine') {
+  async markDecisionReviewed(id, reviewComment = null, reviewType = 'routine', reviewOutcome = 'reaffirmed', deferralReason = null, nextReviewDate = null) {
     return this.request(`/decisions/${id}/mark-reviewed`, {
       method: 'PUT',
-      body: JSON.stringify({ reviewComment, reviewType }),
+      body: JSON.stringify({ 
+        reviewComment, 
+        reviewType, 
+        reviewOutcome, 
+        deferralReason, 
+        nextReviewDate 
+      }),
     });
   }
 
@@ -500,6 +506,72 @@ class ApiService {
     }
 
     return await response.blob();
+  }
+
+  // ============================================================================
+  // REVIEW INTELLIGENCE & GOVERNANCE APIs (Migration 027)
+  // ============================================================================
+
+  // Get review urgency score for a decision
+  async getReviewUrgency(decisionId) {
+    return this.request(`/decisions/${decisionId}/review-urgency`);
+  }
+
+  // Force recalculate review urgency score
+  async recalculateReviewUrgency(decisionId) {
+    return this.request(`/decisions/${decisionId}/recalculate-urgency`, {
+      method: 'POST'
+    });
+  }
+
+  // Check if user can edit a governed decision
+  async checkEditPermission(decisionId, justification = null) {
+    return this.request(`/decisions/${decisionId}/check-edit-permission`, {
+      method: 'POST',
+      body: JSON.stringify({ justification })
+    });
+  }
+
+  // Request approval to edit a governed decision
+  async requestEditApproval(decisionId, justification, proposedChanges) {
+    return this.request(`/decisions/${decisionId}/request-edit-approval`, {
+      method: 'POST',
+      body: JSON.stringify({ justification, proposedChanges })
+    });
+  }
+
+  // Approve or reject an edit request (for second reviewers)
+  async resolveEditRequest(auditId, approved, reviewerNotes = null) {
+    return this.request(`/decisions/governance/approve-edit/${auditId}`, {
+      method: 'POST',
+      body: JSON.stringify({ approved, reviewerNotes })
+    });
+  }
+
+  // Get governance audit log for a decision
+  async getGovernanceAudit(decisionId) {
+    return this.request(`/decisions/${decisionId}/governance-audit`);
+  }
+
+  // Lock or unlock a decision (TEAM LEADS ONLY)
+  async toggleDecisionLock(decisionId, lock, reason = null) {
+    return this.request(`/decisions/${decisionId}/toggle-lock`, {
+      method: 'POST',
+      body: JSON.stringify({ lock, reason })
+    });
+  }
+
+  // Update governance settings for a decision (TEAM LEADS ONLY)
+  async updateGovernanceSettings(decisionId, settings) {
+    return this.request(`/decisions/${decisionId}/governance-settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings)
+    });
+  }
+
+  // Get pending edit approval requests (TEAM LEADS ONLY)
+  async getPendingApprovals() {
+    return this.request('/decisions/governance/pending-approvals');
   }
 }
 

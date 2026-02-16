@@ -381,7 +381,10 @@ function AppContent() {
               <DecisionHealthOverview key={`health-${refreshKey}`} />
 
               {/* Decision Log Table */}
-              <DecisionLogTable key={`log-${refreshKey}`} />
+              <DecisionLogTable 
+                key={`log-${refreshKey}`}
+                onNavigate={handleNavigate}
+              />
             </div>
           )}
 

@@ -394,14 +394,14 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     }
   };
 
-  const handleSubmitReview = async (decisionId, reviewComment, reviewType) => {
+  const handleSubmitReview = async (decisionId, reviewComment, reviewType, reviewOutcome, deferralReason, nextReviewDate) => {
     try {
-      await api.markDecisionReviewed(decisionId, reviewComment, reviewType);
+      await api.markDecisionReviewed(decisionId, reviewComment, reviewType, reviewOutcome, deferralReason, nextReviewDate);
       // Refresh the list WITHOUT auto-evaluation to preserve the reviewed state
       const data = await api.getDecisions();
       setDecisions(data);
       const decision = decisions.find((d) => d.id === decisionId);
-      showToast("success", `"${decision?.title}" marked as reviewed`);
+      showToast("success", `"${decision?.title}" marked as reviewed with outcome: ${reviewOutcome}`);
     } catch (err) {
       console.error("Failed to mark decision as reviewed:", err);
       const errorMessage =
