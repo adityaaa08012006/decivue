@@ -32,9 +32,9 @@ export class DeterministicEngine implements IDecisionEngine {
    */
   evaluate(input: EvaluationInput): EvaluationOutput {
     const trace: EvaluationStep[] = [];
-    // Always start from ACTIVE lifecycle unless constraints/assumptions force invalidation
-    let lifecycle = input.decision.lifecycle === DecisionLifecycle.INVALIDATED 
-      ? DecisionLifecycle.ACTIVE 
+    // Reset INVALIDATED lifecycle to STABLE to give it a fresh chance at recovery
+    let lifecycle: DecisionLifecycle = input.decision.lifecycle === DecisionLifecycle.INVALIDATED 
+      ? DecisionLifecycle.STABLE 
       : input.decision.lifecycle;
     let healthSignal = 100; // Start fresh at 100 and recalculate
     let invalidatedReason: string | undefined = undefined;

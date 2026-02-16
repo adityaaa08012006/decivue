@@ -83,8 +83,8 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
       setDecisions(data);
       setError(null);
       
-      // Auto-evaluate all decisions that need it (stale health or newly loaded)
-      autoEvaluateDecisions(data);
+      // Smart evaluation: Use batch endpoint to only evaluate what's needed
+      smartEvaluateDecisions();
     } catch (err) {
       console.error('Failed to fetch decisions:', err);
       setError('Failed to load decisions. Please make sure the backend is running.');
@@ -93,24 +93,38 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     }
   };
 
-  // Auto-evaluate decisions that need evaluation
-  const autoEvaluateDecisions = async (decisionsList) => {
-    console.log('🔄 Auto-evaluating decisions on load...');
-    
-    // Evaluate all decisions silently in the background
-    for (const decision of decisionsList) {
-      try {
-        await api.evaluateDecision(decision.id);
-        console.log(`✅ Auto-evaluated: ${decision.title}`);
-      } catch (err) {
-        console.error(`Failed to auto-evaluate ${decision.title}:`, err);
+  // Smart evaluation: Only evaluates decisions that actually need it
+  const smartEvaluateDecisions = async () => {
+    try {
+      console.log('🔄 Running smart evaluation...');
+      
+      // Call batch evaluate endpoint (it will only evaluate what's needed)
+      const result = await api.post('/decisions/batch-evaluate', {
+        // Don't pass decisionIds - let backend decide what needs evaluation
+        force: false  // Only evaluate if actually needed
+      });
+
+      console.log(`✅ Smart evaluation complete:`, {
+        evaluated: result.evaluated,
+        skipped: result.skipped,
+        failed: result.failed
+      });
+
+      // Only refresh if any evaluations actually ran
+      if (result.evaluated > 0) {
+        const updatedData = await api.getDecisions();
+        setDecisions(updatedData);
       }
+    } catch (err) {
+      console.error('Smart evaluation failed:', err);
+      // Don't show error to user - evaluation is background task
     }
-    
-    // Refresh decisions after evaluation
-    const updatedData = await api.getDecisions();
-    setDecisions(updatedData);
-    console.log('✅ All decisions auto-evaluated and refreshed');
+  };
+
+  // Legacy auto-evaluate for backwards compatibility (now uses smart logic)
+  const autoEvaluateDecisions = async (decisionsList) => {
+    console.log('⚠️ Legacy auto-evaluate called - redirecting to smart evaluation');
+    await smartEvaluateDecisions();
   };
 
   const fetchDecisionDetails = async (decisionId) => {

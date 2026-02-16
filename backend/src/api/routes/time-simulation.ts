@@ -3,37 +3,47 @@
  * Allows simulating time jumps to test system behavior
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { getAdminDatabase } from '@data/database';
 import { DeterministicEngine } from '@engine/index';
 import { EvaluationInput } from '@engine/types';
 import { logger } from '@utils/logger';
 import { AssumptionValidationService } from '../../services/assumption-validation-service';
+import { AuthRequest } from '@middleware/auth';
 
 const router = Router();
 
-// Store the simulated time offset in memory
+// Store the simulated time offset in memory (keyed by organization)
 // null means no simulation active (use real time)
-let simulatedTimeOffset: number | null = null;
+const simulatedTimeOffsets: Map<string, number | null> = new Map();
 
 /**
- * Get the current time (simulated or real)
+ * Get the current time (simulated or real) for an organization
  * This is exported so other modules can use the simulated time
  */
-export function getCurrentTime(): Date {
-  return simulatedTimeOffset 
-    ? new Date(Date.now() + simulatedTimeOffset)
-    : new Date();
+export function getCurrentTime(organizationId?: string): Date {
+  if (organizationId) {
+    const offset = simulatedTimeOffsets.get(organizationId);
+    if (offset) {
+      return new Date(Date.now() + offset);
+    }
+  }
+  return new Date();
 }
 
 /**
  * POST /api/simulate-time
- * Simulate a time jump and re-evaluate all decisions
+ * Simulate a time jump and re-evaluate all decisions FOR CURRENT ORGANIZATION ONLY
  */
-router.post('/', async (req: Request, res: Response): Promise<any> => {
+router.post('/', async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const supabase = getAdminDatabase();
-    const { days} = req.body;
+    const { days } = req.body;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
 
     if (!days || typeof days !== 'number' || days <= 0) {
       return res.status(400).json({
@@ -42,17 +52,19 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
       });
     }
 
-    logger.info(`Time simulation requested: +${days} days`);
+    logger.info(`Time simulation requested: +${days} days for organization ${organizationId}`);
 
-    // Calculate simulated timestamp and store offset
+    // Calculate simulated timestamp and store offset FOR THIS ORGANIZATION
     const simulatedTimestamp = new Date();
     simulatedTimestamp.setDate(simulatedTimestamp.getDate() + days);
-    simulatedTimeOffset = days * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+    const timeOffset = days * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+    simulatedTimeOffsets.set(organizationId, timeOffset);
 
-    // Fetch all decisions
+    // Fetch decisions ONLY FOR THIS ORGANIZATION
     const { data: decisions, error: decisionsError } = await supabase
       .from('decisions')
       .select('*')
+      .eq('organization_id', organizationId)
       .neq('lifecycle', 'RETIRED');
 
     if (decisionsError) {
@@ -323,29 +335,42 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
 
 /**
  * GET /api/simulate-time/current
- * Get the current time (simulated or real)
+ * Get the current time (simulated or real) for the current organization
  */
-router.get('/current', (_req: Request, res: Response): any => {
-  const currentTime = getCurrentTime();
+router.get('/current', (req: AuthRequest, res: Response): any => {
+  const organizationId = req.user?.organizationId;
+  
+  if (!organizationId) {
+    return res.status(401).json({ error: 'Organization ID required' });
+  }
+
+  const currentTime = getCurrentTime(organizationId);
+  const offset = simulatedTimeOffsets.get(organizationId);
   
   return res.json({
     currentTime: currentTime.toISOString(),
-    isSimulated: simulatedTimeOffset !== null,
-    offsetDays: simulatedTimeOffset ? Math.floor(simulatedTimeOffset / (1000 * 60 * 60 * 24)) : 0
+    isSimulated: offset !== null && offset !== undefined,
+    offsetDays: offset ? Math.floor(offset / (1000 * 60 * 60 * 24)) : 0
   });
 });
 
 /**
  * DELETE /api/simulate-time/reset
- * Reset time simulation to real time
+ * Reset time simulation to real time for the current organization
  */
-router.delete('/reset', (_req: Request, res: Response): any => {
-  simulatedTimeOffset = null;
-  logger.info('Time simulation reset to real time');
+router.delete('/reset', (req: AuthRequest, res: Response): any => {
+  const organizationId = req.user?.organizationId;
+  
+  if (!organizationId) {
+    return res.status(401).json({ error: 'Organization ID required' });
+  }
+
+  simulatedTimeOffsets.delete(organizationId);
+  logger.info(`Time simulation reset to real time for organization ${organizationId}`);
   
   return res.json({
     message: 'Time simulation reset',
-    currentTime: getCurrentTime().toISOString(),
+    currentTime: getCurrentTime(organizationId).toISOString(),
     isSimulated: false
   });
 });

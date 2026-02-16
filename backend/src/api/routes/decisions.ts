@@ -16,6 +16,7 @@ router.post('/', controller.create.bind(controller));
 router.put('/:id', controller.update.bind(controller));
 router.delete('/:id', controller.delete.bind(controller));
 router.put('/:id/retire', controller.retire.bind(controller));
+router.post('/batch-evaluate', controller.batchEvaluate.bind(controller)); // Batch evaluation (before /:id routes)
 router.post('/:id/evaluate', controller.evaluate.bind(controller));
 router.put('/:id/mark-reviewed', controller.markReviewed.bind(controller));
 

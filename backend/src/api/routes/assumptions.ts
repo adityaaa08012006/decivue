@@ -176,19 +176,31 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 
       if (assumptionsError) throw assumptionsError;
 
-      // Get all decision links
-      const { data: links, error: linksError } = await db
-        .from('decision_assumptions')
-        .select(`
-          assumption_id,
-          decisions (
-            id,
-            title,
-            lifecycle
-          )
-        `);
+      // Get all decision links for this organization's assumptions
+      const assumptionIds = (assumptions || []).map((a: any) => a.id);
+      
+      let links: any[] = [];
+      if (assumptionIds.length > 0) {
+        const { data: linksData, error: linksError } = await db
+          .from('decision_assumptions')
+          .select(`
+            assumption_id,
+            decisions (
+              id,
+              title,
+              lifecycle,
+              organization_id
+            )
+          `)
+          .in('assumption_id', assumptionIds);
 
-      if (linksError) throw linksError;
+        if (linksError) throw linksError;
+        
+        // Filter to only include decisions from the current organization
+        links = (linksData || []).filter((link: any) => 
+          link.decisions?.organization_id === organizationId
+        );
+      }
 
       // Filter by scope if requested
       let filteredAssumptions = assumptions || [];
@@ -235,10 +247,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
           hasDeprecatedDecisions,
           allDecisionsDeprecated,
           deprecatedDecisionCount: deprecatedDecisions.length,
-          deprecationWarning: hasDeprecatedDecisions 
-            ? allDecisionsDeprecated
-              ? `All ${deprecatedDecisions.length} linked decision(s) are deprecated. This assumption should be marked as BROKEN.`
-              : `${deprecatedDecisions.length} of ${impactedDecisions.length} linked decision(s) are deprecated.`
+          deprecationWarning: allDecisionsDeprecated
+            ? `All ${deprecatedDecisions.length} linked decision(s) are deprecated. This assumption should be marked as BROKEN.`
             : undefined
         };
       });

@@ -22,7 +22,7 @@ export class AssumptionValidationService {
   static async validateStatusChange(
     assumptionId: string,
     newStatus: 'VALID' | 'SHAKY' | 'BROKEN',
-    oldStatus: 'VALID' | 'SHAKY' | 'BROKEN'
+    _oldStatus: 'VALID' | 'SHAKY' | 'BROKEN'
   ): Promise<ValidationResult> {
     try {
       const db = getDatabase();
@@ -267,6 +267,25 @@ export class AssumptionValidationService {
     try {
       const db = getDatabase();
 
+      // First, get the decision's organization_id
+      const { data: decision, error: decisionError } = await db
+        .from('decisions')
+        .select('organization_id')
+        .eq('id', decisionId)
+        .single();
+
+      if (decisionError) {
+        logger.error('Failed to get decision organization', { decisionId, error: decisionError });
+        return;
+      }
+
+      if (!decision) {
+        logger.info('Decision not found', { decisionId });
+        return;
+      }
+
+      const organizationId = decision.organization_id;
+
       // Get all DECISION_SPECIFIC assumptions linked to this decision
       const { data: links, error: linksError } = await db
         .from('decision_assumptions')
@@ -276,7 +295,8 @@ export class AssumptionValidationService {
             id,
             description,
             scope,
-            status
+            status,
+            organization_id
           )
         `)
         .eq('decision_id', decisionId);
@@ -288,25 +308,27 @@ export class AssumptionValidationService {
         return;
       }
 
-      // Filter to only DECISION_SPECIFIC assumptions (or NULL/missing scope - treat as decision-specific)
+      // Filter to only DECISION_SPECIFIC assumptions from the same organization
       const decisionSpecificAssumptions = links
         .filter((link: any) => 
-          link.assumptions?.scope === 'DECISION_SPECIFIC' || 
-          !link.assumptions?.scope || 
-          link.assumptions?.scope === null
+          link.assumptions?.organization_id === organizationId &&
+          (link.assumptions?.scope === 'DECISION_SPECIFIC' || 
+           !link.assumptions?.scope || 
+           link.assumptions?.scope === null)
         )
         .map((link: any) => link.assumptions);
 
       logger.info(`Checking ${decisionSpecificAssumptions.length} decision-specific assumptions for deprecation`, {
         decisionId,
-        note: 'Including assumptions with NULL/missing scope'
+        organizationId,
+        note: 'Filtered to same organization only'
       });
 
-      // For each assumption, check if ALL linked decisions are deprecated
+      // For each assumption, check if ALL linked decisions (in same org) are deprecated
       for (const assumption of decisionSpecificAssumptions) {
         if (!assumption) continue;
 
-        // Get all decisions linked to this assumption
+        // Get all decisions linked to this assumption, filtering by organization
         const { data: allLinks, error: allLinksError } = await db
           .from('decision_assumptions')
           .select(`
@@ -314,7 +336,8 @@ export class AssumptionValidationService {
             decisions (
               id,
               title,
-              lifecycle
+              lifecycle,
+              organization_id
             )
           `)
           .eq('assumption_id', assumption.id);
@@ -329,9 +352,18 @@ export class AssumptionValidationService {
 
         if (!allLinks || allLinks.length === 0) continue;
 
-        // Check if ALL linked decisions are truly deprecated (RETIRED)
+        // Filter to only include decisions from the same organization
+        const orgLinks = allLinks.filter((link: any) => 
+          link.decisions?.organization_id === organizationId
+        );
+
+        if (orgLinks.length === 0) continue;
+
+        if (orgLinks.length === 0) continue;
+
+        // Check if ALL linked decisions (in same org) are truly deprecated (RETIRED)
         // Note: INVALIDATED decisions can recover, so we don't treat them as deprecated
-        const allDeprecated = allLinks.every((link: any) => 
+        const allDeprecated = orgLinks.every((link: any) => 
           link.decisions?.lifecycle === 'RETIRED'
         );
 
@@ -353,7 +385,8 @@ export class AssumptionValidationService {
           } else {
             logger.info(`Deprecated assumption: ${assumption.description.substring(0, 60)}...`, {
               assumptionId: assumption.id,
-              reason: 'All linked decisions are retired (permanently deprecated)'
+              organizationId,
+              reason: 'All linked decisions (in same org) are retired (permanently deprecated)'
             });
 
             // Check if notification already exists for this assumption deprecation
@@ -377,7 +410,8 @@ export class AssumptionValidationService {
                 assumptionId: assumption.id,
                 metadata: {
                   reason: 'all_decisions_retired',
-                  retiredDecisionCount: allLinks.length
+                  retiredDecisionCount: orgLinks.length,
+                  organizationId
                 }
               });
             } else {
@@ -385,15 +419,16 @@ export class AssumptionValidationService {
             }
           }
         } else {
-          // At least one non-retired decision - keep assumption active
+          // At least one non-retired decision (in same org) - keep assumption active
           // Note: INVALIDATED decisions can still recover, so we keep their assumptions
-          const activeCount = allLinks.filter((link: any) => 
+          const activeCount = orgLinks.filter((link: any) => 
             link.decisions?.lifecycle !== 'RETIRED'
           ).length;
 
           logger.info(`Keeping assumption active: ${activeCount} active decision(s) still using it`, {
             assumptionId: assumption.id,
-            totalDecisions: allLinks.length,
+            organizationId,
+            totalDecisions: orgLinks.length,
             activeDecisions: activeCount
           });
         }

@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@utils/logger';
 import { AuthRequest } from '@middleware/auth';
 import { AssumptionValidationService } from '@services/assumption-validation-service';
+import { EvaluationService } from '@services/evaluation-service';
 
 export class DecisionController {
   private engine: DeterministicEngine;
@@ -279,15 +280,32 @@ export class DecisionController {
   /**
    * POST /api/decisions/:id/evaluate
    * Trigger manual evaluation of a decision
+   * 
+   * Query params:
+   * - force: boolean (optional) - Force evaluation even if not needed
+   * - check: boolean (optional) - Only check if evaluation is needed, don't evaluate
    */
   async evaluate(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const decisionId = req.params.id;
+      const force = req.query.force === 'true';
+      const checkOnly = req.query.check === 'true';
       const db = getAdminDatabase();
 
-      logger.info(`🔄 Starting evaluation for decision: ${decisionId}`);
+      logger.info(`🔄 Evaluation request for decision: ${decisionId}`, { force, checkOnly });
 
-      // Fetch decision
+      // If check-only mode, just return whether evaluation is needed
+      if (checkOnly) {
+        const check = await EvaluationService.needsEvaluation(decisionId);
+        return res.json({
+          needsEvaluation: check.needsEvaluation,
+          reason: check.reason,
+          lastEvaluatedAt: check.lastEvaluatedAt,
+          hoursSinceEval: check.hoursSinceEval
+        });
+      }
+
+      // Fetch decision for verification
       const { data: decision, error: decisionError } = await db
         .from('decisions')
         .select('*')
@@ -299,176 +317,20 @@ export class DecisionController {
         return res.status(404).json({ error: 'Decision not found' });
       }
 
-      logger.info(`Found decision: ${decision.title}`);
+      // Use smart evaluation service
+      const result = await EvaluationService.evaluateIfNeeded(decisionId, force);
 
-      // Fetch assumptions linked to this decision
-      const { data: decisionAssumptions } = await db
-        .from('decision_assumptions')
-        .select(`
-          assumption_id,
-          assumptions (
-            id,
-            description,
-            status,
-            scope,
-            created_at,
-            validated_at,
-            metadata
-          )
-        `)
-        .eq('decision_id', decisionId);
-
-      const assumptions = (decisionAssumptions || [])
-        .map((da: any) => da.assumptions)
-        .filter(Boolean)
-        .map((a: any) => ({
-          ...a,
-          scope: a.scope || 'DECISION_SPECIFIC', // Default to decision-specific if not set
-          isUniversal: false
-        }));
-
-      // Fetch universal assumptions (they apply to all decisions)
-      const { data: universalAssumptions } = await db
-        .from('assumptions')
-        .select('*')
-        .eq('scope', 'UNIVERSAL');
-
-      const universalWithFlag = (universalAssumptions || []).map(a => ({
-        ...a,
-        isUniversal: true
-      }));
-
-      const allAssumptions = [...assumptions, ...universalWithFlag];
-
-      // Fetch constraints
-      const { data: decisionConstraints } = await db
-        .from('decision_constraints')
-        .select(`
-          constraint_id,
-          constraints (
-            id,
-            name,
-            description,
-            constraint_type,
-            rule_expression,
-            is_immutable,
-            created_at
-          )
-        `)
-        .eq('decision_id', decisionId);
-
-      const constraints = (decisionConstraints || [])
-        .map((dc: any) => dc.constraints)
-        .filter(Boolean);
-
-      logger.info(`📋 Evaluation context:`);
-      logger.info(`   - Decision-specific assumptions: ${assumptions.length}`);
-      logger.info(`   - Universal assumptions: ${(universalAssumptions || []).length}`);
-      logger.info(`   - Total assumptions: ${allAssumptions.length}`);
-      logger.info(`   - Broken assumptions: ${allAssumptions.filter(a => a.status === 'BROKEN').length}`);
-      logger.info(`   - VALID assumptions: ${allAssumptions.filter(a => a.status === 'VALID').length}`);
-      logger.info(`   - SHAKY assumptions: ${allAssumptions.filter(a => a.status === 'SHAKY').length}`);
-      allAssumptions.forEach(a => {
-        logger.info(`     → ${a.scope || 'DECISION_SPECIFIC'}: ${a.status} - ${a.description.substring(0, 50)}...`);
-      });
-      logger.info(`   - Constraints: ${constraints.length}`);
-
-      // Fetch dependencies - get the actual decision records
-      const { data: dependencyRelations } = await db
-        .from('dependencies')
-        .select('*')
-        .or(`source_decision_id.eq.${decisionId},target_decision_id.eq.${decisionId}`);
-
-      // Fetch the actual decision records that this decision depends on
-      const dependencyIds = (dependencyRelations || [])
-        .filter((d: any) => d.source_decision_id === decisionId)
-        .map((d: any) => d.target_decision_id);
-
-      let dependencyDecisions: any[] = [];
-      if (dependencyIds.length > 0) {
-        const { data: depDecisions } = await db
-          .from('decisions')
-          .select('*')
-          .in('id', dependencyIds);
-        dependencyDecisions = depDecisions || [];
+      // If evaluation was skipped (not needed)
+      if (result === null) {
+        logger.info(`Evaluation skipped for decision ${decisionId} (not needed)`);
+        return res.json({
+          decision,
+          skipped: true,
+          message: 'Evaluation not needed - decision is fresh'
+        });
       }
 
-      // Build evaluation input
-      const evaluationInput = {
-        decision: {
-          id: decision.id,
-          title: decision.title,
-          description: decision.description,
-          lifecycle: decision.lifecycle,
-          healthSignal: decision.health_signal,
-          lastReviewedAt: decision.last_reviewed_at ? new Date(decision.last_reviewed_at) : new Date(decision.created_at),
-          createdAt: new Date(decision.created_at),
-          expiryDate: decision.expiry_date ? new Date(decision.expiry_date) : undefined,
-          metadata: decision.metadata || {}
-        },
-        assumptions: allAssumptions.map((a: any) => ({
-          id: a.id,
-          description: a.description,
-          status: a.status,
-          scope: a.scope || 'DECISION_SPECIFIC',
-          isUniversal: a.isUniversal || false,
-          createdAt: a.created_at ? new Date(a.created_at) : new Date(),
-          validatedAt: a.validated_at ? new Date(a.validated_at) : undefined,
-          metadata: a.metadata || {}
-        })),
-        constraints: constraints.map((c: any) => ({
-          id: c.id,
-          name: c.name || c.constraint_name || '',
-          description: c.description || '',
-          constraintType: c.constraint_type || 'OTHER',
-          ruleExpression: c.rule_expression || c.rule_definition,
-          isImmutable: c.is_immutable !== false,
-          createdAt: c.created_at ? new Date(c.created_at) : new Date(),
-          constraint_name: c.name || c.constraint_name,
-          constraint_type: c.constraint_type,
-          rule_definition: c.rule_expression || c.rule_definition,
-          scope: c.scope
-        })),
-        dependencies: dependencyDecisions.map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          description: d.description,
-          lifecycle: d.lifecycle,
-          healthSignal: d.health_signal,
-          lastReviewedAt: d.last_reviewed_at ? new Date(d.last_reviewed_at) : new Date(d.created_at),
-          createdAt: new Date(d.created_at),
-          expiryDate: d.expiry_date ? new Date(d.expiry_date) : undefined,
-          metadata: d.metadata || {}
-        })),
-        currentTimestamp: getCurrentTime()
-      };
-
-      // Run evaluation engine
-      const result = this.engine.evaluate(evaluationInput);
-
-      logger.info(`📊 Evaluation result:`);
-      logger.info(`   - Old health: ${decision.health_signal}`);
-      logger.info(`   - New health: ${result.newHealthSignal}`);
-      logger.info(`   - Health change: ${result.newHealthSignal - decision.health_signal}`);
-      logger.info(`   - Old lifecycle: ${decision.lifecycle}`);
-      logger.info(`   - New lifecycle: ${result.newLifecycle}`);
-      logger.info(`   - Invalidated reason: ${result.invalidatedReason || 'none'}`);
-      logger.info(`   - Changes detected: ${result.changesDetected}`);
-
-      // Update decision with new health and lifecycle
-      const { error: updateError } = await db
-        .from('decisions')
-        .update({
-          health_signal: result.newHealthSignal,
-          lifecycle: result.newLifecycle,
-          invalidated_reason: result.invalidatedReason || null
-        })
-        .eq('id', decisionId);
-
-      if (updateError) {
-        logger.error(`Failed to update decision after evaluation: ${updateError.message}`);
-        return res.status(500).json({ error: 'Failed to update decision' });
-      }
+      logger.info(`Decision ${decisionId} evaluated successfully`);
 
       // Record in evaluation history
       await db.from('evaluation_history').insert({
@@ -856,6 +718,67 @@ export class DecisionController {
       if (error) throw error;
       return res.json(data || []);
     } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/batch-evaluate
+   * Batch evaluate multiple decisions
+   * 
+   * Request body:
+   * - decisionIds: string[] (optional) - Specific decision IDs to evaluate
+   * - force: boolean (optional) - Force evaluation even if not needed
+   * 
+   * If decisionIds not provided, evaluates all decisions  that need it for the org
+   */
+  async batchEvaluate(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const { decisionIds, force } = req.body;
+
+      let idsToEvaluate: string[];
+
+      if (decisionIds && Array.isArray(decisionIds)) {
+        // Evaluate specific decisions
+        idsToEvaluate = decisionIds;
+      } else {
+        // Get all decisions needing evaluation for this org
+        const needsEval = await EvaluationService.getDecisionsNeedingEvaluation(
+          organizationId,
+          24, // stale after 24 hours
+          100 // max 100 at once
+        );
+        idsToEvaluate = needsEval.map(d => d.decisionId);
+      }
+
+      if (idsToEvaluate.length === 0) {
+        return res.json({
+          evaluated: 0,
+          skipped: 0,
+          failed: 0,
+          message: 'No decisions need evaluation'
+        });
+      }
+
+      logger.info(`Batch evaluating ${idsToEvaluate.length} decision(s)`, {
+        organizationId,
+        force: force || false
+      });
+
+      // Run batch evaluation
+      const result = await EvaluationService.evaluateBatch(idsToEvaluate, force);
+
+      return res.json({
+        ...result,
+        total: idsToEvaluate.length
+      });
+    } catch (error) {
+      logger.error('Batch evaluation failed', { error });
       return next(error);
     }
   }
