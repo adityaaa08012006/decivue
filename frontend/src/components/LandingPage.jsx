@@ -5,6 +5,7 @@ import ClickSpark from './ClickSpark';
 import ScrollFloat from './ScrollFloat';
 import Squares from './Squares';
 import ScrollVelocity from './ScrollVelocity';
+import { DecisionFlowGraph } from './DecisionFlowGraph';
 
 const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -212,6 +213,28 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
         </div>
       </section>
       
+      {/* Decision Flow Section (Swapped) */}
+      <section className="relative py-20 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col items-center mb-12">
+             <div className="inline-block mb-3">
+              <div className="text-[#1d4ed8] font-semibold text-xs tracking-wider uppercase flex items-center gap-2">
+                <div className="w-7 h-[1px] bg-[#1d4ed8]" />
+                Visual Decision Tracking
+              </div>
+            </div>
+            <h2 className="text-[2.5rem] font-bold mb-3 text-gray-900">Decision Flow</h2>
+            <p className="text-base text-gray-600 max-w-2xl text-center leading-relaxed">
+              Track each decision lifecycle as conditions evolve. Monitor key milestones, identify risks early, and understand the complete journey from creation to completion.
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <DecisionFlowGraph />
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="relative py-16 px-6 md:px-12">
         <div className="max-w-6xl mx-auto">
@@ -247,7 +270,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
             <FeatureCard 
               icon={<TrendingUp className="w-8 h-8" />}
               title="Analyze Impact"
-              description="Visualize how a change in one decision could ripple through your organization."
+              description="Simulate potential outcomes before committing resources."
               link="View Change Simulator"
             />
           </div>
@@ -377,54 +400,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
         </div>
       </section>
       
-      {/* Decision Flow Section */}
-      <section className="relative py-16 px-6 md:px-12">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold mb-3">Decision Flow</h2>
-            <p className="text-gray-400">Track each decision lifecycle as conditions evolve</p>
-          </div>
-          
-          <div className="relative bg-gradient-to-br from-gray-900 to-black rounded-3xl p-10 border border-white/10">
-            {/* Timeline */}
-            <div className="flex items-center justify-between mb-7">
-              {['10 Oct', '11 Oct', '11/1PM', '11 / 5PM', '11/10PM', '12/1AM', '13/1AM'].map((date, i) => (
-                <div key={i} className="text-xs text-gray-500 font-mono">{date}</div>
-              ))}
-            </div>
-            
-            {/* Flow Chart */}
-            <div className="relative h-56">
-              <svg className="w-full h-full" viewBox="0 0 1000 200" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                    <stop offset="50%" stopColor="#3b82f6" stopOpacity="1" />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.5" />
-                  </linearGradient>
-                </defs>
-                <path 
-                  d="M 0 150 Q 150 140, 200 120 T 400 100 T 600 80 T 800 90 T 1000 70" 
-                  fill="none" 
-                  stroke="url(#lineGradient)" 
-                  strokeWidth="3"
-                />
-                {[0, 200, 400, 600, 800, 1000].map((x, i) => (
-                  <circle 
-                    key={i}
-                    cx={x} 
-                    cy={150 - i * 15} 
-                    r="6" 
-                    fill="#3b82f6" 
-                    className="animate-pulse"
-                    style={{ animationDelay: `${i * 0.2}s` }}
-                  />
-                ))}
-              </svg>
-            </div>
-          </div>
-        </div>
-      </section>
+
       
       {/* Testimonials Section */}
       <section className="relative py-16 px-6 md:px-12 bg-gradient-to-b from-[#f6f9ff] to-transparent">
@@ -554,7 +530,11 @@ const FeatureCard = ({ icon, title, description, link }) => (
       </div>
       
       <h3 className="text-xl font-bold mb-3">{title}</h3>
-      <p className="text-gray-400 mb-5 leading-relaxed">{description}</p>
+      {typeof description === 'string' ? (
+        <p className="text-gray-400 mb-5 leading-relaxed">{description}</p>
+      ) : (
+        <div className="mb-5">{description}</div>
+      )}
       
       <a href="#" className="inline-flex items-center gap-2 text-primary-accent font-semibold hover:gap-3 transition-all">
         {link}
