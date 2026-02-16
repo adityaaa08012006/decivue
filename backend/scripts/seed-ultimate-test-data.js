@@ -70,6 +70,11 @@ async function cleanupTestData(organizationId) {
     .eq('organization_id', organizationId);
 
   await supabase
+    .from('decision_conflicts')
+    .delete()
+    .eq('organization_id', organizationId);
+
+  await supabase
     .from('assumption_conflicts')
     .delete()
     .eq('organization_id', organizationId);
@@ -78,7 +83,6 @@ async function cleanupTestData(organizationId) {
     .from('decisions')
     .delete()
     .eq('organization_id', organizationId);
-  
   await supabase
     .from('assumptions')
     .delete()
@@ -905,7 +909,65 @@ async function seedUltimateTestData() {
     console.log(`✅ Created ${createdTensions.length} decision tensions\n`);
 
     // ========================================
-    // 10. CREATE DECISION SIGNALS
+    // 10. CREATE DECISION CONFLICTS
+    // ========================================
+    console.log('⚔️  Creating decision conflicts...');
+
+    // Helper function to ensure decision_a_id < decision_b_id
+    const createConflict = (id1, id2, type, score, explanation, metadata) => {
+      const [decision_a_id, decision_b_id] = id1 < id2 ? [id1, id2] : [id2, id1];
+      return {
+        decision_a_id,
+        decision_b_id,
+        conflict_type: type,
+        confidence_score: score,
+        explanation,
+        organization_id: organizationId,
+        metadata,
+      };
+    };
+
+    const conflictsData = [
+      createConflict(
+        decisionMap['Reduce Cloud Infrastructure'].id,
+        decisionMap['Adopt Kubernetes for'].id,
+        'CONTRADICTORY',
+        0.95,
+        'These decisions directly contradict each other. Reducing cloud infrastructure conflicts with adopting Kubernetes, which requires significant cloud resources and infrastructure investment.',
+        { detected_by: 'ai_analysis', estimated_cost_impact: 200000 }
+      ),
+      createConflict(
+        decisionMap['Expand to European'].id,
+        decisionMap['Reduce Cloud Infrastructure'].id,
+        'OBJECTIVE_UNDERMINING',
+        0.78,
+        'Expanding to European markets requires robust cloud infrastructure across regions. Reducing cloud infrastructure undermines the ability to effectively serve European customers with low latency.',
+        { detected_by: 'ai_analysis', latency_impact: 'high' }
+      ),
+      createConflict(
+        decisionMap['Adopt GraphQL API'].id,
+        decisionMap['Pivot to Mobile-First'].id,
+        'RESOURCE_COMPETITION',
+        0.65,
+        'Both initiatives compete for the same engineering team resources. The complexity of implementing GraphQL conflicts with the need to focus engineering efforts on mobile-first development.',
+        { detected_by: 'ai_analysis', shared_resource: 'backend_team' }
+      ),
+    ];
+
+    const { data: createdDecisionConflicts, error: decisionConflictsError } = await supabase
+      .from('decision_conflicts')
+      .insert(conflictsData)
+      .select();
+
+    if (decisionConflictsError) {
+      console.error('❌ Error creating decision conflicts:', decisionConflictsError);
+      return;
+    }
+
+    console.log(`✅ Created ${createdDecisionConflicts.length} decision conflicts\n`);
+
+    // ========================================
+    // 11. CREATE DECISION SIGNALS
     // ========================================
     console.log('📡 Creating decision signals...');
 
@@ -988,7 +1050,7 @@ async function seedUltimateTestData() {
     console.log(`✅ Created ${createdSignals.length} decision signals\n`);
 
     // ========================================
-    // 11. CREATE NOTIFICATIONS
+    // 12. CREATE NOTIFICATIONS
     // ========================================
     console.log('🔔 Creating notifications...');
 
@@ -1072,7 +1134,7 @@ async function seedUltimateTestData() {
     console.log(`✅ Created ${createdNotifications.length} notifications\n`);
 
     // ========================================
-    // 12. CREATE EVALUATION HISTORY
+    // 13. CREATE EVALUATION HISTORY
     // ========================================
     console.log('📜 Creating evaluation history (audit trail)...');
 
@@ -1176,6 +1238,9 @@ async function seedUltimateTestData() {
     console.log(`   ✅ ${createdTensions.length} Decision Tensions (conflicts)`);
     console.log(`      • LOW, MEDIUM, HIGH severities\n`);
     
+    console.log(`   ✅ ${createdDecisionConflicts.length} Decision Conflicts (AI-detected)`);
+    console.log(`      • CONTRADICTORY, OBJECTIVE_UNDERMINING, RESOURCE_COMPETITION types\n`);
+    
     console.log(`   ✅ ${createdSignals.length} Decision Signals`);
     console.log(`      • SIGNAL, RISK, NOTE, PROGRESS types\n`);
     
@@ -1200,6 +1265,7 @@ async function seedUltimateTestData() {
     console.log('⚔️  CONFLICTS TO EXPLORE:');
     console.log('   • 3 Assumption conflicts requiring resolution');
     console.log('   • 4 Decision tensions (including HIGH severity)');
+    console.log('   • 3 Decision conflicts (AI-detected contradictions)');
     console.log('   • 2 Broken assumptions (linked to active decisions)\n');
 
     console.log('═══════════════════════════════════════════════════════════');
