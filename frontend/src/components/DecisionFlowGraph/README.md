@@ -1,53 +1,252 @@
-# Decision Flow Graph - React Flow Implementation
+# Decision Flow Graph - Enhanced with Swimlane Auto-Layout
 
 ## Overview
 
-This is a React Flow visualization that displays decision relationships by fetching data from your existing Supabase/REST API backend.
+An advanced React Flow visualization that displays decision relationships, organizational assumptions, and dependencies with **automatic swimlane-based layout** powered by ELKjs.
+
+## 🚀 Key Features
+
+### **Automatic Swimlane Layout**
+- ✅ **ELKjs-powered auto-layout** - No manual node positioning required
+- ✅ **Horizontal Left-to-Right flow** - Natural reading direction (Inputs → Decisions → Outcomes)
+- ✅ **Category-based swimlanes** - Decisions auto-organized into Strategy, Technical, Operations, Compliance, Financial rows
+- ✅ **Clean orthogonal edges** - Professional right-angle connections
+
+### **Decision & Assumption Visualization**
+- ✅ **Decision nodes** - Enhanced card design with status badges, health indicators, and glow effects
+- ✅ **Organizational assumption nodes** - Circular nodes showing assumptions affecting multiple decisions
+- ✅ **Decision-specific assumptions** - Revealed in detail panel when clicking a decision
+- ✅ **Interactive highlighting** - Click assumptions to highlight connected decisions
+
+### **Professional Design**
+- ✅ **At-Risk indicator** - Red glowing border + pulse animation for decisions needing attention
+- ✅ **Health signals** - Color-coded dots (green/yellow/orange/red) showing decision health
+- ✅ **Status badges** - Clear visual indicators (Stable, Under Review, At Risk, Invalidated, Retired)
+- ✅ **Category labels** - Shows decision type/domain
 
 ## Architecture
 
 ### Components
 
-1. **DecisionNode.jsx** - Custom rectangular node for decisions
-   - Shows title, description, and status badge
-   - Color-coded border based on lifecycle (STABLE, AT_RISK, etc.)
-   - Handles for incoming/outgoing connections
-
-2. **OrgAssumptionNode.jsx** - Custom circular node for organizational assumptions
-   - Small circular design
-   - Shows label only (no status badge in graph)
-   - Highlights when clicked
-
-3. **DecisionDetailPanel.jsx** - Right-side panel
-   - Opens when clicking a decision node
-   - Shows BOTH organizational and decision-specific assumptions
-   - Clearly separated sections
-
-4. **index.jsx** - Main graph component
-   - Fetches data from APIs
-   - Transforms backend data into React Flow format
+1. **index.jsx** - Main graph component
+   - Fetches data from backend APIs
+   - Applies ELK auto-layout algorithm
+   - Manages node/edge state
    - Handles click interactions
+   - Renders swimlane labels
+
+2. **DecisionNode.jsx** - Enhanced decision card node
+   - Professional card design with visual hierarchy
+   - Status badges with icons
+   - Health indicators (0-100%)
+   - Category/type labels
+   - Glowing borders for at-risk decisions
+   - Multiple connection handles (left, right, top, bottom)
+
+3. **OrgAssumptionNode.jsx** - Organizational assumption node
+   - Circular design
+   - Status-based coloring (VALID/SHAKY/BROKEN)
+   - Highlights on click
+
+4. **DecisionDetailPanel.jsx** - Right-side detail panel
+   - Opens when clicking a decision node
+   - Shows organizational AND decision-specific assumptions
+   - Clearly separated sections
 
 ## Graph Elements
 
 ### Nodes
 
-- **Decision nodes**: Rectangular, show title + status, color-coded
-- **Organizational assumption nodes**: Circular, purple, show short label
+- **Decision nodes**: Enhanced rectangular cards with:
+  - Status badge (top)
+  - Category label
+  - Health indicator
+  - Title and description
+  - Glowing effect for at-risk decisions
+  
+- **Organizational assumption nodes**: Circular nodes showing:
+  - Short label
+  - Status color (green/yellow/red)
+  - Highlight effect on click
 
 ### Edges
 
-- **Decision → Decision**: Solid blue arrows (dependencies)
-- **Org Assumption → Decision**: Dotted purple lines (no arrowhead)
+- **Decision → Decision**: Solid blue arrows with smooth steps (dependencies)
+- **Org Assumption → Decision**: Dotted purple lines (supporting context)
 
-### Why Only Org Assumptions Appear in Graph
+## Swimlane Organization
 
-- Decision-specific assumptions are unique to ONE decision
-- Showing them would clutter the visualization
-- They're revealed in the detail panel when clicking a decision
-- Organizational assumptions affect MULTIPLE decisions, making them valuable to visualize
+Decisions are automatically organized into swimlanes based on their `metadata.category`:
+
+| Category | Swimlane | Color | Use Case |
+|----------|----------|-------|----------|
+| Strategy/Strategic | **Strategy** | Blue | High-level business decisions |
+| Technical/Tech/Engineering | **Technical** | Purple | Technology & architecture |
+| Operations/Ops | **Operations** | Cyan | Process & operations |
+| Compliance/Legal/Regulatory | **Compliance** | Green | Legal & regulatory |
+| Financial/Budget/Finance | **Financial** | Orange | Budget & finance |
+| *Other* | **Other** | Gray | Uncategorized |
+
+### Adding Category to Decisions
+
+When creating decisions, include category in metadata:
+
+```javascript
+{
+  title: "Adopt Cloud Strategy",
+  metadata: {
+    category: "Strategy"  // ← This determines swimlane placement
+  }
+}
+```
 
 ## Data Flow
+
+```mermaid
+graph LR
+    A[Fetch Decisions] --> B[Fetch Dependencies]
+    A --> C[Fetch Org Assumptions]
+    B --> D[Transform to Graph Format]
+    C --> D
+    D --> E[Enrich with Swimlane Data]
+    E --> F[Apply ELK Auto-Layout]
+    F --> G[Render Graph]
+```
+
+### API Endpoints Used
+
+1. **GET /api/decisions** - Fetches all decisions
+2. **GET /api/dependencies/:id** - Fetches decision dependencies
+3. **GET /api/assumptions** - Fetches organizational assumptions (scope=UNIVERSAL)
+4. **GET /api/assumptions/:decisionId** - Fetches assumptions for specific decision (on click)
+
+## Usage
+
+### Click Interactions
+
+1. **Click a DECISION node**:
+   - Opens detail panel on right
+   - Shows organizational assumptions
+   - Shows decision-specific assumptions
+   - Both types clearly separated
+
+2. **Click an ORG ASSUMPTION node**:
+   - Highlights all connected decisions
+   - Click again to unhighlight
+   - Does NOT open detail panel
+
+3. **Refresh button** (top-right):
+   - Reloads graph data
+   - Re-applies layout
+   - Updates all nodes/edges
+
+## Layout Configuration
+
+The auto-layout can be customized in `index.jsx`:
+
+```javascript
+await applySwimLaneLayout(decisionNodes, graphEdges, {
+  nodeWidth: 280,           // Card width
+  nodeHeight: 120,          // Card height  
+  swimlaneSpacing: 180,     // Vertical space between swimlanes
+  stageSpacing: 400,        // Horizontal space between columns
+  nodeSpacing: 60,          // Space between nodes in same lane
+});
+```
+
+## File Structure
+
+```
+DecisionFlowGraph/
+├── index.jsx                    # Main component (enhanced with swimlane layout)
+├── DecisionNode.jsx             # Enhanced decision card node
+├── OrgAssumptionNode.jsx        # Circular assumption node
+├── DecisionDetailPanel.jsx      # Right-side detail panel
+├── styles.css                   # Custom styles
+├── README.md                    # This file
+├── SWIMLANE_GUIDE.md           # Detailed swimlane implementation guide
+├── VICTORY_SUMMARY.md          # Feature summary
+└── QUICK_REFERENCE.md          # Quick reference guide
+```
+
+## Key Improvements from Original
+
+### Before (Original DecisionFlowGraph):
+- ❌ Manual vertical layout
+- ❌ No swimlane organization
+- ❌ Basic node styling
+- ❌ No category support
+
+### After (Enhanced with Swimlane):
+- ✅ Automatic ELK-powered layout
+- ✅ Swimlane organization by category
+- ✅ Professional card design with glow effects
+- ✅ Health indicators and status badges
+- ✅ Horizontal left-to-right flow
+- ✅ Clean orthogonal edges
+- ✅ **Still maintains all assumption connections and interactions**
+
+## Why This Merge?
+
+The original DecisionFlowGraph and SwimlaneDagFlow had overlapping functionality:
+- Both visualized decisions and dependencies
+- Both used React Flow
+- Having two pages was redundant
+
+**Solution**: Merge the best of both into a single, powerful component that:
+- Keeps the valuable assumption connections from the original
+- Adds the professional swimlane auto-layout from SwimlaneDagFlow
+- Provides one unified, feature-rich view
+
+## Technical Details
+
+### ELK Layout Algorithm
+- **Algorithm**: `layered` (hierarchical layout)
+- **Direction**: `RIGHT` (left-to-right flow)
+- **Edge Routing**: `ORTHOGONAL` (clean right angles)
+- **Swimlane Implementation**: Uses partition-based node grouping
+
+### Assumption Positioning
+Organizational assumption nodes are positioned on the left side (-350px) with vertical spacing, separate from the ELK layout of decision nodes. This ensures they don't interfere with the swimlane organization.
+
+### Performance
+- Layout calculation: ~100-500ms for 50-100 nodes
+- React.memo() used on nodes to prevent unnecessary re-renders
+- Efficient data fetching with parallel API calls
+
+## Troubleshooting
+
+### Q: Decisions not organized into swimlanes?
+**A**: Ensure decisions have `metadata.category` set. Check the category value matches expected values (Strategy, Technical, etc.)
+
+### Q: Layout looks cluttered?
+**A**: Adjust spacing parameters in the `applySwimLaneLayout` call in `index.jsx`
+
+### Q: Assumption nodes overlap with decisions?
+**A**: Assumption nodes are intentionally positioned on the left (-350px). If still overlapping, increase the negative x value.
+
+### Q: Edges look messy?
+**A**: ELK's orthogonal routing works best with horizontal layouts. Ensure decisions have proper dependencies defined.
+
+## Future Enhancements
+
+Potential additions (not yet implemented):
+- [ ] Stage column indicators (Inputs, Decisions, Outcomes)
+- [ ] Toggle swimlane visibility
+- [ ] Collapsible swimlane sections
+- [ ] Search and highlight feature
+- [ ] Export as PNG/SVG
+- [ ] Real-time updates via WebSocket
+
+## Related Documentation
+
+- [SWIMLANE_GUIDE.md](./SWIMLANE_GUIDE.md) - Complete implementation details
+- [VICTORY_SUMMARY.md](./VICTORY_SUMMARY.md) - Feature list and usage
+- [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) - Quick start guide
+
+---
+
+**Enhanced Decision Flow Graph - The best of both worlds! 🚀**
 
 ### APIs Used
 

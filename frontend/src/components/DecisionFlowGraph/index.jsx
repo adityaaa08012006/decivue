@@ -6,6 +6,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -14,6 +15,12 @@ import DecisionNode from "./DecisionNode";
 import OrgAssumptionNode from "./OrgAssumptionNode";
 import DecisionDetailPanel from "./DecisionDetailPanel";
 import api from "../../services/api";
+import {
+  applySwimLaneLayout,
+  generateSwimlaneLanes,
+  enrichDecisionsWithSwimLaneData,
+} from "../../utils/swimlaneLayout";
+import { RefreshCw } from "lucide-react";
 
 /**
  * DecisionFlowGraph Component
@@ -47,6 +54,7 @@ const DecisionFlowGraph = () => {
 
   // UI state
   const [isLoading, setIsLoading] = useState(true);
+  const [isLayouting, setIsLayouting] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [selectedDecisionAssumptions, setSelectedDecisionAssumptions] =
@@ -55,6 +63,7 @@ const DecisionFlowGraph = () => {
       decisionSpecific: [],
     });
   const [highlightedAssumption, setHighlightedAssumption] = useState(null);
+  const [swimlaneLanes, setSwimlaneLanes] = useState([]);
 
   // Define custom node types
   const nodeTypes = useMemo(
@@ -67,24 +76,32 @@ const DecisionFlowGraph = () => {
 
   /**
    * Transform backend data into React Flow nodes and edges
+   * Enhanced with swimlane support while keeping assumption connections
    */
   const transformDataToGraph = useCallback(
     (decisions, orgAssumptions, dependencies, decisionAssumptionLinks) => {
       const graphNodes = [];
       const graphEdges = [];
 
-      // Create decision nodes (rectangular)
-      decisions.forEach((decision, index) => {
+      // Enrich decisions with swimlane and stage data
+      const enrichedDecisions = enrichDecisionsWithSwimLaneData(decisions, dependencies);
+
+      // Create decision nodes (rectangular) with swimlane data
+      enrichedDecisions.forEach((decision) => {
         graphNodes.push({
           id: `decision-${decision.id}`,
           type: "decision",
-          position: { x: 250, y: index * 200 }, // Basic vertical layout
+          position: { x: 0, y: 0 }, // Will be set by auto-layout
           data: {
             id: decision.id,
             title: decision.title,
             description: decision.description,
             lifecycle: decision.lifecycle,
             health_signal: decision.health_signal,
+            category: decision.metadata?.category || decision.category,
+            swimlane: decision.swimlane,
+            stage: decision.stage,
+            metadata: decision.metadata,
           },
         });
       });
@@ -95,7 +112,7 @@ const DecisionFlowGraph = () => {
         graphNodes.push({
           id: `org-assumption-${assumption.id}`,
           type: "orgAssumption",
-          position: { x: 50, y: index * 150 }, // Left side layout
+          position: { x: -300, y: index * 150 }, // Left side, will adjust with layout
           data: {
             id: assumption.id,
             label:
@@ -108,18 +125,32 @@ const DecisionFlowGraph = () => {
         });
       });
 
-      // Create decision-to-decision dependency edges (solid arrows)
+      // Create decision-to-decision dependency edges (solid arrows with better styling)
       dependencies.forEach((dep) => {
+        // Check if source or target decision is at risk/invalidated
+        const sourceDecision = enrichedDecisions.find(d => d.id === dep.depends_on_decision_id);
+        const targetDecision = enrichedDecisions.find(d => d.id === dep.decision_id);
+        
+        const isAtRisk = 
+          sourceDecision?.lifecycle === 'AT_RISK' || 
+          sourceDecision?.lifecycle === 'INVALIDATED' ||
+          targetDecision?.lifecycle === 'AT_RISK' || 
+          targetDecision?.lifecycle === 'INVALIDATED';
+        
+        const edgeColor = isAtRisk ? '#ef4444' : '#3b82f6'; // Red for at-risk, blue for normal
+        
         graphEdges.push({
           id: `dep-${dep.id}`,
           source: `decision-${dep.depends_on_decision_id}`,
           target: `decision-${dep.decision_id}`,
-          type: "default",
+          type: "smoothstep",
           animated: false,
-          style: { stroke: "#3b82f6", strokeWidth: 2 },
+          style: { stroke: edgeColor, strokeWidth: 2 },
           markerEnd: {
-            type: "arrowclosed",
-            color: "#3b82f6",
+            type: MarkerType.ArrowClosed,
+            color: edgeColor,
+            width: 20,
+            height: 20,
           },
         });
       });
@@ -130,7 +161,7 @@ const DecisionFlowGraph = () => {
           id: `link-${link.assumption_id}-${link.decision_id}`,
           source: `org-assumption-${link.assumption_id}`,
           target: `decision-${link.decision_id}`,
-          type: "default",
+          type: "smoothstep",
           animated: false,
           style: {
             stroke: "#a855f7",
@@ -147,7 +178,73 @@ const DecisionFlowGraph = () => {
   );
 
   /**
-   * Fetch all data needed for the graph
+   * Apply auto-layout to nodes using ELK
+   */
+  const layoutGraph = useCallback(
+    async (graphNodes, graphEdges) => {
+      setIsLayouting(true);
+
+      try {
+        // Separate decision nodes from assumption nodes for layout
+        const decisionNodes = graphNodes.filter((n) => n.type === "decision");
+        const assumptionNodes = graphNodes.filter(
+          (n) => n.type === "orgAssumption",
+        );
+
+        // Apply ELK swimlane layout to decision nodes only
+        const layoutedDecisionNodes = await applySwimLaneLayout(
+          decisionNodes,
+          graphEdges.filter((e) => e.id.startsWith("dep-")), // Only decision dependencies
+          {
+            nodeWidth: 280,
+            nodeHeight: 120,
+            swimlaneSpacing: 200,
+            stageSpacing: 450,
+            nodeSpacing: 100,
+          },
+        );
+
+        // Position assumption nodes on the left side with proper spacing
+        const positionedAssumptionNodes = assumptionNodes.map(
+          (node, index) => ({
+            ...node,
+            position: {
+              x: -350,
+              y: index * 180 + 100,
+            },
+          }),
+        );
+
+        // Generate swimlane background lanes
+        const lanes = generateSwimlaneLanes(layoutedDecisionNodes, {
+          swimlaneSpacing: 200,
+          swimlaneHeight: 170,
+        });
+
+        setSwimlaneLanes(lanes);
+
+        // Combine all nodes
+        const allLayoutedNodes = [
+          ...layoutedDecisionNodes,
+          ...positionedAssumptionNodes,
+        ];
+
+        setNodes(allLayoutedNodes);
+        setEdges(graphEdges);
+      } catch (err) {
+        console.error("Layout failed:", err);
+        // Fallback: use nodes without advanced layout
+        setNodes(graphNodes);
+        setEdges(graphEdges);
+      } finally {
+        setIsLayouting(false);
+      }
+    },
+    [setNodes, setEdges],
+  );
+
+  /**
+   * Fetch all data needed for the graph and apply layout
    */
   const fetchGraphData = useCallback(async () => {
     try {
@@ -238,15 +335,17 @@ const DecisionFlowGraph = () => {
         decisionAssumptionLinks,
       );
 
-      setNodes(graphNodes);
-      setEdges(graphEdges);
+      // Apply auto-layout
+      await layoutGraph(graphNodes, graphEdges);
+
+      console.log("✅ Graph layouted successfully");
     } catch (err) {
       console.error("❌ Error fetching graph data:", err);
       setError("Failed to load decision flow data. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [transformDataToGraph, setNodes, setEdges]);
+  }, [transformDataToGraph, layoutGraph]);
 
   // Fetch data on mount
   useEffect(() => {
@@ -381,7 +480,7 @@ const DecisionFlowGraph = () => {
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading decision flow...</p>
+          <p className="text-gray-600 font-medium">Loading decision flow...</p>
         </div>
       </div>
     );
@@ -406,6 +505,43 @@ const DecisionFlowGraph = () => {
 
   return (
     <div className="relative w-full h-screen bg-gray-50">
+      {/* Swimlane Background Labels */}
+      {swimlaneLanes.length > 0 && (
+        <div className="absolute top-0 left-0 z-10 p-4 pointer-events-none">
+          {swimlaneLanes.map((lane) => (
+            <div
+              key={lane.id}
+              className="mb-4 flex items-center"
+              style={{
+                marginTop: lane.y,
+                marginBottom: lane.height - 40,
+              }}
+            >
+              <div
+                className="px-3 py-1 rounded-r-lg text-white font-semibold text-sm shadow-md"
+                style={{ backgroundColor: lane.color }}
+              >
+                {lane.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Refresh Button */}
+      <div className="absolute top-4 right-4 z-10">
+        <button
+          onClick={fetchGraphData}
+          disabled={isLayouting}
+          className="p-2 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+          title="Refresh Graph"
+        >
+          <RefreshCw
+            className={`w-5 h-5 text-gray-700 ${isLayouting ? "animate-spin" : ""}`}
+          />
+        </button>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -414,18 +550,42 @@ const DecisionFlowGraph = () => {
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ 
+          padding: 0.2,
+          minZoom: 0.5,
+          maxZoom: 1.5,
+        }}
         minZoom={0.1}
         maxZoom={2}
+        defaultEdgeOptions={{
+          type: "smoothstep",
+        }}
       >
-        <Background color="#aaa" gap={16} />
+        <Background color="#e5e7eb" gap={20} />
         <Controls />
         <MiniMap
           nodeColor={(node) => {
-            if (node.type === "decision") return "#3b82f6";
+            if (node.type === "decision") {
+              const lifecycle = node.data?.lifecycle;
+              switch (lifecycle) {
+                case "STABLE":
+                  return "#10b981";
+                case "UNDER_REVIEW":
+                  return "#f59e0b";
+                case "AT_RISK":
+                  return "#ef4444";
+                case "INVALIDATED":
+                  return "#dc2626";
+                case "RETIRED":
+                  return "#6b7280";
+                default:
+                  return "#3b82f6";
+              }
+            }
             if (node.type === "orgAssumption") return "#a855f7";
             return "#6b7280";
           }}
+          maskColor="rgba(0, 0, 0, 0.1)"
         />
       </ReactFlow>
 
@@ -439,7 +599,7 @@ const DecisionFlowGraph = () => {
         />
       )}
 
-      {/* Instruction overlay (optional) */}
+      {/* Instruction overlay */}
       <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg max-w-sm z-10">
         <p className="text-sm text-gray-700 mb-2 font-semibold">
           💡 How to use:
@@ -454,6 +614,7 @@ const DecisionFlowGraph = () => {
           </li>
           <li>• Solid arrows = decision dependencies</li>
           <li>• Dotted lines = org assumption links</li>
+          <li>• Decisions auto-organized by category into swimlanes</li>
         </ul>
       </div>
     </div>

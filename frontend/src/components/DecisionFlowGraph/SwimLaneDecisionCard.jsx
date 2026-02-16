@@ -1,16 +1,27 @@
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Shield, AlertTriangle, XCircle, Clock, Archive } from "lucide-react";
+import { 
+  Shield, 
+  AlertTriangle, 
+  XCircle, 
+  Clock, 
+  TrendingDown,
+  CheckCircle,
+  Archive
+} from "lucide-react";
 
 /**
- * Enhanced Decision Node for React Flow
+ * Enhanced Decision Card for Swimlane DAG Layout
+ * 
+ * Features:
  * - Professional card design with visual hierarchy
- * - Glowing border for at-risk decisions
  * - Status badge with icon
+ * - Type label (category/swimlane)
  * - Health indicator
- * - Category label
+ * - Glowing border for at-risk decisions
+ * - Minimalist, flat design
  */
-const DecisionNode = memo(({ data, selected }) => {
+const SwimLaneDecisionCard = memo(({ data, selected }) => {
   const getStatusConfig = (lifecycle) => {
     switch (lifecycle) {
       case "STABLE":
@@ -80,7 +91,7 @@ const DecisionNode = memo(({ data, selected }) => {
   const StatusIcon = config.icon;
 
   // Get type label from metadata or swimlane
-  const typeLabel = data.category || data.metadata?.category || "Decision";
+  const typeLabel = data.category || data.metadata?.category || data.swimlane || "Decision";
 
   // Get health indicator color
   const getHealthColor = (health) => {
@@ -92,9 +103,9 @@ const DecisionNode = memo(({ data, selected }) => {
 
   const healthColor = getHealthColor(data.health_signal || 100);
 
-  // Apply glow effect for at-risk decisions (no animation)
+  // Apply glow effect for at-risk decisions
   const glowClass = config.glow 
-    ? "shadow-lg shadow-red-500/50 ring-2 ring-red-500 ring-opacity-50" 
+    ? "shadow-lg shadow-red-500/50 ring-2 ring-red-500 ring-opacity-50 animate-pulse" 
     : "";
 
   return (
@@ -119,23 +130,17 @@ const DecisionNode = memo(({ data, selected }) => {
         minHeight: 120,
       }}
     >
-      {/* Input Handles */}
+      {/* Input Handle (Left) */}
       <Handle
         type="target"
         position={Position.Left}
         className="w-3 h-3 !bg-blue-500 border-2 border-white"
         style={{ left: -6 }}
       />
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="w-3 h-3 !bg-purple-500 border-2 border-white"
-        style={{ top: -6 }}
-      />
 
       {/* Card Header */}
       <div className="p-3 border-b border-gray-200">
-        {/* Type Label and Health */}
+        {/* Type Label */}
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
             {typeLabel}
@@ -187,23 +192,29 @@ const DecisionNode = memo(({ data, selected }) => {
         )}
       </div>
 
-      {/* Output Handles */}
+      {/* Output Handle (Right) */}
       <Handle
         type="source"
         position={Position.Right}
         className="w-3 h-3 !bg-blue-500 border-2 border-white"
         style={{ right: -6 }}
       />
+
+      {/* Disabled Handles for Top/Bottom (prevents messy connections) */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ opacity: 0, pointerEvents: 'none' }}
+      />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-blue-500 border-2 border-white"
-        style={{ bottom: -6 }}
+        style={{ opacity: 0, pointerEvents: 'none' }}
       />
     </div>
   );
 });
 
-DecisionNode.displayName = "DecisionNode";
+SwimLaneDecisionCard.displayName = "SwimLaneDecisionCard";
 
-export default DecisionNode;
+export default SwimLaneDecisionCard;
