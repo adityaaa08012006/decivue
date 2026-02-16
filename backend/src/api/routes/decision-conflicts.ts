@@ -5,7 +5,7 @@
 
 import { Router } from "express";
 import { Response, NextFunction } from "express";
-import { getAuthenticatedDatabase } from "@data/database";
+import { getAuthenticatedDatabase, getAdminDatabase } from "@data/database";
 import { DecisionConflictDetector } from "../../services/decision-conflict-detector";
 import { logger } from "@utils/logger";
 import { AuthRequest } from "../../middleware/auth";
@@ -94,7 +94,7 @@ router.post(
       }
 
       // Detect conflicts
-      const detectedConflicts = detector.detectConflictsInList(
+      const detectedConflicts = await detector.detectConflictsInList(
         decisions.map((d) => ({
           id: d.id,
           title: d.title,
@@ -145,7 +145,9 @@ router.post(
               p_confidence_score: conflict.confidenceScore,
               p_explanation: conflict.explanation,
               p_organization_id: decisionData.organization_id,
-              p_metadata: {},
+              p_metadata: {
+                aiGenerated: conflict.aiGenerated || false,
+              },
             },
           );
 
@@ -242,15 +244,20 @@ router.put(
       // Track conflict resolution in version history for both decisions
       if (data) {
         try {
-          await adminDb.rpc('track_decision_conflict_resolution', {
+          await adminDb.rpc("track_decision_conflict_resolution", {
             p_conflict_id: id,
             p_resolution_action: resolutionAction,
-            p_resolution_notes: resolutionNotes || '',
-            p_resolved_by: userId
+            p_resolution_notes: resolutionNotes || "",
+            p_resolved_by: userId,
           });
-          logger.info("Conflict resolution tracked in version history", { conflictId: id });
+          logger.info("Conflict resolution tracked in version history", {
+            conflictId: id,
+          });
         } catch (trackError) {
-          logger.error("Failed to track conflict resolution in version history", { trackError });
+          logger.error(
+            "Failed to track conflict resolution in version history",
+            { trackError },
+          );
           // Don't fail the request if tracking fails
         }
       }

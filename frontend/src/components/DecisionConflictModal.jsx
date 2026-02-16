@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 import api from "../services/api";
 
 const DecisionConflictModal = ({ conflict, onClose, onResolved }) => {
@@ -148,9 +148,17 @@ const DecisionConflictModal = ({ conflict, onClose, onResolved }) => {
             </div>
             {conflict.explanation && (
               <div className="mt-3 pt-3 border-t border-orange-200">
-                <p className="text-sm font-semibold text-orange-900 mb-1">
-                  Explanation:
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-semibold text-orange-900">
+                    Explanation:
+                  </p>
+                  {conflict.metadata?.aiGenerated && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-semibold rounded-full">
+                      <Sparkles size={12} />
+                      AI Enhanced
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-orange-800">
                   {conflict.explanation}
                 </p>

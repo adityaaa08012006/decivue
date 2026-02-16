@@ -7,6 +7,7 @@ import {
   XCircle,
   Search,
   X,
+  Sparkles,
 } from "lucide-react";
 import api from "../services/api";
 import DecisionConflictModal from "./DecisionConflictModal";
@@ -370,9 +371,17 @@ const DecisionConflictsPage = () => {
                     <div className="p-6">
                       {/* Explanation */}
                       <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm font-semibold text-gray-700 mb-1">
-                          Conflict Explanation:
-                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold text-gray-700">
+                            Conflict Explanation:
+                          </p>
+                          {conflict.metadata?.aiGenerated && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-semibold rounded-full">
+                              <Sparkles size={12} />
+                              AI Enhanced
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-800">
                           {conflict.explanation}
                         </p>

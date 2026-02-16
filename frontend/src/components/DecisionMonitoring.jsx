@@ -21,6 +21,7 @@ import {
   Check,
   Archive,
   History,
+  Sparkles,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -1509,9 +1510,17 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                                       {conflict.other_decision?.title ||
                                         "Unknown Decision"}
                                     </p>
-                                    <p className="text-sm text-gray-700 mb-2">
-                                      {conflict.explanation}
-                                    </p>
+                                    <div className="mb-2">
+                                      {conflict.metadata?.aiGenerated && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-semibold rounded-full mb-1">
+                                          <Sparkles size={10} />
+                                          AI Enhanced
+                                        </span>
+                                      )}
+                                      <p className="text-sm text-gray-700">
+                                        {conflict.explanation}
+                                      </p>
+                                    </div>
                                     <p className="text-xs text-gray-600">
                                       Detected:{" "}
                                       {new Date(

@@ -3,6 +3,7 @@
  * Detects potential conflicts between decisions using semantic analysis
  */
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../utils/logger";
 
 export interface Decision {
@@ -25,6 +26,7 @@ export interface ConflictDetectionResult {
     | "MUTUALLY_EXCLUSIVE";
   confidenceScore: number; // 0.0 - 1.0
   explanation: string;
+  aiGenerated?: boolean; // Whether the explanation was enhanced by AI
 }
 
 export class DecisionConflictDetector {
@@ -86,13 +88,83 @@ export class DecisionConflictDetector {
     "shouldn't",
   ];
 
+  // Gemini AI for generating detailed explanations
+  private genAI: GoogleGenerativeAI | null = null;
+  private model: any = null;
+
+  constructor() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
+      try {
+        this.genAI = new GoogleGenerativeAI(apiKey);
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+        logger.info("Gemini AI initialized for conflict explanations");
+      } catch (error) {
+        logger.warn("Failed to initialize Gemini AI", { error });
+      }
+    } else {
+      logger.warn("GEMINI_API_KEY not found, using basic explanations");
+    }
+  }
+
+  /**
+   * Generate detailed explanation using Gemini LLM
+   */
+  private async generateDetailedExplanation(
+    decisionA: Decision,
+    decisionB: Decision,
+    conflictType: string,
+    basicExplanation: string,
+  ): Promise<{ explanation: string; aiGenerated: boolean }> {
+    if (!this.model) {
+      return { explanation: basicExplanation, aiGenerated: false };
+    }
+
+    try {
+      const prompt = `You are analyzing a conflict between two organizational decisions. Generate a clear, concise explanation (2-3 sentences) that answers:
+
+1. Which decisions are involved? (Use their titles)
+2. What aspect conflicts? (objective, resource, timeline, assumption, technical approach, etc.)
+3. Why is this inconsistent or problematic?
+
+Conflict Type: ${conflictType}
+
+Decision A:
+Title: ${decisionA.title}
+Description: ${decisionA.description || "N/A"}
+Category: ${decisionA.category || "N/A"}
+
+Decision B:
+Title: ${decisionB.title}
+Description: ${decisionB.description || "N/A"}
+Category: ${decisionB.category || "N/A"}
+
+Basic Detection: ${basicExplanation}
+
+Generate a professional, actionable explanation that clearly states the conflict without jargon.`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      if (text && text.length > 10) {
+        return { explanation: text.trim(), aiGenerated: true };
+      }
+
+      return { explanation: basicExplanation, aiGenerated: false };
+    } catch (error) {
+      logger.error("Failed to generate LLM explanation", { error });
+      return { explanation: basicExplanation, aiGenerated: false };
+    }
+  }
+
   /**
    * Detect conflicts between two decisions
    */
-  public detectConflict(
+  public async detectConflict(
     decisionA: Decision,
     decisionB: Decision,
-  ): ConflictDetectionResult | null {
+  ): Promise<ConflictDetectionResult | null> {
     // Don't check a decision against itself
     if (decisionA.id === decisionB.id) {
       return null;
@@ -127,7 +199,19 @@ export class DecisionConflictDetector {
           category: decisionA.category,
           confidence: structuredResult.confidenceScore,
         });
-        return structuredResult;
+        
+        const { explanation, aiGenerated } = await this.generateDetailedExplanation(
+          decisionA,
+          decisionB,
+          structuredResult.conflictType,
+          structuredResult.explanation,
+        );
+        
+        return {
+          ...structuredResult,
+          explanation,
+          aiGenerated,
+        };
       }
     }
 
@@ -147,7 +231,19 @@ export class DecisionConflictDetector {
         decisionB: decisionB.id,
         confidence: resourceResult.confidenceScore,
       });
-      return resourceResult;
+      
+      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
+        decisionA,
+        decisionB,
+        resourceResult.conflictType,
+        resourceResult.explanation,
+      );
+      
+      return {
+        ...resourceResult,
+        explanation,
+        aiGenerated,
+      };
     }
 
     // Strategy 2: Contradictory actions
@@ -163,7 +259,19 @@ export class DecisionConflictDetector {
         decisionB: decisionB.id,
         confidence: contradictoryResult.confidenceScore,
       });
-      return contradictoryResult;
+      
+      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
+        decisionA,
+        decisionB,
+        contradictoryResult.conflictType,
+        contradictoryResult.explanation,
+      );
+      
+      return {
+        ...contradictoryResult,
+        explanation,
+        aiGenerated,
+      };
     }
 
     // Strategy 3: Objective undermining
@@ -179,7 +287,19 @@ export class DecisionConflictDetector {
         decisionB: decisionB.id,
         confidence: underminingResult.confidenceScore,
       });
-      return underminingResult;
+      
+      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
+        decisionA,
+        decisionB,
+        underminingResult.conflictType,
+        underminingResult.explanation,
+      );
+      
+      return {
+        ...underminingResult,
+        explanation,
+        aiGenerated,
+      };
     }
 
     // Strategy 4: Premise invalidation (newer invalidates older)
@@ -195,7 +315,19 @@ export class DecisionConflictDetector {
         decisionB: decisionB.id,
         confidence: premiseResult.confidenceScore,
       });
-      return premiseResult;
+      
+      const { explanation, aiGenerated } = await this.generateDetailedExplanation(
+        decisionA,
+        decisionB,
+        premiseResult.conflictType,
+        premiseResult.explanation,
+      );
+      
+      return {
+        ...premiseResult,
+        explanation,
+        aiGenerated,
+      };
     }
 
     return null;
@@ -204,11 +336,11 @@ export class DecisionConflictDetector {
   /**
    * Detect conflicts in a list of decisions (compare all pairs)
    */
-  public detectConflictsInList(decisions: Decision[]): Array<{
+  public async detectConflictsInList(decisions: Decision[]): Promise<Array<{
     decisionA: Decision;
     decisionB: Decision;
     conflict: ConflictDetectionResult;
-  }> {
+  }>> {
     const conflicts: Array<{
       decisionA: Decision;
       decisionB: Decision;
@@ -217,7 +349,7 @@ export class DecisionConflictDetector {
 
     for (let i = 0; i < decisions.length; i++) {
       for (let j = i + 1; j < decisions.length; j++) {
-        const conflict = this.detectConflict(decisions[i], decisions[j]);
+        const conflict = await this.detectConflict(decisions[i], decisions[j]);
         if (conflict && conflict.confidenceScore >= 0.65) {
           // Lower threshold for decisions
           conflicts.push({
