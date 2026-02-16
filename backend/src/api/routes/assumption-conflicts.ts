@@ -5,10 +5,11 @@
 
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
-import { getDatabase } from '@data/database';
+import { getDatabase, getAdminDatabase } from '@data/database';
 import { AssumptionConflictDetector } from '../../services/assumption-conflict-detector';
 import { logger } from '@utils/logger';
 import { getCurrentTime } from './time-simulation';
+import { DeterministicEngine } from '@engine/index';
 
 const router = Router();
 const detector = new AssumptionConflictDetector();
@@ -173,7 +174,8 @@ router.put('/:id/resolve', async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ error: `Invalid resolution action. Must be one of: ${validActions.join(', ')}` });
     }
 
-    const db = getDatabase();
+    // Use admin database to bypass RLS for system operations
+    const db = getAdminDatabase();
 
     // Fetch the conflict to get assumption IDs
     const { data: conflict, error: fetchError } = await db
@@ -253,14 +255,147 @@ router.put('/:id/resolve', async (req: Request, res: Response, next: NextFunctio
         decisionIds: uniqueDecisionIds
       });
 
-      // Trigger evaluation for each affected decision
+      // Trigger evaluation for each affected decision using the deterministic engine
+      const engine = new DeterministicEngine();
+
       for (const decisionId of uniqueDecisionIds) {
         try {
-          await fetch(`http://localhost:3001/api/decisions/${decisionId}/evaluate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+          logger.info(`Re-evaluating decision ${decisionId} after conflict resolution`);
+          
+          // Fetch decision and all related data
+          const { data: decision } = await db
+            .from('decisions')
+            .select('*')
+            .eq('id', decisionId)
+            .single();
+
+          if (!decision) {
+            logger.warn(`Decision ${decisionId} not found for re-evaluation`);
+            continue;
+          }
+
+          // Fetch assumptions, constraints, and dependencies separately to avoid RLS issues
+          const { data: decisionAssumptions } = await db
+            .from('decision_assumptions')
+            .select('assumption_id')
+            .eq('decision_id', decisionId);
+
+          const assumptionIds = (decisionAssumptions || []).map(da => da.assumption_id);
+          
+          const [assumptionsResult, constraintsResult, dependenciesResult] = await Promise.all([
+            assumptionIds.length > 0 ? db.from('assumptions').select('*').in('id', assumptionIds) : Promise.resolve({ data: [] }),
+            db.from('decision_constraints')
+              .select('constraint_id')
+              .eq('decision_id', decisionId)
+              .then(async ({ data: dcData }) => {
+                const constraintIds = (dcData || []).map(dc => dc.constraint_id);
+                return constraintIds.length > 0 ? db.from('constraints').select('*').in('id', constraintIds) : { data: [] };
+              }),
+            db.from('dependencies')
+              .select('blocking_decision_id')
+              .eq('blocked_decision_id', decisionId)
+              .then(async ({ data: depData }) => {
+                const blockingIds = (depData || []).map(d => d.blocking_decision_id);
+                return blockingIds.length > 0 ? db.from('decisions').select('*').in('id', blockingIds) : { data: [] };
+              })
+          ]);
+
+          // Extract and map assumptions (keeping it simple)
+          const assumptions = (assumptionsResult.data || [])
+            .filter(Boolean)
+            .map((a: any) => ({
+              id: a.id,
+              description: a.description,
+              status: a.status,
+              scope: a.scope || 'DECISION_SPECIFIC',
+              isUniversal: a.scope === 'UNIVERSAL',
+              createdAt: a.created_at ? new Date(a.created_at) : new Date(),
+              validatedAt: a.validated_at ? new Date(a.validated_at) : undefined,
+              metadata: a.metadata || {}
+            }));
+
+          // Extract and map constraints
+          const constraints = (constraintsResult.data || [])
+            .filter(Boolean)
+            .map((c: any) => ({
+              id: c.id,
+              name: c.name || c.constraint_name || '',
+              description: c.description || '',
+              constraint_type: c.constraint_type || 'OTHER',
+              rule_expression: c.rule_expression || c.rule_definition,
+              is_immutable: c.is_immutable !== false
+            }));
+
+          // Extract and map dependencies (keeping it simple)
+          const dependencies = (dependenciesResult.data || [])
+            .filter(Boolean)
+            .map((dep: any) => ({
+              id: dep.id,
+              title: dep.title || '',
+              description: dep.description || '',
+              lifecycle: dep.lifecycle || 'ACTIVE',
+              healthSignal: typeof dep.health_signal === 'number' ? dep.health_signal : 100,
+              createdAt: dep.created_at ? new Date(dep.created_at) : new Date(),
+              lastReviewedAt: dep.last_reviewed_at ? new Date(dep.last_reviewed_at) : undefined,
+              expiryDate: dep.expiry_date ? new Date(dep.expiry_date) : undefined,
+              metadata: dep.metadata && typeof dep.metadata === 'object' ? dep.metadata : {}
+            }));
+
+          // Build evaluation input
+          const evaluationInput = {
+            decision: {
+              id: decision.id,
+              title: decision.title,
+              description: decision.description || '',
+              lifecycle: decision.lifecycle,
+              healthSignal: decision.health_signal,
+              lastReviewedAt: decision.last_reviewed_at ? new Date(decision.last_reviewed_at) : undefined,
+              createdAt: decision.created_at ? new Date(decision.created_at) : new Date(),
+              expiryDate: decision.expiry_date ? new Date(decision.expiry_date) : undefined,
+              metadata: decision.metadata && typeof decision.metadata === 'object' ? decision.metadata : {}
+            },
+            assumptions,
+            constraints,
+            dependencies,
+            currentTimestamp: getCurrentTime()
+          };
+
+          logger.info(`Evaluating decision ${decisionId}`, {
+            assumptionCount: assumptions.length,
+            constraintCount: constraints.length,
+            dependencyCount: dependencies.length
           });
-          logger.info(`Re-evaluated decision ${decisionId}`);
+
+          // Run evaluation (synchronous, not async)
+          let result;
+          try {
+            result = engine.evaluate(evaluationInput);
+          } catch (evalError: any) {
+            logger.error(`Engine evaluation failed for decision ${decisionId}`, { 
+              error: evalError.message,
+              stack: evalError.stack?.substring(0, 500)
+            });
+            throw evalError;
+          }
+
+          logger.info(`Evaluation complete for decision ${decisionId}`, {
+            newLifecycle: result.newLifecycle,
+            newHealthSignal: result.newHealthSignal
+          });
+
+          // Update decision directly
+          await db.from('decisions')
+            .update({
+              lifecycle: result.newLifecycle,
+              health_signal: result.newHealthSignal,
+              invalidated_reason: result.invalidatedReason || null
+            })
+            .eq('id', decisionId);
+
+          logger.info(`Re-evaluated decision ${decisionId}`, { 
+            lifecycle: result.newLifecycle,
+            healthSignal: result.newHealthSignal 
+          });
         } catch (evalError) {
           logger.error(`Failed to re-evaluate decision ${decisionId}`, { error: evalError });
         }

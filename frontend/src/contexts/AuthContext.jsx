@@ -66,63 +66,68 @@ export function AuthProvider({ children }) {
 
   // Initialize auth from localStorage
   useEffect(() => {
-    const storedSession = localStorage.getItem('decivue_session');
-    const storedUser = localStorage.getItem('decivue_user');
+    const initAuth = async () => {
+      const storedSession = localStorage.getItem('decivue_session');
+      const storedUser = localStorage.getItem('decivue_user');
 
-    if (storedSession && storedUser) {
-      try {
-        const parsedSession = JSON.parse(storedSession);
-        const parsedUser = JSON.parse(storedUser);
+      if (storedSession && storedUser) {
+        try {
+          const parsedSession = JSON.parse(storedSession);
+          const parsedUser = JSON.parse(storedUser);
 
-        // Set auth token for API calls
-        api.setAuthToken(parsedSession.access_token);
+          // Set auth token for API calls
+          api.setAuthToken(parsedSession.access_token);
 
-        // Check if token is expired or about to expire
-        const expiresAt = parsedSession.expires_at ? new Date(parsedSession.expires_at).getTime() : 0;
-        const now = Date.now();
-        const isExpired = expiresAt && now >= expiresAt;
-        const expiringInLessThan5Min = expiresAt && (expiresAt - now) < (5 * 60 * 1000);
+          // Check if token is expired or about to expire
+          const expiresAt = parsedSession.expires_at ? new Date(parsedSession.expires_at).getTime() : 0;
+          const now = Date.now();
+          const isExpired = expiresAt && now >= expiresAt;
+          const expiringInLessThan5Min = expiresAt && (expiresAt - now) < (5 * 60 * 1000);
 
-        if (isExpired || expiringInLessThan5Min) {
-          // Try to refresh the session immediately
-          console.log('🔄 Token expired or expiring soon, refreshing...');
-          refreshSession(parsedSession)
-            .then(success => {
-              if (success) {
-                // Fetch user profile after refresh
-                api.get('/auth/me')
-                  .then(response => {
-                    setUser(response.user);
-                  })
-                  .catch(() => logout())
-                  .finally(() => setLoading(false));
-              } else {
-                setLoading(false);
+          if (isExpired || expiringInLessThan5Min) {
+            // Try to refresh the session immediately
+            console.log('🔄 Token expired or expiring soon, refreshing...');
+            const success = await refreshSession(parsedSession);
+            if (success) {
+              // Fetch user profile after refresh
+              try {
+                const response = await api.get('/auth/me');
+                setUser(response.user);
+              } catch (err) {
+                console.error('Failed to fetch user after refresh:', err);
+                logout();
               }
-            });
-        } else {
-          // Verify token is still valid
-          api.get('/auth/me')
-            .then(response => {
+            }
+          } else {
+            // Verify token is still valid
+            try {
+              const response = await api.get('/auth/me');
               setUser(response.user);
               setSession(parsedSession);
-            })
-            .catch(() => {
-              // Token expired or invalid
+            } catch (err) {
+              // Token expired or invalid, or backend unavailable
+              console.warn('Failed to verify session, clearing auth:', err);
               logout();
-            })
-            .finally(() => {
-              setLoading(false);
-            });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to restore session:', error);
+          logout();
         }
-      } catch (error) {
-        console.error('Failed to restore session:', error);
-        logout();
-        setLoading(false);
       }
-    } else {
+      
       setLoading(false);
-    }
+    };
+
+    // Add timeout to prevent indefinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth initialization timeout, continuing...');
+      setLoading(false);
+    }, 3000);
+
+    initAuth().finally(() => {
+      clearTimeout(timeoutId);
+    });
   }, []);
 
   const login = async (email, password) => {

@@ -165,33 +165,51 @@ export class AssumptionValidationService {
     validation: ValidationResult
   ): Promise<void> {
     try {
+      const db = getDatabase();
+
       // Get linked decision IDs for context
       const linkedDecisionIds = assumption.decision_assumptions?.map(
         (da: any) => da.decision_id
       ) || [];
 
-      await NotificationService.create({
-        type: 'ASSUMPTION_BROKEN',
-        severity: 'WARNING',
-        title: '⚠️ Status Mismatch Detected',
-        message: `You marked "${assumption.description}" as ${newStatus}, but ${validation.reason}`,
-        assumptionId: assumption.id,
-        decisionId: linkedDecisionIds[0], // Use first linked decision
-        metadata: {
+      // Check if a similar notification already exists (same assumption, same type, not dismissed)
+      const { data: existingNotification } = await db
+        .from('notifications')
+        .select('id')
+        .eq('type', 'ASSUMPTION_BROKEN')
+        .eq('assumption_id', assumption.id)
+        .eq('is_dismissed', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Only create notification if one doesn't already exist
+      if (!existingNotification) {
+        await NotificationService.create({
+          type: 'ASSUMPTION_BROKEN',
+          severity: 'WARNING',
+          title: '⚠️ Status Mismatch Detected',
+          message: `You marked "${assumption.description}" as ${newStatus}, but ${validation.reason}`,
+          assumptionId: assumption.id,
+          decisionId: linkedDecisionIds[0], // Use first linked decision
+          metadata: {
+            manualStatus: newStatus,
+            suggestedStatus: validation.suggestedStatus,
+            confidence: validation.confidence,
+            reason: validation.reason,
+            linkedDecisions: linkedDecisionIds
+          }
+        });
+
+        logger.warn('Assumption status mismatch detected', {
+          assumptionId: assumption.id,
           manualStatus: newStatus,
           suggestedStatus: validation.suggestedStatus,
-          confidence: validation.confidence,
-          reason: validation.reason,
-          linkedDecisions: linkedDecisionIds
-        }
-      });
-
-      logger.warn('Assumption status mismatch detected', {
-        assumptionId: assumption.id,
-        manualStatus: newStatus,
-        suggestedStatus: validation.suggestedStatus,
-        reason: validation.reason
-      });
+          reason: validation.reason
+        });
+      } else {
+        logger.info(`Skipping duplicate validation warning for assumption ${assumption.id} - notification already exists`);
+      }
     } catch (error) {
       logger.error('Failed to create validation warning', { error });
     }
@@ -335,18 +353,33 @@ export class AssumptionValidationService {
               reason: 'All linked decisions are deprecated'
             });
 
-            // Optionally create a notification
-            await NotificationService.create({
-              type: 'ASSUMPTION_BROKEN',
-              severity: 'INFO',
-              title: '📋 Assumption Auto-Deprecated',
-              message: `"${assumption.description}" was marked as BROKEN because all decisions using it are deprecated.`,
-              assumptionId: assumption.id,
-              metadata: {
-                reason: 'all_decisions_deprecated',
-                deprecatedDecisionCount: allLinks.length
-              }
-            });
+            // Check if notification already exists for this assumption deprecation
+            const { data: existingNotification } = await db
+              .from('notifications')
+              .select('id')
+              .eq('type', 'ASSUMPTION_BROKEN')
+              .eq('assumption_id', assumption.id)
+              .eq('is_dismissed', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            // Only create notification if one doesn't already exist
+            if (!existingNotification) {
+              await NotificationService.create({
+                type: 'ASSUMPTION_BROKEN',
+                severity: 'INFO',
+                title: '📋 Assumption Auto-Deprecated',
+                message: `"${assumption.description}" was marked as BROKEN because all decisions using it are deprecated.`,
+                assumptionId: assumption.id,
+                metadata: {
+                  reason: 'all_decisions_deprecated',
+                  deprecatedDecisionCount: allLinks.length
+                }
+              });
+            } else {
+              logger.info(`Skipping duplicate notification for assumption ${assumption.id} - notification already exists`);
+            }
           }
         } else {
           // At least one active decision - keep assumption active

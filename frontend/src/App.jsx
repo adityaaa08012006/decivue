@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import LandingPage from './components/LandingPage';
+import OrganizationTypeSelector from './components/OrganizationTypeSelector';
+import TemplatePreview from './components/TemplatePreview';
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import Sidebar from "./components/Sidebar";
@@ -26,6 +29,10 @@ import api from "./services/api";
 
 function AppContent() {
   const { user, loading, logout, isLead } = useAuth();
+  const [showLanding, setShowLanding] = useState(true);
+  const [showOrgSelector, setShowOrgSelector] = useState(false);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [selectedOrgType, setSelectedOrgType] = useState(null);
   const [authView, setAuthView] = useState("login"); // 'login' or 'register'
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [currentView, setCurrentView] = useState("dashboard");
@@ -127,12 +134,100 @@ function AppContent() {
     );
   }
 
-  // Not authenticated - show login/register
+  // Not authenticated - show landing page, org selector, template preview, or login/register
   if (!user) {
-    if (authView === "login") {
-      return <LoginPage onNavigateToRegister={() => setAuthView("register")} />;
+    // Show organization type selector
+    if (showOrgSelector) {
+      return (
+        <OrganizationTypeSelector
+          onSelect={(orgType) => {
+            if (orgType.id === 'skip') {
+              setShowOrgSelector(false);
+              setShowLanding(false);
+              setAuthView('register');
+            } else {
+              setSelectedOrgType(orgType);
+              setShowOrgSelector(false);
+              setShowTemplatePreview(true);
+            }
+          }}
+          onBack={() => {
+            setShowOrgSelector(false);
+            setShowLanding(true);
+          }}
+        />
+      );
     }
-    return <RegisterPage onNavigateToLogin={() => setAuthView("login")} />;
+
+    // Show template preview
+    if (showTemplatePreview && selectedOrgType) {
+      return (
+        <TemplatePreview
+          orgType={selectedOrgType}
+          onContinue={() => {
+            setShowTemplatePreview(false);
+            setShowLanding(false);
+            setAuthView('register');
+          }}
+          onBack={() => {
+            setShowTemplatePreview(false);
+            setShowOrgSelector(true);
+          }}
+        />
+      );
+    }
+
+    // Show landing page
+    if (showLanding) {
+      return (
+        <LandingPage 
+          onGetStarted={() => {
+            setShowLanding(false);
+            setShowOrgSelector(true);
+          }}
+          onSeeDemo={() => {
+            setShowLanding(false);
+            setAuthView('login');
+          }}
+        />
+      );
+    }
+    
+    // Show login
+    if (authView === 'login') {
+      return (
+        <div>
+          <LoginPage onNavigateToRegister={() => setAuthView('register')} />
+          <button 
+            onClick={() => {
+              setShowLanding(true);
+              setShowOrgSelector(false);
+              setShowTemplatePreview(false);
+            }}
+            className="fixed top-6 left-6 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            ← Back to Home
+          </button>
+        </div>
+      );
+    }
+    
+    // Show register
+    return (
+      <div>
+        <RegisterPage onNavigateToLogin={() => setAuthView('login')} />
+        <button 
+          onClick={() => {
+            setShowLanding(true);
+            setShowOrgSelector(false);
+            setShowTemplatePreview(false);
+          }}
+          className="fixed top-6 left-6 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          ← Back to Home
+        </button>
+      </div>
+    );
   }
 
   // Authenticated - show main app
