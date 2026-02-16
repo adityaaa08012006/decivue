@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Clock, CheckCircle, AlertTriangle, XCircle, Chev
 import { decisionTemplates, getHealthConfig, getAssumptionConfig } from '../utils/organizationTemplates';
 import Aurora from './Aurora';
 import ClickSpark from './ClickSpark';
+import Squares from './Squares';
 
 const TemplatePreview = ({ orgType, onContinue, onBack }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -26,14 +27,28 @@ const TemplatePreview = ({ orgType, onContinue, onBack }) => {
       duration={400}
     >
     <div className="org-selector-page fixed inset-0 z-50 overflow-y-auto">
+      {/* Animated Squares Background */}
+      <div className="fixed inset-0 z-0">
+        <Squares
+          speed={0.28}
+          squareSize={40}
+          direction="diagonal"
+          borderColor="rgba(59, 130, 246, 0.4)"
+          hoverFillColor="rgba(59, 130, 246, 0.2)"
+        />
+      </div>
+      
       {/* Aurora Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
+      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] opacity-70">
         <Aurora
           colorStops={["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
           amplitude={0.5}
           blend={0.35}
         />
       </div>
+      
+      {/* Subtle overlay for depth */}
+      <div className="fixed inset-0 bg-white/20 pointer-events-none" />
       
       {/* Subtle Noise Texture Overlay */}
       <div className="fixed inset-0 noise-texture pointer-events-none" />

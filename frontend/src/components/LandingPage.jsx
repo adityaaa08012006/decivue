@@ -50,7 +50,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       <nav className="relative z-50 flex items-center justify-end px-10 py-3">
         <button
           onClick={onLogin}
-          className="px-5 py-2 bg-white/80 backdrop-blur-sm text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-white hover:border-gray-300 shadow-sm transition-all duration-300"
+          className="px-5 py-2 text-gray-700 font-semibold rounded-xl border border-gray-300 hover:border-gray-400 transition-all duration-300 opacity-60 hover:opacity-100 text-sm"
         >
           Login
         </button>

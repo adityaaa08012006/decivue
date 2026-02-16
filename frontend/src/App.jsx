@@ -209,7 +209,7 @@ function AppContent() {
               setShowOrgSelector(false);
               setShowTemplatePreview(false);
             }}
-            className="fixed top-6 left-6 text-sm text-gray-400 hover:text-white transition-colors"
+            className="fixed top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-50 cursor-pointer opacity-60 hover:opacity-100 px-3 py-1.5 rounded-lg text-sm"
           >
             ← Back to Home
           </button>
@@ -227,7 +227,7 @@ function AppContent() {
             setShowOrgSelector(false);
             setShowTemplatePreview(false);
           }}
-          className="fixed top-6 left-6 text-sm text-gray-400 hover:text-white transition-colors"
+          className="fixed top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-50 cursor-pointer opacity-60 hover:opacity-100 px-3 py-1.5 rounded-lg text-sm"
         >
           ← Back to Home
         </button>
