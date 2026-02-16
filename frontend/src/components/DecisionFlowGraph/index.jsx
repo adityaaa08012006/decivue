@@ -504,7 +504,7 @@ const DecisionFlowGraph = () => {
   }
 
   return (
-    <div className="relative w-full h-screen bg-gray-50">
+    <div className="relative w-full h-screen bg-neutral-white dark:bg-neutral-gray-900">
       {/* Swimlane Background Labels */}
       {swimlaneLanes.length > 0 && (
         <div className="absolute top-0 left-0 z-10 p-4 pointer-events-none">

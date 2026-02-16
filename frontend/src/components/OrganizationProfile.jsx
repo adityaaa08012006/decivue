@@ -142,7 +142,7 @@ const OrganizationProfile = () => {
     );
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] dark:from-neutral-gray-900 dark:via-neutral-gray-900 dark:to-neutral-gray-800">
+        <div className="min-h-screen w-full bg-neutral-white dark:bg-neutral-gray-900">
             <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
                 {/* Top Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">

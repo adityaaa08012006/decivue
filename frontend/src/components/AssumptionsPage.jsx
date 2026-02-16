@@ -276,7 +276,7 @@ const AssumptionsPage = () => {
     const decisionAssumptions = filterAssumptions().filter(a => getType(a) === 'decision');
 
     return (
-        <div className="flex h-screen bg-white dark:bg-neutral-gray-800 overflow-hidden">
+        <div className="flex h-screen bg-neutral-white dark:bg-neutral-gray-900 overflow-hidden">
             {/* Toast Notification */}
             {toast && (
                 <div className="fixed top-4 right-4 z-50 transition-all duration-300 ease-out">

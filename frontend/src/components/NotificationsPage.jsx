@@ -174,7 +174,7 @@ const NotificationsPage = ({ onNotificationAction }) => {
     }
 
     return (
-        <div className="flex h-screen bg-white dark:bg-neutral-gray-800 overflow-hidden">
+        <div className="flex h-screen bg-neutral-white dark:bg-neutral-gray-900 overflow-hidden">
             <div className="flex-1 flex flex-col h-full overflow-y-auto">
                 <div className="max-w-4xl mx-auto w-full p-8">
                     {/* Header */}

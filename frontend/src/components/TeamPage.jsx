@@ -69,7 +69,7 @@ const TeamPage = () => {
   };
 
   return (
-    <div className="flex h-screen bg-neutral-gray-50 dark:bg-neutral-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-neutral-white dark:bg-neutral-gray-900 overflow-hidden">
       <div className="flex-1 flex flex-col h-full overflow-y-auto">
         <div className="max-w-5xl mx-auto w-full p-6 md:p-8">
           {/* Header */}
