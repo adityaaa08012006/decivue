@@ -198,6 +198,12 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       console.error('Login failed:', error);
+      
+      // Clear any stale session data on failed login to prevent conflicts
+      localStorage.removeItem('decivue_session');
+      localStorage.removeItem('decivue_user');
+      api.setAuthToken(null);
+      
       return {
         success: false,
         error: error.message || 'Login failed'

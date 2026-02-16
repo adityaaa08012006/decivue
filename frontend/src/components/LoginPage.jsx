@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import decivueLogo from '../../assets/Main logo.png';
@@ -15,18 +15,34 @@ export default function LoginPage({ onNavigateToRegister }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Debug: Log component lifecycle
+  useEffect(() => {
+    console.log('🔐 LoginPage mounted');
+    return () => {
+      console.log('🔐 LoginPage unmounted');
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent any parent handlers
+    
     setError('');
     setLoading(true);
 
+    console.log('🔑 Attempting login...');
     const result = await login(email, password);
 
     if (!result.success) {
+      console.error('❌ Login failed:', result.error);
       setError(result.error);
       setLoading(false);
+      // Explicitly keep the component mounted and showing error
+      return false; // Prevent any default form behavior
     }
+    console.log('✅ Login successful, redirecting...');
     // Success handled by AuthContext - user will be redirected
+    return false;
   };
 
   const isFormValid = email.trim() !== '' && password.trim() !== '';
@@ -161,11 +177,11 @@ export default function LoginPage({ onNavigateToRegister }) {
             <div className="py-1">
               <p className="text-[13px] text-[#333]">
                 By continuing, you agree to the{' '}
-                <a href="#" className="text-[#111] underline hover:no-underline">
+                <a href="#" onClick={(e) => e.preventDefault()} className="text-[#111] underline hover:no-underline">
                   Terms of use
                 </a>{' '}
                 and{' '}
-                <a href="#" className="text-[#111] underline hover:no-underline">
+                <a href="#" onClick={(e) => e.preventDefault()} className="text-[#111] underline hover:no-underline">
                   Privacy Policy
                 </a>
                 .
@@ -190,6 +206,7 @@ export default function LoginPage({ onNavigateToRegister }) {
           <div className="flex flex-col items-center gap-4 pt-2">
             <a
               href="#"
+              onClick={(e) => e.preventDefault()}
               className="text-[13px] font-semibold text-[#111] underline hover:no-underline"
             >
               Forget your password

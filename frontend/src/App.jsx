@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   ArrowRight,
@@ -30,11 +30,17 @@ import api from "./services/api";
 
 function AppContent() {
   const { user, loading, logout, isLead } = useAuth();
+  
+  // Persist authView across re-renders using sessionStorage
+  const [authView, setAuthView] = useState(() => {
+    const saved = sessionStorage.getItem('authView');
+    return saved || null;
+  });
+  
   const [showLanding, setShowLanding] = useState(true);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedOrgType, setSelectedOrgType] = useState(null);
-  const [authView, setAuthView] = useState("login"); // 'login' or 'register'
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [currentView, setCurrentView] = useState("dashboard");
   const [showAddDecisionModal, setShowAddDecisionModal] = useState(false);
@@ -42,6 +48,35 @@ function AppContent() {
   const [showTimeSimMenu, setShowTimeSimMenu] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState(null);
+
+  // Persist authView to sessionStorage
+  useEffect(() => {
+    if (authView) {
+      sessionStorage.setItem('authView', authView);
+      console.log('📱 Saved authView to sessionStorage:', authView);
+    } else {
+      sessionStorage.removeItem('authView');
+      console.log('📱 Removed authView from sessionStorage');
+    }
+  }, [authView]);
+
+  // Debug: Log authView changes
+  useEffect(() => {
+    console.log('📱 App authView changed to:', authView);
+  }, [authView]);
+
+  // Debug: Log user changes
+  useEffect(() => {
+    console.log('👤 App user changed:', user ? user.email : 'null');
+    
+    // Clear authView when user successfully logs in
+    if (user) {
+      console.log('✅ User authenticated, clearing authView');
+      setAuthView(null);
+      setShowLanding(false);
+      sessionStorage.removeItem('authView');
+    }
+  }, [user]);
 
   const handleNavigate = (viewId) => {
     setCurrentView(viewId);
@@ -177,37 +212,21 @@ function AppContent() {
         />
       );
     }
-
-    // Show landing page
-    if (showLanding) {
-      return (
-        <LandingPage 
-          onGetStarted={() => {
-            setShowLanding(false);
-            setAuthView('register');
-          }}
-          onSeeDemo={() => {
-            setShowLanding(false);
-            setShowOrgSelector(true);
-          }}
-          onLogin={() => {
-            setShowLanding(false);
-            setAuthView('login');
-          }}
-        />
-      );
-    }
     
-    // Show login
+    // Show login (check BEFORE landing page to prevent redirect on error)
     if (authView === 'login') {
       return (
-        <div>
-          <LoginPage onNavigateToRegister={() => setAuthView('register')} />
+        <div key="login-page">
+          <LoginPage onNavigateToRegister={() => {
+            setAuthView('register');
+            setShowLanding(false);
+          }} />
           <button 
             onClick={() => {
               setShowLanding(true);
               setShowOrgSelector(false);
               setShowTemplatePreview(false);
+              setAuthView(null);
             }}
             className="fixed top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-50 cursor-pointer opacity-60 hover:opacity-100 px-3 py-1.5 rounded-lg text-sm"
           >
@@ -217,21 +236,45 @@ function AppContent() {
       );
     }
     
-    // Show register
+    // Show register (check BEFORE landing page)
+    if (authView === 'register') {
+      return (
+        <div key="register-page">
+          <RegisterPage onNavigateToLogin={() => {
+            setAuthView('login');
+            setShowLanding(false);
+          }} />
+          <button 
+            onClick={() => {
+              setShowLanding(true);
+              setShowOrgSelector(false);
+              setShowTemplatePreview(false);
+              setAuthView(null);
+            }}
+            className="fixed top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-50 cursor-pointer opacity-60 hover:opacity-100 px-3 py-1.5 rounded-lg text-sm"
+          >
+            ← Back to Home
+          </button>
+        </div>
+      );
+    }
+
+    // Show landing page (default)
     return (
-      <div>
-        <RegisterPage onNavigateToLogin={() => setAuthView('login')} />
-        <button 
-          onClick={() => {
-            setShowLanding(true);
-            setShowOrgSelector(false);
-            setShowTemplatePreview(false);
-          }}
-          className="fixed top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-50 cursor-pointer opacity-60 hover:opacity-100 px-3 py-1.5 rounded-lg text-sm"
-        >
-          ← Back to Home
-        </button>
-      </div>
+      <LandingPage 
+        onGetStarted={() => {
+          setShowLanding(false);
+          setAuthView('register');
+        }}
+        onSeeDemo={() => {
+          setShowLanding(false);
+          setShowOrgSelector(true);
+        }}
+        onLogin={() => {
+          setShowLanding(false);
+          setAuthView('login');
+        }}
+      />
     );
   }
 

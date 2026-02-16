@@ -39,6 +39,13 @@ class ApiService {
 
       // Handle 401 Unauthorized - token expired or invalid
       if (response.status === 401) {
+        // Don't reload if this is a login/register request - let the error propagate normally
+        const isAuthRequest = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
+        if (isAuthRequest) {
+          const error = await response.json().catch(() => ({ error: 'Authentication failed' }));
+          throw new Error(error.error || 'Invalid credentials');
+        }
+
         console.error('401 Unauthorized - session expired');
         // Clear local storage and redirect to login
         localStorage.removeItem('decivue_session');
