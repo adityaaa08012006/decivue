@@ -1,7 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import CircularProgressCard from './CircularProgressCard';
 import api from '../services/api';
+
+const HorizontalProgressCard = ({ title, value, total, status }) => {
+  const percentage = total > 0 ? (value / total) * 100 : 0;
+  
+  const statusColors = {
+    danger: {
+      filled: 'bg-gradient-to-r from-red-400 to-red-500',
+      empty: 'bg-red-100',
+      text: 'text-neutral-black'
+    },
+    success: {
+      filled: 'bg-gradient-to-r from-green-400 to-green-500',
+      empty: 'bg-green-100',
+      text: 'text-neutral-black'
+    },
+    warning: {
+      filled: 'bg-gradient-to-r from-amber-400 to-amber-500',
+      empty: 'bg-amber-100',
+      text: 'text-neutral-black'
+    }
+  };
+
+  const colors = statusColors[status] || statusColors.success;
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-gray-200">
+      {/* Progress Bar */}
+      <div className="flex gap-2 mb-4">
+        <div className={`h-2 rounded-full ${colors.filled}`} style={{ width: `${percentage}%` }}></div>
+        <div className={`h-2 rounded-full ${colors.empty} flex-1`}></div>
+      </div>
+      
+      {/* Label */}
+      <div className="text-sm font-medium text-neutral-gray-600 mb-2">
+        {title}
+      </div>
+      
+      {/* Value */}
+      <div className={`text-4xl font-bold ${colors.text}`}>
+        {value}
+      </div>
+    </div>
+  );
+};
 
 const DecisionHealthOverview = () => {
   const [decisions, setDecisions] = useState([]);
@@ -73,13 +116,12 @@ const DecisionHealthOverview = () => {
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {healthData.map((item) => (
-          <CircularProgressCard
+          <HorizontalProgressCard
             key={item.id}
             title={item.title}
             value={item.value}
             total={item.total}
             status={item.status}
-            animate={true}
           />
         ))}
       </div>
