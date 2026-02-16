@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle, Flag, TrendingUp, Activity, AlertTriangle, Clock, Users } from 'lucide-react';
 import Aurora from './Aurora';
 import ClickSpark from './ClickSpark';
+import ScrollFloat from './ScrollFloat';
+import Squares from './Squares';
+import ScrollVelocity from './ScrollVelocity';
 
 const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -19,8 +22,19 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       duration={400}
     >
     <div className="landing-page text-gray-900 overflow-x-hidden relative">
+      {/* Animated Squares Background */}
+      <div className="fixed inset-0 z-0">
+        <Squares
+          speed={0.28}
+          squareSize={40}
+          direction="diagonal"
+          borderColor="rgba(59, 130, 246, 0.4)"
+          hoverFillColor="rgba(59, 130, 246, 0.2)"
+        />
+      </div>
+      
       {/* Aurora Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
+      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] opacity-70">
         <Aurora
           colorStops={["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
           amplitude={0.5}
@@ -29,10 +43,10 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       </div>
       
       {/* Subtle overlay for depth */}
-      <div className="fixed inset-0 bg-white/10 pointer-events-none" />
+      <div className="fixed inset-0 bg-white/20 pointer-events-none" />
       
       {/* Top Navigation Bar */}
-      <nav className="relative z-50 flex items-center justify-end px-10 py-5">
+      <nav className="relative z-50 flex items-center justify-end px-10 py-3">
         <button
           onClick={onLogin}
           className="px-5 py-2 bg-white/80 backdrop-blur-sm text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-white hover:border-gray-300 shadow-sm transition-all duration-300"
@@ -63,7 +77,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       <div className="fixed inset-0 bg-grid-pattern-light opacity-[0.03] pointer-events-none" />
       
       {/* Hero Section */}
-      <section className="relative min-h-[calc(100vh-80px)] flex items-center justify-center px-6 md:px-12 overflow-hidden">
+      <section className="relative min-h-[calc(100vh-100px)] flex items-center justify-center px-6 md:px-12 overflow-hidden pt-4">
         
         <div className="relative z-10 max-w-6xl w-full mx-auto grid lg:grid-cols-2 gap-10 items-center">
           {/* Left Content */}
@@ -185,26 +199,33 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
         </div>
       </section>
       
-      {/* Social Proof Bar */}
-      <section className="relative py-14 border-y border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 md:px-12">
-          <p className="text-center text-gray-500 text-xs mb-7 uppercase tracking-wider">Trusted by forward-thinking teams</p>
-          <div className="flex flex-wrap justify-center items-center gap-10 opacity-30 grayscale">
-            <Logo name="Dropbox" />
-            <Logo name="Notion" />
-            <Logo name="Slack" />
-            <Logo name="Slack" />
-            <Logo name="Stripe" />
-            <Logo name="Stripe" />
-          </div>
+      {/* Key Values Scroll */}
+      <section className="relative py-5 border-y border-gray-200/50">
+        <div className="max-w-full">
+          <ScrollVelocity
+            texts={['Clarity • Alignment • Foresight • Governance • Confidence']}
+            velocity={15}
+            className="text-gray-400/70 font-medium"
+            scrollerClassName="text-base md:text-lg"
+            numCopies={6}
+          />
         </div>
       </section>
       
       {/* Features Section */}
-      <section className="relative py-28 px-6 md:px-12">
+      <section className="relative py-16 px-6 md:px-12">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-[2.75rem] font-bold mb-5 text-gray-900">Keep a Pulse on Your Team's Decisions</h2>
+            <ScrollFloat
+              containerClassName="text-[2.75rem] font-bold mb-5 text-gray-900"
+              animationDuration={1}
+              ease="back.inOut(2)"
+              scrollStart="center bottom+=50%"
+              scrollEnd="bottom bottom-=40%"
+              stagger={0.03}
+            >
+              Keep a Pulse on Your Team's Decisions
+            </ScrollFloat>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               As decisions mature, things change. Track your team's organizational foundational work in real-time.
             </p>
@@ -234,7 +255,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       </section>
       
       {/* Insight Section */}
-      <section className="relative py-28 px-6 md:px-12 bg-gradient-to-b from-transparent via-[#eef2ff]/30 to-transparent">
+      <section className="relative py-16 px-6 md:px-12 bg-gradient-to-b from-transparent via-[#eef2ff]/30 to-transparent">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-14 items-center">
             {/* Left - Copy */}
@@ -357,7 +378,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       </section>
       
       {/* Decision Flow Section */}
-      <section className="relative py-28 px-6 md:px-12">
+      <section className="relative py-16 px-6 md:px-12">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold mb-3">Decision Flow</h2>
@@ -406,7 +427,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       </section>
       
       {/* Testimonials Section */}
-      <section className="relative py-28 px-6 md:px-12 bg-gradient-to-b from-[#f6f9ff] to-transparent">
+      <section className="relative py-16 px-6 md:px-12 bg-gradient-to-b from-[#f6f9ff] to-transparent">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-[2.75rem] font-bold mb-3 text-gray-900">
@@ -474,7 +495,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       </section>
       
       {/* Footer */}
-      <footer className="relative border-t border-gray-200 py-10 px-6 md:px-12">
+      <footer className="relative border-t border-gray-200 py-8 px-6 md:px-12">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-5">
           <div className="text-xl font-bold text-gray-900">Decivue</div>
           <div className="flex gap-8 text-sm text-gray-600">
