@@ -45,6 +45,7 @@ router.post('/import/bulk', importController.bulkImport.bind(importController));
 // Bind methods to preserve 'this' context
 router.get('/', controller.getAll.bind(controller));
 router.post('/batch-evaluate', controller.batchEvaluate.bind(controller)); // Batch evaluation (before /:id routes)
+router.post('/check-similar-failures', controller.checkSimilarFailures.bind(controller)); // Check for similar deprecated failures
 
 // Governance endpoints (must be before /:id routes)
 router.get('/governance/pending-approvals', controller.getPendingApprovals.bind(controller));

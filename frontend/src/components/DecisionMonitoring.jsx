@@ -28,6 +28,7 @@ import { useAuth } from "../contexts/AuthContext";
 import DecisionVersionsModal from "./DecisionVersionsModal";
 import ReviewDecisionModal from "./ReviewDecisionModal";
 import EditDecisionModal from "./EditDecisionModal";
+import RetireDecisionModal from "./RetireDecisionModal";
 
 const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const { user, isLead } = useAuth();
@@ -416,25 +417,23 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     }
   };
 
-  const handleRetireDecision = (decisionId, decisionTitle) => {
-    setRetireConfirmation({ id: decisionId, title: decisionTitle });
+  const handleRetireDecision = (decision) => {
+    setRetireConfirmation(decision);
   };
 
-  const confirmRetire = async () => {
-    if (!retireConfirmation) return;
-
+  const confirmRetire = async (decisionId, reason, outcome, conclusions) => {
     try {
-      await api.retireDecision(retireConfirmation.id, "manually_retired");
+      await api.retireDecision(decisionId, reason, outcome, conclusions);
       await fetchDecisions(); // Refresh the list
       showToast(
         "success",
-        `Decision "${retireConfirmation.title}" has been retired`,
+        `Decision has been retired${outcome === "failed" ? " and marked as failed - future similar decisions will be warned" : ""}`,
       );
       setRetireConfirmation(null);
     } catch (err) {
       console.error("Failed to retire decision:", err);
       showToast("error", "Failed to retire decision. Please try again.");
-      setRetireConfirmation(null);
+      throw err; // Re-throw so modal knows it failed
     }
   };
 
@@ -579,46 +578,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
         </div>
       )}
 
-      {/* Retire Confirmation Modal */}
+      {/* Retire Decision Modal */}
       {retireConfirmation && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mx-auto mb-4">
-              <Archive className="text-orange-600" size={32} />
-            </div>
-            <h2 className="text-2xl font-bold text-neutral-black mb-2 text-center">
-              Retire Decision?
-            </h2>
-            <p className="text-neutral-gray-600 mb-6 text-center">
-              Are you sure you want to retire{" "}
-              <span className="font-semibold">
-                "{retireConfirmation.title}"
-              </span>
-              ?
-            </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-amber-800">
-                <strong>Note:</strong> This action marks the decision as
-                deprecated and final. The decision will be set to RETIRED
-                lifecycle and cannot be reviewed.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setRetireConfirmation(null)}
-                className="flex-1 px-6 py-3 bg-neutral-gray-100 text-neutral-gray-700 font-semibold rounded-xl hover:bg-neutral-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmRetire}
-                className="flex-1 px-6 py-3 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors"
-              >
-                Retire
-              </button>
-            </div>
-          </div>
-        </div>
+        <RetireDecisionModal
+          decision={retireConfirmation}
+          onClose={() => setRetireConfirmation(null)}
+          onSubmit={confirmRetire}
+        />
       )}
 
       {/* Header */}
@@ -975,23 +941,23 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                       >
                         <Check size={18} />
                       </button>
-                      {decision.lifecycle !== "RETIRED" && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRetireDecision(decision.id, decision.title);
-                          }}
-                          disabled={decision.lockedAt && !isLead}
-                          className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={
-                            decision.lockedAt && !isLead
-                              ? "Decision is locked (team lead access only)"
-                              : "Retire decision (mark as deprecated)"
-                          }
-                        >
-                          <Archive size={18} />
-                        </button>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRetireDecision(decision);
+                        }}
+                        disabled={decision.lifecycle === "RETIRED" || (decision.lockedAt && !isLead)}
+                        className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={
+                          decision.lifecycle === "RETIRED"
+                            ? "Decision is already retired"
+                            : decision.lockedAt && !isLead
+                            ? "Decision is locked (team lead access only)"
+                            : "Retire decision (mark as deprecated)"
+                        }
+                      >
+                        <Archive size={18} />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1712,122 +1678,6 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    {/* Feature 5: Time-based Decay Details */}
-                    <div>
-                      <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                        <TrendingDown size={18} className="text-cyan-500" />
-                        How fresh is this?
-                      </h4>
-                      <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-3">
-                        {/* Expiry Date Display */}
-                        {decision.expiryDate &&
-                          (() => {
-                            const expiryDate = new Date(decision.expiryDate);
-                            const now = currentTime;
-                            const daysUntilExpiry = Math.floor(
-                              (expiryDate - now) / (1000 * 60 * 60 * 24),
-                            );
-                            const isExpired = daysUntilExpiry < 0;
-                            const daysPastExpiry = Math.abs(daysUntilExpiry);
-
-                            return (
-                              <>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm text-slate-600">
-                                    Expiry Date:
-                                  </span>
-                                  <span className="text-sm font-semibold text-slate-800">
-                                    {expiryDate.toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm text-slate-600">
-                                    {isExpired
-                                      ? "Days Past Expiry:"
-                                      : "Days Until Expiry:"}
-                                  </span>
-                                  <span
-                                    className={`text-sm font-bold ${
-                                      isExpired
-                                        ? "text-red-600"
-                                        : daysUntilExpiry <= 30
-                                          ? "text-orange-600"
-                                          : daysUntilExpiry <= 90
-                                            ? "text-yellow-600"
-                                            : "text-green-600"
-                                    }`}
-                                  >
-                                    {isExpired
-                                      ? daysPastExpiry
-                                      : daysUntilExpiry}{" "}
-                                    days
-                                  </span>
-                                </div>
-                                {isExpired && (
-                                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                                    <div className="flex items-center gap-2 text-red-700">
-                                      <AlertCircle size={16} />
-                                      <span className="text-sm font-semibold">
-                                        ⚠️ EXPIRED - Decision is past deadline
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="border-t border-slate-200 my-2"></div>
-                              </>
-                            );
-                          })()}
-
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">
-                            Days since last check:
-                          </span>
-                          <span className="text-sm font-semibold text-slate-800">
-                            {Math.floor(
-                              (new Date() - new Date(decision.lastReviewedAt)) /
-                                (1000 * 60 * 60 * 24),
-                            )}{" "}
-                            days
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">
-                            Status:
-                          </span>
-                          <span
-                            className={`text-sm font-semibold ${getFreshnessBand(decayScore).textColor} cursor-help`}
-                            title={`${decayScore}% fresh`}
-                          >
-                            {getFreshnessBand(decayScore).label}
-                          </span>
-                        </div>
-                        <div
-                          className="w-full bg-slate-100 rounded-full h-3 overflow-hidden cursor-help"
-                          title={`Freshness: ${decayScore}%`}
-                          role="progressbar"
-                          aria-label={`Freshness ${decayScore}%`}
-                          aria-valuenow={decayScore}
-                          aria-valuemin="0"
-                          aria-valuemax="100"
-                        >
-                          <div
-                            className={`h-3 rounded-full transition-all ${
-                              decayScore >= 80
-                                ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
-                                : decayScore >= 60
-                                  ? "bg-gradient-to-r from-amber-400 to-amber-500"
-                                  : "bg-gradient-to-r from-rose-400 to-rose-500"
-                            }`}
-                            style={{ width: `${decayScore}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2 bg-indigo-50 p-2 rounded-lg">
-                          💡 Decisions get stale over time. Check them regularly
-                          to keep them healthy!
-                        </p>
-                      </div>
                     </div>
 
                     {/* Feature 6: Linked Cause (Mock data) */}

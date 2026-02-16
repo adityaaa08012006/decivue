@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Trash2 } from 'lucide-react';
+import { Plus, X, Trash2, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 
 /**
@@ -27,6 +27,8 @@ const StructuredDecisionForm = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [managingCategories, setManagingCategories] = useState(false);
+  const [warnings, setWarnings] = useState([]);
+  const [checkingWarnings, setCheckingWarnings] = useState(false);
 
   // Decision-specific categories
   const DECISION_CATEGORIES = [
@@ -72,7 +74,10 @@ const StructuredDecisionForm = ({
     if (category === '__CUSTOM__') {
       setFormData({ ...formData, showCustomCategory: true, category: '' });
     } else {
-      setFormData({ ...formData, category, showCustomCategory: false, parameters: {} });
+      const newFormData = { ...formData, category, showCustomCategory: false, parameters: {} };
+      setFormData(newFormData);
+      // Check for similar failures when category changes
+      checkSimilarFailures(category, {});
     }
   };
 
@@ -83,20 +88,62 @@ const StructuredDecisionForm = ({
     }
 
     const categoryName = formData.customCategory.trim();
-    setFormData({ 
+    const newFormData = {
       ...formData, 
       category: categoryName, 
       showCustomCategory: false,
       customCategory: '',
       parameters: {}
-    });
+    };
+    setFormData(newFormData);
+    // Check for similar failures when custom category is added
+    checkSimilarFailures(categoryName, {});
   };
 
   const updateParameter = (key, value) => {
+    const newParameters = { ...formData.parameters, [key]: value };
     setFormData({
       ...formData,
-      parameters: { ...formData.parameters, [key]: value }
+      parameters: newParameters
     });
+    // Check for similar failures when parameters change significantly
+    // Debounce this to avoid too many API calls
+    if (formData.category) {
+      checkSimilarFailures(formData.category, newParameters);
+    }
+  };
+
+  // Check for similar deprecated decisions that failed
+  const checkSimilarFailures = async (category, parameters) => {
+    // Skip if no category or if it's an existing decision (editing)
+    if (!category || existingDecision) {
+      setWarnings([]);
+      return;
+    }
+
+    // Skip if parameters are empty
+    if (!parameters || Object.keys(parameters).length === 0) {
+      setWarnings([]);
+      return;
+    }
+
+    try {
+      setCheckingWarnings(true);
+      const response = await api.checkSimilarFailures(category, parameters);
+      
+      if (response.warnings && response.warnings.length > 0) {
+        setWarnings(response.warnings);
+        console.log('⚠️ Similar failed decisions detected:', response.warnings);
+      } else {
+        setWarnings([]);
+      }
+    } catch (err) {
+      console.error('Failed to check for similar failures:', err);
+      // Don't block the user if checking fails
+      setWarnings([]);
+    } finally {
+      setCheckingWarnings(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -559,6 +606,75 @@ const StructuredDecisionForm = ({
             {formData.category} Parameters
           </h4>
           {renderParameterFields()}
+        </div>
+      )}
+
+      {/* Warnings about Similar Failed Decisions */}
+      {warnings.length > 0 && (
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-1" size={24} />
+            <div className="flex-1">
+              <h4 className="font-bold text-yellow-900 mb-2">
+                ⚠️ Warning: Similar Decisions Failed in the Past
+              </h4>
+              <p className="text-sm text-yellow-800 mb-3">
+                We found {warnings.length} similar decision{warnings.length > 1 ? 's' : ''} that failed previously. Please review before proceeding:
+              </p>
+              
+              {warnings.map((warning, idx) => (
+                <div key={idx} className="bg-white border border-yellow-300 rounded-lg p-3 mb-3 last:mb-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h5 className="font-semibold text-gray-900">
+                      "{warning.deprecatedDecisionTitle}"
+                    </h5>
+                    <span className="text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                      {Math.round(warning.similarityScore * 100)}% similar
+                    </span>
+                  </div>
+                  
+                  {warning.matchingParameters.length > 0 && (
+                    <div className="text-xs text-gray-600 mb-2">
+                      <span className="font-medium">Matching:</span> {warning.matchingParameters.slice(0, 2).join(', ')}
+                      {warning.matchingParameters.length > 2 && ` +${warning.matchingParameters.length - 2} more`}
+                    </div>
+                  )}
+                  
+                  {warning.failureReasons && warning.failureReasons.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-red-700 mb-1">Why it failed:</p>
+                      <ul className="text-xs text-gray-700 space-y-1 ml-4">
+                        {warning.failureReasons.slice(0, 3).map((reason, i) => (
+                          <li key={i} className="list-disc">{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {warning.recommendations && warning.recommendations.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-blue-700 mb-1">Recommendations:</p>
+                      <ul className="text-xs text-gray-700 space-y-1 ml-4">
+                        {warning.recommendations.slice(0, 2).map((rec, i) => (
+                          <li key={i} className="list-disc">{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              <p className="text-xs text-yellow-800 italic mt-2">
+                💡 Consider adjusting your approach or parameters to avoid similar issues.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {checkingWarnings && (
+        <div className="text-sm text-gray-500 italic">
+          Checking for similar failed decisions...
         </div>
       )}
 

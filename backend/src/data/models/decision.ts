@@ -44,6 +44,16 @@ export interface Decision {
   reviewUrgencyScore?: number; // Calculated urgency score for review prioritization
   nextReviewDate?: Date; // Scheduled next review date
   consecutiveDeferrals?: number; // Count of consecutive review deferrals
+  // Deprecation outcome tracking (Migration 032)
+  deprecationOutcome?: 'failed' | 'succeeded' | 'partially_succeeded' | 'superseded' | 'no_longer_relevant';
+  deprecationConclusions?: {
+    what_happened?: string; // Summary of what happened with the decision
+    why_outcome?: string; // Explanation of why it had this outcome
+    lessons_learned?: string[]; // Key lessons from this decision
+    key_issues?: string[]; // Main issues that caused failure (if failed)
+    recommendations?: string[]; // What to do differently next time
+    failure_reasons?: string[]; // Specific failure reasons for similarity matching
+  };
 }
 
 export interface DecisionCreate {

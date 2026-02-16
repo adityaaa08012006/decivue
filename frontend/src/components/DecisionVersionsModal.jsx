@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield, Lock, Unlock, Edit, CheckCircle, XCircle } from 'lucide-react';
+import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield, Lock, Unlock, Edit, CheckCircle, XCircle, Archive } from 'lucide-react';
 import api from '../services/api';
 
 /**
@@ -69,6 +69,9 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
     // For version events, check the change_type in event_data
     if (eventType === 'version' && eventData) {
       switch (eventData.change_type) {
+        case 'retirement':
+        case 'deprecation':
+          return <Archive size={18} className="text-orange-600" />;
         case 'governance_lock':
           return <Lock size={18} className="text-gray-700" />;
         case 'governance_unlock':
@@ -153,6 +156,49 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
               {/* Version Event Details */}
               {event.event_type === 'version' && (
                 <div className="mt-2 space-y-2">
+                  {/* Retirement/Deprecation Events */}
+                  {(eventData.change_type === 'retirement' || eventData.change_type === 'deprecation') && (
+                    <div className="bg-orange-50 border border-orange-300 rounded p-3">
+                      <div className="flex items-start gap-2">
+                        <Archive size={16} className="text-orange-700 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm w-full">
+                          <div className="font-medium text-orange-900">
+                            🗃️ Decision Retired
+                          </div>
+                          {eventData.changed_fields?.deprecation_outcome && (
+                            <div className="mt-2">
+                              <span className="font-semibold text-gray-700">Outcome: </span>
+                              <span className={`px-2 py-1 text-xs rounded ${
+                                eventData.changed_fields.deprecation_outcome === 'failed' ? 'bg-red-100 text-red-700' :
+                                eventData.changed_fields.deprecation_outcome === 'succeeded' ? 'bg-green-100 text-green-700' :
+                                eventData.changed_fields.deprecation_outcome === 'partially_succeeded' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {eventData.changed_fields.deprecation_outcome.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                          )}
+                          {eventData.changed_fields?.deprecation_conclusions && (
+                            <div className="mt-2 space-y-1 text-gray-700">
+                              {eventData.changed_fields.deprecation_conclusions.what_happened && (
+                                <div>
+                                  <span className="font-semibold">What happened: </span>
+                                  {eventData.changed_fields.deprecation_conclusions.what_happened}
+                                </div>
+                              )}
+                              {eventData.changed_fields.deprecation_conclusions.lessons_learned && (
+                                <div>
+                                  <span className="font-semibold">Lessons: </span>
+                                  {eventData.changed_fields.deprecation_conclusions.lessons_learned}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Governance Lock/Unlock Events */}
                   {(eventData.change_type === 'governance_lock' || eventData.change_type === 'governance_unlock') && (
                     <div className={`border rounded p-3 ${

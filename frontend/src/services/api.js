@@ -157,10 +157,17 @@ class ApiService {
     });
   }
 
-  async retireDecision(id, reason) {
+  async retireDecision(id, reason, outcome = null, conclusions = null) {
     return this.request(`/decisions/${id}/retire`, {
       method: 'PUT',
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, outcome, conclusions }),
+    });
+  }
+
+  async checkSimilarFailures(category, parameters) {
+    return this.request('/decisions/check-similar-failures', {
+      method: 'POST',
+      body: JSON.stringify({ category, parameters }),
     });
   }
 

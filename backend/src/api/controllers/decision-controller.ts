@@ -15,6 +15,7 @@ import { logger } from '@utils/logger';
 import { AuthRequest } from '@middleware/auth';
 import { AssumptionValidationService } from '@services/assumption-validation-service';
 import { EvaluationService } from '@services/evaluation-service';
+import { DeprecationWarningService } from '@services/deprecation-warning-service';
 
 export class DecisionController {
   private engine: DeterministicEngine;
@@ -226,11 +227,22 @@ export class DecisionController {
   /**
    * PUT /api/decisions/:id/retire
    * Retire a decision (mark as deprecated/final)
+   * 
+   * Request body:
+   * - reason: string - Why was this decision retired?
+   * - outcome: 'failed' | 'succeeded' | 'partially_succeeded' | 'superseded' | 'no_longer_relevant' (optional)
+   * - conclusions: object with structured conclusions (optional):
+   *   - what_happened: string
+   *   - why_outcome: string
+   *   - lessons_learned: string[]
+   *   - key_issues: string[]
+   *   - recommendations: string[]
+   *   - failure_reasons: string[]
    */
   async retire(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { reason } = req.body;
+      const { reason, outcome, conclusions } = req.body;
       const organizationId = req.user?.organizationId;
 
       if (!organizationId) {
@@ -239,14 +251,25 @@ export class DecisionController {
 
       const db = getAdminDatabase();
 
+      // Build update object
+      const updateData: any = {
+        lifecycle: 'RETIRED',
+        invalidated_reason: reason || 'manually_retired',
+        health_signal: 0
+      };
+
+      // Add deprecation outcome and conclusions if provided
+      if (outcome) {
+        updateData.deprecation_outcome = outcome;
+      }
+      if (conclusions) {
+        updateData.deprecation_conclusions = conclusions;
+      }
+
       // Update decision to RETIRED lifecycle
       const { data: decision, error } = await db
         .from('decisions')
-        .update({
-          lifecycle: 'RETIRED',
-          invalidated_reason: reason || 'manually_retired',
-          health_signal: 0
-        })
+        .update(updateData)
         .eq('id', id)
         .eq('organization_id', organizationId)
         .select()
@@ -257,6 +280,26 @@ export class DecisionController {
       if (!decision) {
         return res.status(404).json({ error: 'Decision not found' });
       }
+
+      // Create version history entry for retirement
+      const changeSummary = outcome 
+        ? `Decision retired - Outcome: ${outcome.replace(/_/g, ' ')}`
+        : 'Decision retired';
+      
+      const versionMetadata: any = {
+        deprecation_outcome: outcome,
+        deprecation_conclusions: conclusions
+      };
+
+      await db.rpc('create_decision_version', {
+        p_decision_id: id,
+        p_change_type: 'retirement',
+        p_change_summary: changeSummary,
+        p_changed_fields: ['lifecycle', 'deprecation_outcome', 'deprecation_conclusions'],
+        p_changed_by: req.user?.id || null,
+        p_review_comment: reason,
+        p_metadata: versionMetadata
+      });
 
       // Emit event
       await eventBus.emit({
@@ -1283,6 +1326,49 @@ export class DecisionController {
     } catch (error) {
       console.error('💥 Exception in getPendingApprovals:', error);
       logger.error('Failed to get pending approvals', { error });
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/check-similar-failures
+   * Check if a decision with given parameters is similar to any failed deprecated decisions
+   * 
+   * Request body:
+   * - category: string (optional) - Decision category
+   * - parameters: object (optional) - Decision parameters
+   * 
+   * Returns: Array of warnings about similar failed decisions
+   */
+  async checkSimilarFailures(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const { category, parameters } = req.body;
+
+      // Check for similar failures
+      const warnings = await DeprecationWarningService.checkForSimilarFailures(
+        organizationId,
+        category,
+        parameters
+      );
+
+      logger.info('Checked for similar failures', {
+        organizationId,
+        category,
+        warningCount: warnings.length
+      });
+
+      return res.json({
+        warnings,
+        hasWarnings: warnings.length > 0
+      });
+    } catch (error) {
+      logger.error('Failed to check for similar failures', { error });
       return next(error);
     }
   }
