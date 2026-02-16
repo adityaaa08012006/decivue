@@ -21,4 +21,7 @@ router.get('/custom', controller.generateCustomReport.bind(controller));
 // Team member AI-powered report (leads only)
 router.post('/team-member', controller.generateTeamMemberReport.bind(controller));
 
+// Team member AI-powered report as PDF (leads only)
+router.post('/team-member-pdf', controller.generateTeamMemberReportPDF.bind(controller));
+
 export default router;

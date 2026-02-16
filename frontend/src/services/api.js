@@ -472,6 +472,34 @@ class ApiService {
       body: JSON.stringify(payload),
     });
   }
+
+  async generateTeamMemberReportPDF(userId, startDate = null, endDate = null) {
+    const payload = { userId };
+    if (startDate) payload.startDate = startDate;
+    if (endDate) payload.endDate = endDate;
+
+    const url = `${API_BASE_URL}/reports/team-member-pdf`;
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to generate PDF report');
+    }
+
+    return await response.blob();
+  }
 }
 
 export default new ApiService();

@@ -6,6 +6,7 @@ import api from '../services/api';
 const TeamMemberReportModal = ({ user, onClose }) => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingPDF, setLoadingPDF] = useState(false);
   const [error, setError] = useState(null);
   const [cached, setCached] = useState(false);
 
@@ -44,6 +45,27 @@ const TeamMemberReportModal = ({ user, onClose }) => {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      setLoadingPDF(true);
+      const blob = await api.generateTeamMemberReportPDF(user.id);
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${user.fullName || user.email}-performance-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      alert('Failed to download PDF report. Please try again.');
+    } finally {
+      setLoadingPDF(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="relative w-full max-w-5xl max-h-[90vh] bg-white dark:bg-neutral-gray-800 rounded-2xl shadow-2xl flex flex-col">
@@ -74,11 +96,24 @@ const TeamMemberReportModal = ({ user, onClose }) => {
                 )}
                 <button
                   onClick={handleDownload}
-                  className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-medium"
+                  className="px-4 py-2 bg-white dark:bg-neutral-gray-700 text-neutral-black dark:text-white border border-neutral-gray-300 dark:border-neutral-gray-600 rounded-lg hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-600 transition-colors flex items-center gap-2 text-sm font-medium"
                   title="Download as Markdown"
                 >
                   <Download size={16} />
-                  Download
+                  MD
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={loadingPDF}
+                  className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Download as PDF"
+                >
+                  {loadingPDF ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  PDF
                 </button>
               </>
             )}
