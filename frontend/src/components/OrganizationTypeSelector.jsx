@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { organizationTypes } from '../utils/organizationTemplates';
 import Aurora from './Aurora';
+import ClickSpark from './ClickSpark';
 
 // Organization background images from public folder
 const orgBackgrounds = {
@@ -23,6 +24,13 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
   };
 
   return (
+    <ClickSpark
+      sparkColor='#3b82f6'
+      sparkSize={14}
+      sparkRadius={25}
+      sparkCount={8}
+      duration={400}
+    >
     <div className="org-selector-page fixed inset-0 z-50 overflow-y-auto">
       {/* Aurora Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
@@ -138,6 +146,7 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
         </div>
       </div>
     </div>
+    </ClickSpark>
   );
 };
 

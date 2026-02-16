@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle, Flag, TrendingUp, Activity, AlertTriangle, Clock, Users } from 'lucide-react';
 import Aurora from './Aurora';
+import ClickSpark from './ClickSpark';
 
 const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -10,6 +11,13 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   }, []);
 
   return (
+    <ClickSpark
+      sparkColor='#3b82f6'
+      sparkSize={14}
+      sparkRadius={25}
+      sparkCount={8}
+      duration={400}
+    >
     <div className="landing-page text-gray-900 overflow-x-hidden relative">
       {/* Aurora Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
@@ -59,15 +67,27 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
         
         <div className="relative z-10 max-w-6xl w-full mx-auto grid lg:grid-cols-2 gap-10 items-center">
           {/* Left Content */}
-          <div className={`space-y-7 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className={`space-y-6 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {/* Brand Integration */}
+            <div className="flex items-center gap-4 mb-2">
+              <img 
+                src="/assets/Main logo.png" 
+                alt="Decivue Logo" 
+                className="h-12 lg:h-14"
+              />
+              <div className="text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight">
+                Decivue
+              </div>
+            </div>
+            
             <div className="inline-block">
-              <div className="text-[#1d4ed8] font-semibold text-xs tracking-wider uppercase mb-4 flex items-center gap-2">
+              <div className="text-[#1d4ed8] font-semibold text-xs tracking-wider uppercase flex items-center gap-2">
                 <div className="w-7 h-[1px] bg-[#1d4ed8]" />
                 Decision Intelligence Platform
               </div>
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight text-gray-900">
+            <h1 className="text-4xl lg:text-5xl font-bold leading-[1.15] tracking-tight text-gray-900">
               Stronger Decisions.
               <br />
               <span className="text-gray-800">Smarter Organizations.</span>
@@ -469,6 +489,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
         </div>
       </footer>
     </div>
+    </ClickSpark>
   );
 };
 
