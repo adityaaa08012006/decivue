@@ -376,6 +376,38 @@ class ApiService {
     });
   }
 
+  // Decision Conflicts endpoints
+  async getDecisionConflicts(includeResolved = false) {
+    const params = new URLSearchParams();
+    if (includeResolved) params.append('includeResolved', 'true');
+    const query = params.toString();
+    return this.request(`/decision-conflicts${query ? `?${query}` : ''}`);
+  }
+
+  async getDecisionConflictsForDecision(decisionId) {
+    return this.request(`/decision-conflicts/${decisionId}`);
+  }
+
+  async detectDecisionConflicts(decisionIds = null) {
+    return this.request('/decision-conflicts/detect', {
+      method: 'POST',
+      body: JSON.stringify({ decisionIds }),
+    });
+  }
+
+  async resolveDecisionConflict(id, resolutionAction, resolutionNotes = '') {
+    return this.request(`/decision-conflicts/${id}/resolve`, {
+      method: 'PUT',
+      body: JSON.stringify({ resolutionAction, resolutionNotes }),
+    });
+  }
+
+  async deleteDecisionConflict(id) {
+    return this.request(`/decision-conflicts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Health check
   async checkHealth() {
     return this.request('/health', { baseUrl: 'http://localhost:3001' });

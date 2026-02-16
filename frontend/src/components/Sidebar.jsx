@@ -1,6 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, Pen, FileText, Bell, Settings, FileText as FileIcon, LogOut, LayoutDashboard } from 'lucide-react';
-import api from '../services/api';
+import React, { useState, useEffect } from "react";
+import {
+  Users,
+  TrendingUp,
+  Pen,
+  FileText,
+  Bell,
+  Settings,
+  FileText as FileIcon,
+  LogOut,
+  LayoutDashboard,
+  AlertTriangle,
+} from "lucide-react";
+import api from "../services/api";
 
 const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -17,48 +28,93 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       const data = await api.getUnreadNotificationCount();
       setUnreadCount(data.count || 0);
     } catch (error) {
-      console.error('Failed to fetch unread count:', error);
+      console.error("Failed to fetch unread count:", error);
     }
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', active: currentView === 'dashboard' },
-    { id: 'team', label: 'Your Team', icon: 'users', active: false },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: "dashboard",
+      active: currentView === "dashboard",
+    },
+    { id: "team", label: "Your Team", icon: "users", active: false },
   ];
 
   const analyticsItems = [
-    { id: 'monitoring', label: 'Decision Monitoring', icon: 'trending', active: currentView === 'monitoring' },
-    { id: 'assumptions', label: 'Assumptions Section', icon: 'pen', active: currentView === 'assumptions' },
+    {
+      id: "monitoring",
+      label: "Decision Monitoring",
+      icon: "trending",
+      active: currentView === "monitoring",
+    },
+    {
+      id: "assumptions",
+      label: "Assumptions Section",
+      icon: "pen",
+      active: currentView === "assumptions",
+    },
+    {
+      id: "decision-conflicts",
+      label: "Decision Conflicts",
+      icon: "alert",
+      active: currentView === "decision-conflicts",
+    },
   ];
 
   const otherItems = [
-    { id: 'flow', label: 'Decision Flow', icon: 'file', active: currentView === 'flow', avatars: 3 },
-    { id: 'notifications', label: 'Notifications', icon: 'bell', active: currentView === 'notifications', badge: unreadCount },
+    {
+      id: "flow",
+      label: "Decision Flow",
+      icon: "file",
+      active: currentView === "flow",
+      avatars: 3,
+    },
+    {
+      id: "notifications",
+      label: "Notifications",
+      icon: "bell",
+      active: currentView === "notifications",
+      badge: unreadCount,
+    },
   ];
 
   const helpItems = [
-    { id: 'settings', label: 'Settings', icon: 'settings', active: currentView === 'settings' },
-    { id: 'profile', label: 'Organisation Information', icon: 'doc', active: currentView === 'profile' },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: "settings",
+      active: currentView === "settings",
+    },
+    {
+      id: "profile",
+      label: "Organisation Information",
+      icon: "doc",
+      active: currentView === "profile",
+    },
   ];
 
   const getIcon = (iconName) => {
     const iconProps = { size: 20, strokeWidth: 2 };
     switch (iconName) {
-      case 'dashboard':
+      case "dashboard":
         return <LayoutDashboard {...iconProps} />;
-      case 'users':
+      case "users":
         return <Users {...iconProps} />;
-      case 'trending':
+      case "trending":
         return <TrendingUp {...iconProps} />;
-      case 'pen':
+      case "pen":
         return <Pen {...iconProps} />;
-      case 'file':
+      case "warning":
+        return <AlertTriangle {...iconProps} />;
+      case "file":
         return <FileText {...iconProps} />;
-      case 'bell':
+      case "bell":
         return <Bell {...iconProps} />;
-      case 'settings':
+      case "settings":
         return <Settings {...iconProps} />;
-      case 'doc':
+      case "doc":
         return <FileText {...iconProps} />;
       default:
         return <FileIcon {...iconProps} />;
@@ -68,13 +124,14 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   const MenuItem = ({ item }) => (
     <div
       onClick={() => onNavigate && onNavigate(item.id)}
-      className={`flex items-center justify-between px-4 py-2 rounded-lg cursor-pointer transition-all ${item.active
-        ? 'bg-primary-blue text-white'
-        : 'text-neutral-gray-700 hover:bg-neutral-gray-100'
-        }`}
+      className={`flex items-center justify-between px-4 py-2 rounded-lg cursor-pointer transition-all ${
+        item.active
+          ? "bg-primary-blue text-white"
+          : "text-neutral-gray-700 hover:bg-neutral-gray-100"
+      }`}
     >
       <div className="flex items-center gap-3">
-        <div className={item.active ? 'text-white' : 'text-neutral-gray-600'}>
+        <div className={item.active ? "text-white" : "text-neutral-gray-600"}>
           {getIcon(item.icon)}
         </div>
         <span className="text-sm font-medium">{item.label}</span>
@@ -101,23 +158,31 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
         <div className="w-8 h-8 flex items-center justify-center">
           <img src="/assets/logo.png" alt="Decivue" className="w-8 h-8" />
         </div>
-        <span className="text-xl font-bold text-neutral-black dark:text-white">Decivue</span>
+        <span className="text-xl font-bold text-neutral-black dark:text-white">
+          Decivue
+        </span>
       </div>
 
       {/* User Info */}
       {user && (
         <div className="px-2 py-3 mb-4 border-b border-neutral-gray-200 dark:border-neutral-gray-700 flex-shrink-0">
-          <p className="text-sm font-semibold text-neutral-black dark:text-white truncate">{user.fullName}</p>
-          <p className="text-xs text-neutral-gray-500 dark:text-neutral-gray-400 truncate">{user.email}</p>
+          <p className="text-sm font-semibold text-neutral-black dark:text-white truncate">
+            {user.fullName}
+          </p>
+          <p className="text-xs text-neutral-gray-500 dark:text-neutral-gray-400 truncate">
+            {user.email}
+          </p>
           <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className={`text-xs px-2 py-1 rounded font-medium ${
-              user.role === 'lead'
-                ? 'bg-primary-blue text-white'
-                : 'bg-neutral-gray-200 dark:bg-neutral-gray-700 text-neutral-gray-700 dark:text-neutral-gray-300'
-            }`}>
-              {user.role === 'lead' ? 'Org Lead' : 'Team Member'}
+            <span
+              className={`text-xs px-2 py-1 rounded font-medium ${
+                user.role === "lead"
+                  ? "bg-primary-blue text-white"
+                  : "bg-neutral-gray-200 dark:bg-neutral-gray-700 text-neutral-gray-700 dark:text-neutral-gray-300"
+              }`}
+            >
+              {user.role === "lead" ? "Org Lead" : "Team Member"}
             </span>
-            {user.role === 'lead' && user.orgCode && (
+            {user.role === "lead" && user.orgCode && (
               <span className="text-xs font-mono bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded font-semibold">
                 {user.orgCode}
               </span>
@@ -130,7 +195,9 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       <div className="flex-1 flex flex-col">
         {/* MENU Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">MENU</p>
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">
+            MENU
+          </p>
           <div className="space-y-0.5">
             {menuItems.map((item) => (
               <MenuItem key={item.id} item={item} />
@@ -142,7 +209,9 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
 
         {/* ANALYTICS Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">ANALYTICS</p>
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">
+            ANALYTICS
+          </p>
           <div className="space-y-0.5">
             {analyticsItems.map((item) => (
               <MenuItem key={item.id} item={item} />
@@ -165,7 +234,9 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
 
         {/* HELP Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">HELP</p>
+          <p className="text-xs font-semibold text-neutral-gray-500 dark:text-neutral-gray-400 mb-2 px-2">
+            HELP
+          </p>
           <div className="space-y-0.5">
             {helpItems.map((item) => (
               <MenuItem key={item.id} item={item} />

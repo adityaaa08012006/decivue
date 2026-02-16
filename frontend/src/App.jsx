@@ -19,6 +19,7 @@ import DecisionLogTable from "./components/DecisionLogTable";
 import OrganisationOverview from "./components/OrganisationOverview";
 import DecisionMonitoring from "./components/DecisionMonitoring";
 import AssumptionsPage from "./components/AssumptionsPage";
+import DecisionConflictsPage from "./components/DecisionConflictsPage";
 import OrganizationProfile from "./components/OrganizationProfile";
 import NotificationsPage from "./components/NotificationsPage";
 import DecisionFlowGraph from "./components/DecisionFlowGraph";
@@ -391,6 +392,7 @@ function AppContent() {
             />
           )}
           {currentView === "assumptions" && <AssumptionsPage />}
+          {currentView === "decision-conflicts" && <DecisionConflictsPage />}
           {currentView === "notifications" && (
             <NotificationsPage
               onNotificationAction={handleNotificationAction}

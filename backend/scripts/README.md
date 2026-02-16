@@ -41,6 +41,26 @@ npx tsx scripts/clear-all-data.ts
 
 ⚠️ **Warning:** This is destructive and cannot be undone!
 
+### `seed-conflicting-decisions.ts`
+
+Seeds test data specifically for testing decision conflict detection:
+
+- Creates 8 pairs of conflicting decisions
+- Covers different conflict types (budget, resources, timeline, strategic, etc.)
+- Automatically assigns to your first organization
+
+**Usage:**
+
+```bash
+npx tsx scripts/seed-conflicting-decisions.ts
+```
+
+After running this script:
+
+1. Navigate to the Decision Conflicts page in the UI
+2. Click "Run Detection" to detect conflicts
+3. Review and resolve the detected conflicts
+
 ## Subdirectories
 
 ### `sql-fixes/`
