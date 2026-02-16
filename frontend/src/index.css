@@ -86,6 +86,15 @@ html:not(.dark) body {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Smooth Scrolling */
 .landing-page {
   scroll-behavior: smooth;
@@ -94,6 +103,10 @@ html:not(.dark) body {
 /* Animation Utilities */
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite;
 }
 
 /* Organization Card Hover Animation */

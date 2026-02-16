@@ -126,8 +126,8 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       onClick={() => onNavigate && onNavigate(item.id)}
       className={`flex items-center justify-between px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
         item.active
-          ? "bg-primary-blue text-white"
-          : "text-neutral-gray-700 dark:text-neutral-gray-300 hover:bg-neutral-gray-100 dark:hover:bg-neutral-gray-700"
+          ? "bg-primary-blue/90 backdrop-blur-sm text-white shadow-md"
+          : "text-neutral-gray-700 dark:text-neutral-gray-200 hover:bg-white/40 dark:hover:bg-gray-800/40 hover:backdrop-blur-md"
       }`}
     >
       <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   );
 
   return (
-    <div className="w-56 h-screen bg-neutral-white dark:bg-neutral-gray-800 border-r border-neutral-gray-200 dark:border-neutral-gray-700 flex flex-col p-3">
+    <div className="w-56 h-screen bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/30 flex flex-col p-3 shadow-lg">
       {/* Logo */}
       <div className="flex items-center gap-2 mb-3 px-2 flex-shrink-0">
         <div className="w-7 h-7 flex items-center justify-center">
@@ -165,7 +165,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
 
       {/* User Info */}
       {user && (
-        <div className="px-2 py-2 mb-3 border-b border-neutral-gray-200 dark:border-neutral-gray-700 flex-shrink-0">
+        <div className="px-2 py-2 mb-3 border-b border-white/30 dark:border-gray-600/30 flex-shrink-0 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm rounded-lg">
           <p className="text-sm font-semibold text-neutral-black dark:text-white truncate">
             {user.fullName}
           </p>
@@ -205,7 +205,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-1.5" />
+        <div className="border-t border-white/20 dark:border-gray-600/20 my-1.5" />
 
         {/* ANALYTICS Section */}
         <div className="mb-3">
@@ -219,7 +219,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-1.5" />
+        <div className="border-t border-white/20 dark:border-gray-600/20 my-1.5" />
 
         {/* Other Items */}
         <div className="mb-3">
@@ -230,7 +230,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
           </div>
         </div>
 
-        <div className="border-t border-neutral-gray-200 dark:border-neutral-gray-700 my-1.5" />
+        <div className="border-t border-white/20 dark:border-gray-600/20 my-1.5" />
 
         {/* HELP Section */}
         <div className="mb-3">
@@ -246,10 +246,10 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       </div>
 
       {/* Log out - Fixed at bottom */}
-      <div className="flex-shrink-0 pt-2 border-t border-neutral-gray-200 dark:border-neutral-gray-700">
+      <div className="flex-shrink-0 pt-2 border-t border-white/20 dark:border-gray-600/20">
         <button
           onClick={onLogout}
-          className="flex items-center gap-2 px-3 py-1.5 text-primary-red dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 text-primary-red dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 hover:backdrop-blur-md rounded-lg w-full transition-all"
         >
           <LogOut size={18} strokeWidth={2} />
           <span className="text-sm font-medium">Log out</span>

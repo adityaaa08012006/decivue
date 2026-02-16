@@ -1015,7 +1015,7 @@ export class DecisionController {
 
       const db = getAdminDatabase();
 
-      const { data, error } = await db.rpc('resolve_edit_request', {
+      const { error } = await db.rpc('resolve_edit_request', {
         p_audit_id: auditId,
         p_reviewer_id: userId,
         p_approved: approved === true,
@@ -1148,7 +1148,7 @@ export class DecisionController {
 
       const db = getAdminDatabase();
 
-      const { data, error } = await db.rpc('toggle_decision_lock', {
+      const { error } = await db.rpc('toggle_decision_lock', {
         p_decision_id: id,
         p_user_id: userId,
         p_lock: lock,
@@ -1205,7 +1205,7 @@ export class DecisionController {
 
       const db = getAdminDatabase();
 
-      const { data, error } = await db.rpc('update_governance_settings', {
+      const { error } = await db.rpc('update_governance_settings', {
         p_decision_id: id,
         p_user_id: userId,
         p_governance_mode: governanceMode !== undefined ? governanceMode : null,

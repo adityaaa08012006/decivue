@@ -3,12 +3,11 @@
  * Handles decision import from documents and templates
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { DecisionRepository } from '../../data/repositories/decision-repository';
 import { getAdminDatabase } from '../../data/database';
-import logger from '../../utils/logger';
-import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../../utils/logger';
 
 interface ExtractedDecision {
   title: string;
@@ -53,13 +52,13 @@ export class ImportController {
 
       logger.info(`Extracted ${extractedDecisions.length} decisions from document`);
 
-      res.json({ 
+      return res.json({ 
         decisions: extractedDecisions,
         source: file.originalname 
       });
     } catch (error) {
       logger.error('Error parsing document:', error);
-      next(error);
+      return next(error);
     }
   }
 
@@ -82,13 +81,13 @@ export class ImportController {
 
       logger.info(`Parsed ${decisions.length} decisions from template`);
 
-      res.json({ 
+      return res.json({ 
         decisions,
         source: file.originalname 
       });
     } catch (error) {
       logger.error('Error parsing template:', error);
-      next(error);
+      return next(error);
     }
   }
 
@@ -207,7 +206,7 @@ export class ImportController {
 
       logger.info(`Bulk import completed: ${results.created.length} succeeded, ${results.failed.length} failed`);
 
-      res.json({
+      return res.json({
         success: true,
         created: results.created.length,
         failed: results.failed.length,
@@ -215,7 +214,7 @@ export class ImportController {
       });
     } catch (error) {
       logger.error('Error in bulk import:', error);
-      next(error);
+      return next(error);
     }
   }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle, Flag, TrendingUp, Activity, AlertTriangle, Clock, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
 import Aurora from './Aurora';
 import ClickSpark from './ClickSpark';
 import ScrollFloat from './ScrollFloat';
@@ -159,24 +160,28 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
                     status="Stable"
                     statusColor="green"
                     date="2d ago"
+                    index={0}
                   />
                   <DecisionCard 
                     title="Partnership Strategy"
                     status="At Risk"
                     statusColor="yellow"
                     date="5d ago"
+                    index={1}
                   />
                   <DecisionCard 
                     title="International Markets Expansion"
                     status="Critical"
                     statusColor="red"
                     date="8d ago"
+                    index={2}
                   />
                   <DecisionCard 
                     title="Product Launch Timeline"
                     status="Expired"
                     statusColor="gray"
                     date="12d ago"
+                    index={3}
                   />
                 </div>
               </div>
@@ -476,27 +481,109 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
 };
 
 // Supporting Components
-const DecisionCard = ({ title, status, statusColor, date }) => {
+const DecisionCard = ({ title, status, statusColor, date, index = 0 }) => {
   const colorMap = {
     green: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     yellow: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     red: 'bg-red-500/20 text-red-400 border-red-500/30',
     gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30'
   };
+
+  const glowMap = {
+    green: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]',
+    yellow: 'hover:shadow-[0_0_20px_rgba(234,179,8,0.4)]',
+    red: 'hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]',
+    gray: 'hover:shadow-[0_0_15px_rgba(107,114,128,0.3)]'
+  };
   
   return (
-    <div className="group bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-300 cursor-pointer">
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-sm">{title}</div>
-        <div className="text-xs text-gray-500">{date}</div>
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        duration: 0.5, 
+        delay: index * 0.1,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }}
+      whileHover={{ 
+        scale: 1.02,
+        y: -2,
+        transition: { duration: 0.2 }
+      }}
+      className={`group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer overflow-hidden ${glowMap[statusColor]}`}
+    >
+      {/* Shimmer Effect on Hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
       </div>
-      <div className="flex items-center justify-between">
-        <span className={`px-3 py-1 rounded-lg text-xs font-medium border ${colorMap[statusColor]}`}>
-          {status}
-        </span>
-        <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+      
+      {/* Ambient Glow Background */}
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-xl ${
+        statusColor === 'green' ? 'bg-emerald-500/20' :
+        statusColor === 'yellow' ? 'bg-yellow-500/20' :
+        statusColor === 'red' ? 'bg-red-500/20' :
+        'bg-gray-500/20'
+      }`} />
+      
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-2">
+          <motion.div 
+            className="font-semibold text-sm"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1 + 0.2 }}
+          >
+            {title}
+          </motion.div>
+          <motion.div 
+            className="text-xs text-gray-500"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: index * 0.1 + 0.3 }}
+          >
+            {date}
+          </motion.div>
+        </div>
+        <div className="flex items-center justify-between">
+          <motion.span 
+            className={`relative px-3 py-1 rounded-lg text-xs font-medium border ${colorMap[statusColor]}`}
+            animate={statusColor === 'red' || statusColor === 'yellow' ? {
+              scale: [1, 1.05, 1],
+            } : {}}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            {/* Pulse Ring for Critical/At Risk */}
+            {(statusColor === 'red' || statusColor === 'yellow') && (
+              <motion.span
+                className={`absolute inset-0 rounded-lg border-2 ${
+                  statusColor === 'red' ? 'border-red-400/50' : 'border-yellow-400/50'
+                }`}
+                animate={{
+                  scale: [1, 1.3, 1.5],
+                  opacity: [0.5, 0.2, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeOut"
+                }}
+              />
+            )}
+            {status}
+          </motion.span>
+          <motion.div
+            whileHover={{ x: 4 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
+          </motion.div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
