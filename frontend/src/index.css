@@ -97,14 +97,7 @@ html:not(.dark) body {
 }
 
 /* Organization Card Hover Animation */
-.org-card {
-  transform-style: preserve-3d;
-  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
 
-.org-card:hover {
-  transform: translateY(-8px) scale(1.01);
-}
 
 /* === Organization Selector Premium Background === */
 .org-selector-bg {

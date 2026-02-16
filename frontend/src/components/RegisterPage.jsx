@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserPlus, Building2, Users, AlertCircle, CheckCircle, Copy } from 'lucide-react';
+import { UserPlus, Building2, Users, AlertCircle, CheckCircle, Copy, Eye, EyeOff } from 'lucide-react';
+import decivueLogo from '../../assets/Main logo.png';
+import illustrationImg from '../../assets/Illustration.png';
 
 export default function RegisterPage({ onNavigateToLogin }) {
   const { registerCreateOrg, registerJoinOrg } = useAuth();
@@ -18,6 +20,7 @@ export default function RegisterPage({ onNavigateToLogin }) {
   // Join org fields
   const [orgCode, setOrgCode] = useState('');
 
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -74,211 +77,261 @@ export default function RegisterPage({ onNavigateToLogin }) {
     }
   };
 
+  const isFormValid = () => {
+    if (!fullName || !email || !password || !confirmPassword) return false;
+    if (password !== confirmPassword) return false;
+    if (password.length < 8) return false;
+    if (mode === 'create' && !organizationName) return false;
+    if (mode === 'join' && !orgCode) return false;
+    return true;
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-white flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg border border-neutral-gray-200 w-full max-w-md">
-        {/* Logo and Title */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <UserPlus className="w-8 h-8 text-primary-red" strokeWidth={2} />
-            <h1 className="text-2xl font-bold text-neutral-black">Decivue</h1>
-          </div>
-          <p className="text-sm text-neutral-gray-600">Create your account</p>
-        </div>
+    <div className="h-screen bg-[#fbfbfb] flex flex-col">
+      {/* Header */}
+      <div className="h-[60px] bg-white border-b border-[rgba(102,102,102,0.35)] flex items-center justify-center px-6 flex-shrink-0">
+        <img src={decivueLogo} alt="Decivue" className="h-8" />
+      </div>
 
-        {/* Mode Selector */}
-        <div className="flex gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setMode('create')}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${
-              mode === 'create'
-                ? 'bg-primary-blue text-white shadow-sm'
-                : 'bg-neutral-gray-100 text-neutral-gray-700 hover:bg-neutral-gray-200'
-            }`}
-          >
-            <Building2 className="w-4 h-4 inline mr-2" strokeWidth={2} />
-            Create Organization
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('join')}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${
-              mode === 'join'
-                ? 'bg-primary-blue text-white shadow-sm'
-                : 'bg-neutral-gray-100 text-neutral-gray-700 hover:bg-neutral-gray-200'
-            }`}
-          >
-            <Users className="w-4 h-4 inline mr-2" strokeWidth={2} />
-            Join Team
-          </button>
-        </div>
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
+        <div className="max-w-[1000px] w-full h-full max-h-[calc(100vh-76px)] bg-white border border-[rgba(102,102,102,0.5)] rounded-3xl overflow-hidden shadow-sm">
+          <div className="grid lg:grid-cols-2 gap-0 h-full">
+            {/* Left Column - Form */}
+            <div className="p-6 lg:p-8 overflow-y-auto">
+              <h1 className="text-[24px] font-semibold text-[#111] mb-1">
+                {mode === 'create' ? 'Create Organization' : 'Join Team'}
+              </h1>
+              <p className="text-[#666] text-[13px] mb-4">
+                {mode === 'create' 
+                  ? 'Set up your organization and invite your team'
+                  : 'Enter your details and organization code to join'}
+              </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-              <div className="flex items-start gap-2 mb-2">
-                <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span className="text-sm font-medium">{successMessage}</span>
+              {/* Mode Selector */}
+              <div className="flex gap-2 mb-4 p-1 bg-[#f5f5f5] rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setMode('create')}
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+                    mode === 'create'
+                      ? 'bg-white text-[#111] shadow-sm'
+                      : 'text-[#666] hover:text-[#111]'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4 inline mr-2" strokeWidth={2} />
+                  Create Org
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('join')}
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+                    mode === 'join'
+                      ? 'bg-white text-[#111] shadow-sm'
+                      : 'text-[#666] hover:text-[#111]'
+                  }`}
+                >
+                  <Users className="w-4 h-4 inline mr-2" strokeWidth={2} />
+                  Join Team
+                </button>
               </div>
-              {generatedOrgCode && (
-                <div className="mt-3 p-3 bg-green-100 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-lg font-bold text-green-900">
-                      {generatedOrgCode}
-                    </span>
+
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs">{error}</span>
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-xl">
+                    <div className="flex items-start gap-2 mb-1">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs font-medium">{successMessage}</span>
+                    </div>
+                    {generatedOrgCode && (
+                      <div className="mt-3 p-3 bg-green-100 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-lg font-bold text-green-900">
+                            {generatedOrgCode}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={copyOrgCode}
+                            className="p-2 hover:bg-green-200 rounded transition-colors"
+                            title="Copy to clipboard"
+                          >
+                            {codeCopied ? (
+                              <CheckCircle className="w-5 h-5 text-green-700" />
+                            ) : (
+                              <Copy className="w-5 h-5 text-green-700" />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-xs text-green-800 mt-2">
+                          Redirecting to dashboard...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Full Name */}
+                <div>
+                  <label className="block text-[#111] text-xs font-medium mb-1">
+                    Full name
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    className="w-full h-[44px] px-3 text-sm border border-[rgba(102,102,102,0.35)] rounded-xl text-[#111] focus:outline-none focus:border-[#111] transition-colors"
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                {/* Organization Name (Create mode only) */}
+                {mode === 'create' && (
+                  <div>
+                    <label className="block text-[#111] text-xs font-medium mb-1">
+                      Organization name
+                    </label>
+                    <input
+                      type="text"
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                      required
+                      className="w-full h-[44px] px-3 text-sm border border-[rgba(102,102,102,0.35)] rounded-xl text-[#111] focus:outline-none focus:border-[#111] transition-colors"
+                      placeholder="Acme Corp"
+                    />
+                  </div>
+                )}
+
+                {/* Organization Code (Join mode only) */}
+                {mode === 'join' && (
+                  <div>
+                    <label className="block text-[#111] text-xs font-medium mb-1">
+                      Organization code
+                    </label>
+                    <input
+                      type="text"
+                      value={orgCode}
+                      onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                      required
+                      className="w-full h-[44px] px-3 text-sm border border-[rgba(102,102,102,0.35)] rounded-xl text-[#111] font-mono tracking-wider focus:outline-none focus:border-[#111] transition-colors"
+                      placeholder="ORG-XXXX"
+                      maxLength={8}
+                    />
+                    <p className="text-[10px] text-[#666] mt-1">
+                      Ask your organization lead for the code
+                    </p>
+                  </div>
+                )}
+
+                {/* Email */}
+                <div>
+                  <label className="block text-[#111] text-xs font-medium mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full h-[44px] px-3 text-sm border border-[rgba(102,102,102,0.35)] rounded-xl text-[#111] focus:outline-none focus:border-[#111] transition-colors"
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-[#111] text-xs font-medium mb-1">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      className="w-full h-[44px] px-3 pr-20 text-sm border border-[rgba(102,102,102,0.35)] rounded-xl text-[#111] focus:outline-none focus:border-[#111] transition-colors"
+                      placeholder="Min 8 characters"
+                    />
                     <button
                       type="button"
-                      onClick={copyOrgCode}
-                      className="p-2 hover:bg-green-200 rounded transition-colors"
-                      title="Copy to clipboard"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[#666] hover:text-[#111] transition-colors text-xs"
                     >
-                      {codeCopied ? (
-                        <CheckCircle className="w-5 h-5 text-green-700" />
+                      {showPassword ? (
+                        <>
+                          <EyeOff className="w-4 h-4" />
+                          <span className="text-xs">Hide</span>
+                        </>
                       ) : (
-                        <Copy className="w-5 h-5 text-green-700" />
+                        <>
+                          <Eye className="w-4 h-4" />
+                          <span className="text-xs">Show</span>
+                        </>
                       )}
                     </button>
                   </div>
-                  <p className="text-xs text-green-800 mt-2">
-                    Redirecting to dashboard...
-                  </p>
                 </div>
-              )}
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-[#111] text-xs font-medium mb-1">
+                    Confirm password
+                  </label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="w-full h-[44px] px-3 text-sm border border-[rgba(102,102,102,0.35)] rounded-xl text-[#111] focus:outline-none focus:border-[#111] transition-colors"
+                    placeholder="Repeat password"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loading || !isFormValid()}
+                  className="w-full h-[48px] bg-[#111] text-white rounded-[24px] font-medium text-sm hover:bg-[#333] disabled:opacity-25 disabled:cursor-not-allowed transition-all mt-3"
+                >
+                  {loading
+                    ? 'Creating account...'
+                    : mode === 'create'
+                    ? 'Create organization'
+                    : 'Join organization'}
+                </button>
+
+                {/* Login Link */}
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={onNavigateToLogin}
+                    className="text-[#666] hover:text-[#111] text-xs transition-colors"
+                  >
+                    Already have an account? <span className="underline">Log in</span>
+                  </button>
+                </div>
+              </form>
             </div>
-          )}
 
-          {/* Common Fields */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-              placeholder="John Doe"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full px-4 py-2.5 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-              placeholder="Min 8 characters"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full px-4 py-2.5 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-              placeholder="Repeat password"
-            />
-          </div>
-
-          {/* Mode-Specific Fields */}
-          {mode === 'create' && (
-            <div>
-              <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-                Organization Name
-              </label>
-              <input
-                type="text"
-                value={organizationName}
-                onChange={(e) => setOrganizationName(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-                placeholder="Acme Corp"
-              />
-              <p className="text-xs text-neutral-gray-500 mt-2">
-                You'll receive a code to share with your team
-              </p>
+            {/* Right Column - Illustration */}
+            <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+              <div className="w-full max-w-[280px] flex items-center justify-center">
+                <img src={illustrationImg} alt="Team Collaboration" className="w-full h-auto" />
+              </div>
             </div>
-          )}
-
-          {mode === 'join' && (
-            <div>
-              <label className="block text-sm font-medium text-neutral-gray-700 mb-2">
-                Organization Code
-              </label>
-              <input
-                type="text"
-                value={orgCode}
-                onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
-                required
-                className="w-full px-4 py-2.5 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all font-mono tracking-wider"
-                placeholder="ORG-XXXX"
-                maxLength={8}
-              />
-              <p className="text-xs text-neutral-gray-500 mt-2">
-                Ask your organization lead for the code
-              </p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-red text-white py-2.5 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-          >
-            {loading
-              ? 'Creating account...'
-              : mode === 'create'
-              ? 'Create Organization'
-              : 'Join Organization'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-neutral-gray-600">
-            Already have an account?{' '}
-            <button
-              onClick={onNavigateToLogin}
-              className="text-primary-blue hover:underline font-medium"
-            >
-              Sign in
-            </button>
-          </p>
+          </div>
         </div>
       </div>
+
     </div>
   );
 }

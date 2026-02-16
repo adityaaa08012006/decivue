@@ -25,11 +25,11 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
   return (
     <div className="org-selector-page fixed inset-0 z-50 overflow-y-auto">
       {/* Aurora Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-[#faf5ff] via-[#f3f0ff] to-[#ede9ff]">
+      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
         <Aurora
-          colorStops={["#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd"]}
-          amplitude={0.7}
-          blend={0.45}
+          colorStops={["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
+          amplitude={0.5}
+          blend={0.35}
         />
       </div>
       
@@ -64,8 +64,8 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
             </p>
           </div>
 
-          {/* Organization Type Cards - Immersive Editorial Style */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Organization Type Cards - Full Width Edge to Edge */}
+          <div className="flex gap-4 w-full">
             {organizationTypes.map((orgType, index) => {
               const Icon = orgType.icon;
               
@@ -73,49 +73,46 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
                 <button
                   key={orgType.id}
                   onClick={() => handleSelect(orgType)}
-                  className="org-card group relative h-[380px] rounded-[28px] overflow-hidden transition-all duration-700 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:-translate-y-2"
-                  style={{
-                    animationDelay: `${index * 150}ms`
-                  }}
+                  className="group relative flex-1 aspect-[3/4] rounded-[24px] overflow-hidden shadow-lg cursor-pointer"
                 >
                   {/* Background Image Layer */}
-                  <div className="absolute inset-0 rounded-[28px] overflow-hidden">
+                  <div className="absolute inset-0 rounded-[24px] overflow-hidden">
                     <img 
                       src={orgBackgrounds[orgType.id]} 
                       alt={`${orgType.name} background`}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
 
                   {/* Dark Gradient Overlay for Text Readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/95 via-gray-900/60 to-transparent" />
 
                   {/* Content Layer - Bottom Left Aligned */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-8">
-                    <div className="relative z-10 transition-all duration-500 group-hover:-translate-y-2">
+                  <div className="absolute inset-0 flex flex-col justify-end p-6">
+                    <div className="relative z-10">
                       {/* Icon - Minimal Monochrome */}
-                      <div className="mb-6">
-                        <div className="inline-flex w-14 h-14 rounded-[18px] items-center justify-center backdrop-blur-xl border border-white/20 transition-all duration-500 bg-white/15 group-hover:bg-white/25 group-hover:scale-110">
+                      <div className="mb-4">
+                        <div className="inline-flex w-14 h-14 rounded-[16px] items-center justify-center backdrop-blur-xl border border-white/20 bg-white/15">
                           <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
                         </div>
                       </div>
 
                       {/* Title - Bold Typography */}
-                      <h3 className="text-3xl font-bold text-white mb-3 leading-tight tracking-tight transition-all duration-500 group-hover:translate-y-[-2px]">
+                      <h3 className="text-[22px] font-bold text-white mb-2 leading-tight tracking-tight">
                         {orgType.name}
                       </h3>
                       
                       {/* Subtitle - Descriptive */}
-                      <p className="text-white/80 text-[15px] leading-relaxed mb-6 font-medium">
+                      <p className="text-white/90 text-[15px] leading-relaxed mb-4 font-medium">
                         {orgType.description}
                       </p>
 
                       {/* CTA Button - Prominent Pill */}
                       <div className="inline-flex">
-                        <div className="px-8 py-3.5 rounded-full font-semibold text-[15px] transition-all duration-500 bg-white/90 text-gray-900 group-hover:bg-white group-hover:shadow-[0_8px_24px_rgba(255,255,255,0.35)] group-hover:translate-y-[-2px]">
+                        <div className="px-6 py-2.5 rounded-full font-semibold text-[14px] bg-white/90 text-gray-900">
                           <span className="flex items-center gap-2">
                             <span>Explore</span>
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            <ArrowRight className="w-4 h-4" />
                           </span>
                         </div>
                       </div>
@@ -123,7 +120,7 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
                   </div>
 
                   {/* Subtle Border for Depth */}
-                  <div className="absolute inset-0 rounded-[28px] border border-white/10 pointer-events-none" />
+                  <div className="absolute inset-0 rounded-[24px] border border-white/10 pointer-events-none" />
                 </button>
               );
             })}

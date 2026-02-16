@@ -183,9 +183,13 @@ function AppContent() {
         <LandingPage 
           onGetStarted={() => {
             setShowLanding(false);
-            setShowOrgSelector(true);
+            setAuthView('register');
           }}
           onSeeDemo={() => {
+            setShowLanding(false);
+            setShowOrgSelector(true);
+          }}
+          onLogin={() => {
             setShowLanding(false);
             setAuthView('login');
           }}

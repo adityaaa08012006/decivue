@@ -9,7 +9,7 @@
  * - Automatic node placement with no manual dragging
  */
 
-import ELK from 'elkjs/lib/elk.bundled.js';
+import ELK from 'elkjs';
 
 const elk = new ELK();
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle, Flag, TrendingUp, Activity, AlertTriangle, Clock, Users } from 'lucide-react';
 import Aurora from './Aurora';
 
-const LandingPage = ({ onGetStarted, onSeeDemo }) => {
+const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -22,6 +22,16 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       
       {/* Subtle overlay for depth */}
       <div className="fixed inset-0 bg-white/10 pointer-events-none" />
+      
+      {/* Top Navigation Bar */}
+      <nav className="relative z-50 flex items-center justify-end px-10 py-5">
+        <button
+          onClick={onLogin}
+          className="px-5 py-2 bg-white/80 backdrop-blur-sm text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-white hover:border-gray-300 shadow-sm transition-all duration-300"
+        >
+          Login
+        </button>
+      </nav>
       
       {/* Keep subtle wave overlay for aesthetic */}
       <div className="fixed inset-0 opacity-[0.08] pointer-events-none">
@@ -45,32 +55,32 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       <div className="fixed inset-0 bg-grid-pattern-light opacity-[0.03] pointer-events-none" />
       
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center px-6 md:px-12 overflow-hidden">
+      <section className="relative min-h-[calc(100vh-80px)] flex items-center justify-center px-6 md:px-12 overflow-hidden">
         
-        <div className="relative z-10 max-w-7xl w-full mx-auto grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative z-10 max-w-6xl w-full mx-auto grid lg:grid-cols-2 gap-10 items-center">
           {/* Left Content */}
-          <div className={`space-y-8 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className={`space-y-7 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <div className="inline-block">
-              <div className="text-[#1d4ed8] font-semibold text-sm tracking-wider uppercase mb-4 flex items-center gap-2">
-                <div className="w-8 h-[1px] bg-[#1d4ed8]" />
+              <div className="text-[#1d4ed8] font-semibold text-xs tracking-wider uppercase mb-4 flex items-center gap-2">
+                <div className="w-7 h-[1px] bg-[#1d4ed8]" />
                 Decision Intelligence Platform
               </div>
             </div>
             
-            <h1 className="text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight text-gray-900">
+            <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight text-gray-900">
               Stronger Decisions.
               <br />
               <span className="text-gray-800">Smarter Organizations.</span>
             </h1>
             
-            <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
+            <p className="text-lg text-gray-600 leading-relaxed max-w-xl">
               Decivue is the intelligent platform that helps teams make adaptive, data-driven decisions with clarity. Monitor decision health, track assumptions, and adapt before problems escalate.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button 
                 onClick={onGetStarted}
-                className="group relative px-8 py-4 bg-[#1d4ed8] text-white font-semibold rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-blue-glow hover:scale-[1.02]"
+                className="group relative px-7 py-3.5 bg-[#1d4ed8] text-white font-semibold rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-blue-glow hover:scale-[1.02]"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Get Started — It's Free
@@ -81,13 +91,13 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
               
               <button 
                 onClick={onSeeDemo}
-                className="px-8 py-4 bg-white backdrop-blur-sm text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all duration-300"
+                className="px-7 py-3.5 bg-white backdrop-blur-sm text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all duration-300"
               >
                 See How It Works
               </button>
             </div>
             
-            <div className="pt-8 text-sm text-gray-500">
+            <div className="pt-8 text-xs text-gray-500">
               Start making clearer decisions in minutes.<br />
               No credit card required.
             </div>
@@ -97,8 +107,8 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
           <div className={`relative transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <div className="relative">
               {/* Dashboard Mock */}
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 border border-gray-200 shadow-2xl">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-gray-200 shadow-2xl">
+                <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-200">
                   <div className="text-xs text-gray-500 font-mono">10:45 AM · Source: Fleet Report loaded</div>
                   <div className="flex gap-2">
                     <div className="w-3 h-3 rounded-full bg-red-500/50" />
@@ -108,7 +118,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
                 </div>
                 
                 {/* Decision Cards */}
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <DecisionCard 
                     title="Cloud Provider Future"
                     status="Stable"
@@ -137,8 +147,8 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
               </div>
               
               {/* Floating Health Indicator */}
-              <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-xl rounded-2xl p-4 border border-gray-200 shadow-xl">
-                <div className="text-sm text-gray-600 mb-2">Decision Flow</div>
+              <div className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-xl rounded-2xl p-3 border border-gray-200 shadow-xl">
+                <div className="text-xs text-gray-600 mb-1.5">Decision Flow</div>
                 <div className="flex items-center gap-2">
                   {[38, 45, 52, 48, 55, 50, 58].map((height, i) => (
                     <div key={i} className="flex flex-col items-center gap-1">
@@ -156,10 +166,10 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Social Proof Bar */}
-      <section className="relative py-16 border-y border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <p className="text-center text-gray-500 text-sm mb-8 uppercase tracking-wider">Trusted by forward-thinking teams</p>
-          <div className="flex flex-wrap justify-center items-center gap-12 opacity-30 grayscale">
+      <section className="relative py-14 border-y border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 md:px-12">
+          <p className="text-center text-gray-500 text-xs mb-7 uppercase tracking-wider">Trusted by forward-thinking teams</p>
+          <div className="flex flex-wrap justify-center items-center gap-10 opacity-30 grayscale">
             <Logo name="Dropbox" />
             <Logo name="Notion" />
             <Logo name="Slack" />
@@ -171,16 +181,16 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Features Section */}
-      <section className="relative py-32 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-6 text-gray-900">Keep a Pulse on Your Team's Decisions</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+      <section className="relative py-28 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-[2.75rem] font-bold mb-5 text-gray-900">Keep a Pulse on Your Team's Decisions</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               As decisions mature, things change. Track your team's organizational foundational work in real-time.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-7">
             <FeatureCard 
               icon={<CheckCircle className="w-8 h-8" />}
               title="Monitor Decision Health"
@@ -204,19 +214,19 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Insight Section */}
-      <section className="relative py-32 px-6 md:px-12 bg-gradient-to-b from-transparent via-[#eef2ff]/30 to-transparent">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section className="relative py-28 px-6 md:px-12 bg-gradient-to-b from-transparent via-[#eef2ff]/30 to-transparent">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-14 items-center">
             {/* Left - Copy */}
-            <div className="space-y-8">
+            <div className="space-y-7">
               <div className="inline-block">
-                <div className="text-[#1d4ed8] font-semibold text-sm tracking-wider uppercase flex items-center gap-2">
-                  <div className="w-8 h-[1px] bg-[#1d4ed8]" />
+                <div className="text-[#1d4ed8] font-semibold text-xs tracking-wider uppercase flex items-center gap-2">
+                  <div className="w-7 h-[1px] bg-[#1d4ed8]" />
                   Real-Time Reporting Tailored for <span className="text-[#1d4ed8]">Change</span>
                 </div>
               </div>
               
-              <h2 className="text-5xl font-bold leading-tight text-gray-900">
+              <h2 className="text-[2.75rem] font-bold leading-tight text-gray-900">
                 Spot risks early as conditions shift.
               </h2>
               
@@ -243,11 +253,11 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
               </div>
               
               <div className="pt-4">
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-3 text-xs">
                   <div className="flex -space-x-2">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 border-2 border-white" />
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 border-2 border-white" />
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white" />
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 border-2 border-white" />
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 border-2 border-white" />
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-500 to-gray-600 border-2 border-white" />
                   </div>
                   <div className="text-gray-600">
                     <div className="flex items-center gap-1 text-yellow-500 font-semibold">
@@ -261,15 +271,15 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
             
             {/* Right - Risk Overview Dashboard */}
             <div className="relative">
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-gray-200 shadow-2xl">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">Risk Overview</h3>
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-7 border border-gray-200 shadow-2xl">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-xl font-bold text-gray-900">Risk Overview</h3>
                   <button className="text-gray-400 hover:text-gray-600 transition-colors">•••</button>
                 </div>
                 
                 {/* Risk Score Circle */}
-                <div className="flex items-center justify-center mb-8">
-                  <div className="relative w-48 h-48">
+                <div className="flex items-center justify-center mb-7">
+                  <div className="relative w-44 h-44">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                       <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
                       <circle 
@@ -289,8 +299,8 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
                       </defs>
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="text-5xl font-bold text-gray-900">64</div>
-                      <div className="text-sm text-gray-600 mt-1">Risk Score</div>
+                      <div className="text-[2.75rem] font-bold text-gray-900">64</div>
+                      <div className="text-xs text-gray-600 mt-1">Risk Score</div>
                     </div>
                   </div>
                 </div>
@@ -327,23 +337,23 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Decision Flow Section */}
-      <section className="relative py-32 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Decision Flow</h2>
+      <section className="relative py-28 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold mb-3">Decision Flow</h2>
             <p className="text-gray-400">Track each decision lifecycle as conditions evolve</p>
           </div>
           
-          <div className="relative bg-gradient-to-br from-gray-900 to-black rounded-3xl p-12 border border-white/10">
+          <div className="relative bg-gradient-to-br from-gray-900 to-black rounded-3xl p-10 border border-white/10">
             {/* Timeline */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-7">
               {['10 Oct', '11 Oct', '11/1PM', '11 / 5PM', '11/10PM', '12/1AM', '13/1AM'].map((date, i) => (
                 <div key={i} className="text-xs text-gray-500 font-mono">{date}</div>
               ))}
             </div>
             
             {/* Flow Chart */}
-            <div className="relative h-64">
+            <div className="relative h-56">
               <svg className="w-full h-full" viewBox="0 0 1000 200" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -376,10 +386,10 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Testimonials Section */}
-      <section className="relative py-32 px-6 md:px-12 bg-gradient-to-b from-[#f6f9ff] to-transparent">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-4 text-gray-900">
+      <section className="relative py-28 px-6 md:px-12 bg-gradient-to-b from-[#f6f9ff] to-transparent">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-[2.75rem] font-bold mb-3 text-gray-900">
               Teams Are Making <span className="text-[#1d4ed8]">Smarter Decisions</span> with Decivue.
             </h2>
             <p className="text-gray-600">
@@ -387,7 +397,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-7">
             <TestimonialCard 
               name="Sarah Mendel"
               title="Planning Manager · TechCorp"
@@ -408,24 +418,24 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Final CTA Section */}
-      <section className="relative py-32 px-6 md:px-12">
+      <section className="relative py-28 px-6 md:px-12">
         <div className="max-w-4xl mx-auto text-center">
           <div className="relative">
             {/* Glow Effect */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8fa7ff]/25 rounded-full blur-[150px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] bg-[#8fa7ff]/25 rounded-full blur-[135px] pointer-events-none" />
             
-            <div className="relative z-10 space-y-8">
-              <h2 className="text-6xl font-bold leading-tight text-gray-900">
+            <div className="relative z-10 space-y-7">
+              <h2 className="text-5xl font-bold leading-tight text-gray-900">
                 Ready to Make Better Decisions?
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Join thousands of teams using Decivue to track, monitor, and optimize their decision-making process.
               </p>
               
-              <div className="pt-8">
+              <div className="pt-7">
                 <button 
                   onClick={onGetStarted}
-                  className="group relative px-12 py-5 bg-[#1d4ed8] text-white text-lg font-semibold rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-blue-glow-lg hover:scale-[1.05] hover:bg-[#1e40af]"
+                  className="group relative px-10 py-4 bg-[#1d4ed8] text-white text-base font-semibold rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-blue-glow-lg hover:scale-[1.05] hover:bg-[#1e40af]"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-3">
                     Get Started — It's Free
@@ -444,9 +454,9 @@ const LandingPage = ({ onGetStarted, onSeeDemo }) => {
       </section>
       
       {/* Footer */}
-      <footer className="relative border-t border-gray-200 py-12 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-2xl font-bold text-gray-900">Decivue</div>
+      <footer className="relative border-t border-gray-200 py-10 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-5">
+          <div className="text-xl font-bold text-gray-900">Decivue</div>
           <div className="flex gap-8 text-sm text-gray-600">
             <a href="#" className="hover:text-gray-900 transition-colors">Product</a>
             <a href="#" className="hover:text-gray-900 transition-colors">Pricing</a>
@@ -488,21 +498,21 @@ const DecisionCard = ({ title, status, statusColor, date }) => {
 };
 
 const Logo = ({ name }) => (
-  <div className="text-xl font-bold tracking-tight">{name}</div>
+  <div className="text-lg font-bold tracking-tight">{name}</div>
 );
 
 const FeatureCard = ({ icon, title, description, link }) => (
-  <div className="group relative bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-8 border border-white/10 hover:border-white/20 transition-all duration-500 hover:-translate-y-2">
+  <div className="group relative bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-7 border border-white/10 hover:border-white/20 transition-all duration-500 hover:-translate-y-2">
     {/* Hover Glow */}
     <div className="absolute inset-0 bg-gradient-to-br from-primary-accent/0 to-primary-accent/0 group-hover:from-primary-accent/5 group-hover:to-primary-accent/0 rounded-3xl transition-all duration-500" />
     
     <div className="relative z-10">
-      <div className="w-16 h-16 rounded-2xl bg-primary-accent/10 flex items-center justify-center text-primary-accent mb-6 group-hover:scale-110 transition-transform duration-300">
+      <div className="w-14 h-14 rounded-2xl bg-primary-accent/10 flex items-center justify-center text-primary-accent mb-5 group-hover:scale-110 transition-transform duration-300">
         {icon}
       </div>
       
-      <h3 className="text-2xl font-bold mb-4">{title}</h3>
-      <p className="text-gray-400 mb-6 leading-relaxed">{description}</p>
+      <h3 className="text-xl font-bold mb-3">{title}</h3>
+      <p className="text-gray-400 mb-5 leading-relaxed">{description}</p>
       
       <a href="#" className="inline-flex items-center gap-2 text-primary-accent font-semibold hover:gap-3 transition-all">
         {link}
@@ -551,9 +561,9 @@ const RiskDecisionCard = ({ icon, title, subtitle, status, statusColor }) => {
 };
 
 const TestimonialCard = ({ name, title, quote }) => (
-  <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-8 border border-white/10 hover:border-white/20 transition-all duration-300">
-    <div className="flex items-center gap-4 mb-6">
-      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-700 to-gray-800" />
+  <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-7 border border-white/10 hover:border-white/20 transition-all duration-300">
+    <div className="flex items-center gap-4 mb-5">
+      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-700 to-gray-800" />
       <div>
         <div className="font-bold">{name}</div>
         <div className="text-sm text-gray-400">{title}</div>

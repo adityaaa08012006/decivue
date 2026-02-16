@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import decivueLogo from '../../assets/Main logo.png';
 
 export default function LoginPage({ onNavigateToRegister }) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,76 +26,153 @@ export default function LoginPage({ onNavigateToRegister }) {
     // Success handled by AuthContext - user will be redirected
   };
 
+  const isFormValid = email.trim() !== '' && password.trim() !== '';
+
   return (
-    <div className="min-h-screen bg-neutral-white dark:bg-neutral-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-gray-800 p-8 rounded-xl shadow-lg border border-neutral-gray-200 dark:border-neutral-gray-700 w-full max-w-md">
-        {/* Logo and Title */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <LogIn className="w-8 h-8 text-primary-red" strokeWidth={2} />
-            <h1 className="text-2xl font-bold text-neutral-black dark:text-white">Decivue</h1>
-          </div>
-          <p className="text-sm text-neutral-gray-600 dark:text-neutral-gray-400">Sign in to your account</p>
-        </div>
+    <div className="bg-white h-screen flex flex-col">
+      {/* Header */}
+      <header className="border-b border-gray-200 h-[60px] flex items-center justify-center px-8 flex-shrink-0">
+        <img src={decivueLogo} alt="Decivue" className="h-8" />
+      </header>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span className="text-sm">{error}</span>
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center py-8 px-4 overflow-hidden">
+        <div className="w-full max-w-[580px] space-y-5">
+          {/* Title */}
+          <div className="text-center">
+            <h1 className="text-[26px] font-semibold text-[#333]">
+              Log in
+            </h1>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Error Alert */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span className="text-xs">{error}</span>
+              </div>
+            )}
+
+            {/* Email Field */}
+            <div className="space-y-1">
+              <label
+                htmlFor="email"
+                className="block text-[14px] text-[#666]"
+              >
+                Email address or user name
+              </label>
+              <input
+                id="email"
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                className="w-full h-[44px] px-3 text-sm rounded-xl border border-[rgba(102,102,102,0.35)] focus:outline-none focus:border-[#111] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              />
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-neutral-gray-300 dark:border-neutral-gray-600 bg-white dark:bg-neutral-gray-700 text-neutral-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-              placeholder="you@example.com"
-            />
-          </div>
+            {/* Password Field */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-[14px] text-[#666]"
+                >
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="flex items-center gap-1 text-[rgba(102,102,102,0.8)] hover:text-[#111] transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                  <span className="text-[14px]">
+                    {showPassword ? 'Hide' : 'Show'}
+                  </span>
+                </button>
+              </div>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                className="w-full h-[44px] px-3 text-sm rounded-xl border border-[rgba(102,102,102,0.35)] focus:outline-none focus:border-[#111] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-gray-700 dark:text-neutral-gray-300 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full px-4 py-2.5 border border-neutral-gray-300 dark:border-neutral-gray-600 bg-white dark:bg-neutral-gray-700 text-neutral-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+            {/* Remember Me */}
+            <div className="flex items-center gap-2 py-1">
+              <input
+                id="remember"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-5 h-5 rounded border border-gray-300 text-[#111] focus:ring-2 focus:ring-[#111] cursor-pointer"
+              />
+              <label
+                htmlFor="remember"
+                className="text-[14px] text-[#333] cursor-pointer"
+              >
+                Remember me
+              </label>
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-red text-white py-2.5 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
+            {/* Terms */}
+            <div className="py-1">
+              <p className="text-[13px] text-[#333]">
+                By continuing, you agree to the{' '}
+                <a href="#" className="text-[#111] underline hover:no-underline">
+                  Terms of use
+                </a>{' '}
+                and{' '}
+                <a href="#" className="text-[#111] underline hover:no-underline">
+                  Privacy Policy
+                </a>
+                .
+              </p>
+            </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-neutral-gray-600 dark:text-neutral-gray-400">
-            Don't have an account?{' '}
+            {/* Submit Button */}
             <button
-              onClick={onNavigateToRegister}
-              className="text-primary-blue hover:underline font-medium"
+              type="submit"
+              disabled={!isFormValid || loading}
+              className={`w-full h-[48px] rounded-[24px] text-[16px] font-semibold text-white transition-all ${
+                isFormValid && !loading
+                  ? 'bg-[#111] hover:bg-[#333] cursor-pointer'
+                  : 'bg-[#111] opacity-25 cursor-not-allowed'
+              }`}
             >
-              Sign up
+              {loading ? 'Signing in...' : 'Log in'}
             </button>
-          </p>
+          </form>
+
+          {/* Footer Links */}
+          <div className="flex flex-col items-center gap-4 pt-2">
+            <a
+              href="#"
+              className="text-[13px] font-semibold text-[#111] underline hover:no-underline"
+            >
+              Forget your password
+            </a>
+            <p className="text-[13px] text-[#666]">
+              Don't have an account?{' '}
+              <button
+                onClick={onNavigateToRegister}
+                className="font-semibold text-[#111] underline hover:no-underline"
+              >
+                Sign up
+              </button>
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

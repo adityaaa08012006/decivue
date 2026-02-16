@@ -19,11 +19,11 @@ const TemplatePreview = ({ orgType, onContinue, onBack }) => {
   return (
     <div className="org-selector-page fixed inset-0 z-50 overflow-y-auto">
       {/* Aurora Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-[#fff7ed] via-[#fff3e0] to-[#fef3c7]">
+      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
         <Aurora
-          colorStops={["#f59e0b", "#fbbf24", "#fcd34d", "#fde68a"]}
-          amplitude={0.65}
-          blend={0.38}
+          colorStops={["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
+          amplitude={0.5}
+          blend={0.35}
         />
       </div>
       
