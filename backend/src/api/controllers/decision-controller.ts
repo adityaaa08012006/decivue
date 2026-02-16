@@ -16,22 +16,10 @@ import { AuthRequest } from '@middleware/auth';
 import { AssumptionValidationService } from '@services/assumption-validation-service';
 
 export class DecisionController {
-  private _repository?: DecisionRepository;
-  // @ts-expect-error - Engine will be used for evaluation endpoint
   private engine: DeterministicEngine;
 
   constructor() {
     this.engine = new DeterministicEngine();
-  }
-
-  /**
-   * Lazy-load repository to avoid initialization order issues
-   */
-  private get repository(): DecisionRepository {
-    if (!this._repository) {
-      this._repository = new DecisionRepository(getAdminDatabase());
-    }
-    return this._repository;
   }
 
   /**
@@ -52,9 +40,9 @@ export class DecisionController {
 
       // Filter by organization
       const decisions = allDecisions.filter((d: any) => d.organizationId === organizationId);
-      res.json(decisions);
+      return res.json(decisions);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -79,9 +67,9 @@ export class DecisionController {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      res.json(decision);
+      return res.json(decision);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -151,9 +139,9 @@ export class DecisionController {
       });
 
       logger.info(`Decision updated: ${decision.id}`);
-      res.json(decision);
+      return res.json(decision);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -180,9 +168,9 @@ export class DecisionController {
 
       await repository.delete(req.params.id);
       logger.info(`Decision deleted: ${req.params.id}`);
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -224,11 +212,10 @@ export class DecisionController {
       // Emit event
       await eventBus.emit({
         id: uuidv4(),
-        type: EventType.LIFECYCLE_CHANGED,
+        type: EventType.DECISION_UPDATED,
         timestamp: getCurrentTime(),
         decisionId: id,
-        oldLifecycle: decision.lifecycle,
-        newLifecycle: 'RETIRED'
+        changes: { lifecycle: 'RETIRED' as any, invalidatedReason: reason || 'manually_retired' }
       });
 
       // Check and deprecate orphaned decision-specific assumptions
@@ -237,7 +224,7 @@ export class DecisionController {
       logger.info(`Decision retired: ${id}`);
       return res.json(decision);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -338,11 +325,25 @@ export class DecisionController {
       });
       logger.info(`   - Constraints: ${constraints.length}`);
 
-      // Fetch dependencies
-      const { data: dependencies } = await db
+      // Fetch dependencies - get the actual decision records
+      const { data: dependencyRelations } = await db
         .from('dependencies')
         .select('*')
         .or(`source_decision_id.eq.${decisionId},target_decision_id.eq.${decisionId}`);
+
+      // Fetch the actual decision records that this decision depends on
+      const dependencyIds = (dependencyRelations || [])
+        .filter((d: any) => d.source_decision_id === decisionId)
+        .map((d: any) => d.target_decision_id);
+
+      let dependencyDecisions: any[] = [];
+      if (dependencyIds.length > 0) {
+        const { data: depDecisions } = await db
+          .from('decisions')
+          .select('*')
+          .in('id', dependencyIds);
+        dependencyDecisions = depDecisions || [];
+      }
 
       // Build evaluation input
       const evaluationInput = {
@@ -352,7 +353,7 @@ export class DecisionController {
           description: decision.description,
           lifecycle: decision.lifecycle,
           healthSignal: decision.health_signal,
-          lastReviewedAt: decision.last_reviewed_at ? new Date(decision.last_reviewed_at) : undefined,
+          lastReviewedAt: decision.last_reviewed_at ? new Date(decision.last_reviewed_at) : new Date(decision.created_at),
           createdAt: new Date(decision.created_at),
           expiryDate: decision.expiry_date ? new Date(decision.expiry_date) : undefined,
           metadata: decision.metadata || {}
@@ -380,14 +381,16 @@ export class DecisionController {
           rule_definition: c.rule_expression || c.rule_definition,
           scope: c.scope
         })),
-        dependencies: (dependencies || []).map((d: any) => ({
+        dependencies: dependencyDecisions.map((d: any) => ({
           id: d.id,
-          sourceDecisionId: d.source_decision_id,
-          targetDecisionId: d.target_decision_id,
-          dependencyType: d.dependency_type,
+          title: d.title,
           description: d.description,
-          isBlocking: d.is_blocking,
-          createdAt: d.created_at ? new Date(d.created_at) : new Date()
+          lifecycle: d.lifecycle,
+          healthSignal: d.health_signal,
+          lastReviewedAt: d.last_reviewed_at ? new Date(d.last_reviewed_at) : new Date(d.created_at),
+          createdAt: new Date(d.created_at),
+          expiryDate: d.expiry_date ? new Date(d.expiry_date) : undefined,
+          metadata: d.metadata || {}
         })),
         currentTimestamp: getCurrentTime()
       };
@@ -444,9 +447,7 @@ export class DecisionController {
         type: EventType.DECISION_EVALUATED,
         timestamp: getCurrentTime(),
         decisionId,
-        oldHealth: decision.health_signal,
-        newHealth: result.newHealthSignal,
-        healthChange: result.newHealthSignal - decision.health_signal
+        evaluationResult: result
       });
 
       // If decision was deprecated, check and deprecate orphaned assumptions
