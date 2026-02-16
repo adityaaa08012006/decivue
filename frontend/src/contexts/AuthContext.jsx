@@ -19,13 +19,26 @@ export function AuthProvider({ children }) {
   // Refresh token before it expires
   const refreshSession = async (currentSession) => {
     try {
+      console.log('🔄 Attempting to refresh session...', {
+        hasRefreshToken: !!currentSession?.refresh_token,
+        refreshTokenLength: currentSession?.refresh_token?.length,
+        currentExpiresAt: currentSession?.expires_at
+      });
+
       if (!currentSession?.refresh_token) {
-        console.error('No refresh token available');
+        console.error('❌ No refresh token available in session');
         return false;
       }
 
+      console.log('📡 Calling /auth/refresh endpoint...');
       const response = await api.post('/auth/refresh', {
         refresh_token: currentSession.refresh_token
+      });
+
+      console.log('📦 Refresh response received:', {
+        hasSession: !!response.session,
+        newExpiresAt: response.session?.expires_at,
+        newExpiresIn: response.session?.expires_in
       });
 
       const { session: newSession } = response;
@@ -38,7 +51,12 @@ export function AuthProvider({ children }) {
       console.log('✅ Session refreshed successfully');
       return true;
     } catch (error) {
-      console.error('Failed to refresh session:', error);
+      console.error('❌ Failed to refresh session:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      console.log('🚪 Logging out due to refresh failure');
       logout();
       return false;
     }
@@ -49,12 +67,16 @@ export function AuthProvider({ children }) {
     if (!session?.expires_at) return;
 
     // Calculate when to refresh (5 minutes before expiry)
-    const expiresAt = new Date(session.expires_at).getTime();
+    // Supabase returns expires_at in SECONDS, convert to milliseconds
+    const expiresAt = typeof session.expires_at === 'number' && session.expires_at < 10000000000
+      ? session.expires_at * 1000  // It's in seconds, convert to ms
+      : new Date(session.expires_at).getTime(); // It's already a valid date
+    
     const now = Date.now();
     const timeUntilExpiry = expiresAt - now;
     const refreshTime = Math.max(timeUntilExpiry - (5 * 60 * 1000), 10000); // Refresh 5 min before, or in 10s if already close
 
-    console.log(`⏰ Token refresh scheduled in ${Math.round(refreshTime / 1000 / 60)} minutes`);
+    console.log(`⏰ Token refresh scheduled in ${Math.round(refreshTime / 1000 / 60)} minutes (expires at ${new Date(expiresAt).toLocaleString()})`);
 
     const refreshTimer = setTimeout(() => {
       console.log('🔄 Refreshing session...');
@@ -75,35 +97,54 @@ export function AuthProvider({ children }) {
           const parsedSession = JSON.parse(storedSession);
           const parsedUser = JSON.parse(storedUser);
 
-          // Set auth token for API calls
-          api.setAuthToken(parsedSession.access_token);
-
           // Check if token is expired or about to expire
-          const expiresAt = parsedSession.expires_at ? new Date(parsedSession.expires_at).getTime() : 0;
+          // Supabase returns expires_at in SECONDS, convert to milliseconds
+          const expiresAt = parsedSession.expires_at 
+            ? (typeof parsedSession.expires_at === 'number' && parsedSession.expires_at < 10000000000
+                ? parsedSession.expires_at * 1000  // It's in seconds, convert to ms
+                : new Date(parsedSession.expires_at).getTime()) // It's already a valid date
+            : 0;
           const now = Date.now();
           const isExpired = expiresAt && now >= expiresAt;
           const expiringInLessThan5Min = expiresAt && (expiresAt - now) < (5 * 60 * 1000);
+          
+          console.log('🔍 Token expiry check:', {
+            expiresAt: new Date(expiresAt).toLocaleString(),
+            now: new Date(now).toLocaleString(),
+            isExpired,
+            expiringInLessThan5Min,
+            minutesUntilExpiry: Math.round((expiresAt - now) / 1000 / 60)
+          });
 
           if (isExpired || expiringInLessThan5Min) {
-            // Try to refresh the session immediately
+            // Try to refresh the session immediately BEFORE setting auth token
             console.log('🔄 Token expired or expiring soon, refreshing...');
             const success = await refreshSession(parsedSession);
             if (success) {
+              // Token was refreshed successfully
               // Fetch user profile after refresh
               try {
                 const response = await api.get('/auth/me');
                 setUser(response.user);
+                console.log('✅ Token refreshed and user loaded');
               } catch (err) {
                 console.error('Failed to fetch user after refresh:', err);
                 logout();
               }
+            } else {
+              // Refresh failed, logout
+              console.error('❌ Token refresh failed, logging out');
+              logout();
             }
           } else {
-            // Verify token is still valid
+            // Token is still valid, set it and verify
+            api.setAuthToken(parsedSession.access_token);
+            
             try {
               const response = await api.get('/auth/me');
               setUser(response.user);
               setSession(parsedSession);
+              console.log('✅ Session restored successfully');
             } catch (err) {
               // Token expired or invalid, or backend unavailable
               console.warn('Failed to verify session, clearing auth:', err);
@@ -135,6 +176,13 @@ export function AuthProvider({ children }) {
       const response = await api.post('/auth/login', { email, password });
       const { session, user } = response;
 
+      console.log('📝 Login response received:', {
+        hasSession: !!session,
+        hasUser: !!user,
+        expiresAt: session?.expires_at,
+        expiresIn: session?.expires_in
+      });
+
       // Store in localStorage
       localStorage.setItem('decivue_session', JSON.stringify(session));
       localStorage.setItem('decivue_user', JSON.stringify(user));
@@ -144,6 +192,8 @@ export function AuthProvider({ children }) {
 
       setSession(session);
       setUser(user);
+
+      console.log('✅ Login successful, user:', user.email);
 
       return { success: true };
     } catch (error) {

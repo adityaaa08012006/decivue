@@ -39,6 +39,7 @@ class ApiService {
 
       // Handle 401 Unauthorized - token expired or invalid
       if (response.status === 401) {
+        console.error('401 Unauthorized - session expired');
         // Clear local storage and redirect to login
         localStorage.removeItem('decivue_session');
         localStorage.removeItem('decivue_user');
@@ -51,6 +52,13 @@ class ApiService {
 
         const error = await response.json().catch(() => ({ error: 'Unauthorized' }));
         throw new Error(error.error || 'Session expired. Please login again.');
+      }
+
+      // Handle 403 Forbidden - insufficient permissions (don't logout)
+      if (response.status === 403) {
+        const error = await response.json().catch(() => ({ error: 'Forbidden' }));
+        console.warn('403 Forbidden - insufficient permissions:', error);
+        throw new Error(error.error || 'You do not have permission to perform this action.');
       }
 
       if (!response.ok) {
@@ -569,8 +577,17 @@ class ApiService {
     });
   }
 
+  // Lock or unlock a decision (TEAM LEADS ONLY)
+  async toggleDecisionLock(decisionId, { lock, reason }) {
+    return this.request(`/decisions/${decisionId}/toggle-lock`, {
+      method: 'POST',
+      body: JSON.stringify({ lock, reason })
+    });
+  }
+
   // Get pending edit approval requests (TEAM LEADS ONLY)
   async getPendingApprovals() {
+    console.log('API: Requesting pending approvals from /decisions/governance/pending-approvals');
     return this.request('/decisions/governance/pending-approvals');
   }
 }

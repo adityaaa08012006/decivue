@@ -468,32 +468,56 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
  */
 router.post('/refresh', async (req, res) => {
   try {
+    console.log('🔄 Token refresh request received');
     const { refresh_token } = req.body;
 
     if (!refresh_token) {
+      console.error('❌ No refresh token in request body');
       return res.status(400).json({
         error: 'Refresh token required',
         code: 'REFRESH_TOKEN_REQUIRED'
       });
     }
 
+    console.log('📡 Calling Supabase refreshSession...', {
+      tokenLength: refresh_token.length
+    });
+
     const { data, error } = await supabase.auth.refreshSession({
       refresh_token,
     });
 
-    if (error || !data.session) {
+    if (error) {
+      console.error('❌ Supabase refresh error:', {
+        message: error.message,
+        status: error.status,
+        code: error.code
+      });
       return res.status(401).json({
-        error: 'Invalid refresh token',
-        code: 'INVALID_REFRESH_TOKEN'
+        error: error.message || 'Invalid refresh token',
+        code: error.code || 'INVALID_REFRESH_TOKEN'
       });
     }
+
+    if (!data.session) {
+      console.error('❌ No session returned from Supabase');
+      return res.status(401).json({
+        error: 'No session returned',
+        code: 'NO_SESSION_RETURNED'
+      });
+    }
+
+    console.log('✅ Token refreshed successfully:', {
+      expiresAt: data.session.expires_at,
+      expiresIn: data.session.expires_in
+    });
 
     return res.status(200).json({
       session: data.session,
     });
 
   } catch (error) {
-    console.error('Token refresh error:', error);
+    console.error('❌ Token refresh error:', error);
     return res.status(500).json({
       error: 'Token refresh failed',
       code: 'REFRESH_FAILED'

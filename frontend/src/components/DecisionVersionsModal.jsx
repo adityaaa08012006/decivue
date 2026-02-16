@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield } from 'lucide-react';
+import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield, Lock, Unlock } from 'lucide-react';
 import api from '../services/api';
 
 /**
@@ -69,6 +69,10 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
     // For version events, check the change_type in event_data
     if (eventType === 'version' && eventData) {
       switch (eventData.change_type) {
+        case 'governance_lock':
+          return <Lock size={18} className="text-gray-700" />;
+        case 'governance_unlock':
+          return <Unlock size={18} className="text-green-600" />;
         case 'manual_review':
           return <Check size={18} className="text-green-600" />;
         case 'assumption_conflict_resolved':
@@ -116,7 +120,7 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
           const eventData = event.event_data || {};
           
           return (
-          <div key={event.event_id} className="flex gap-3">
+          <div key={event.event_id || event.id || `timeline-${idx}`} className="flex gap-3">
             {/* Icon */}
             <div className="flex-shrink-0 mt-1">
               {getEventIcon(event.event_type, eventData)}
@@ -143,6 +147,37 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
               {/* Version Event Details */}
               {event.event_type === 'version' && (
                 <div className="mt-2 space-y-2">
+                  {/* Governance Lock/Unlock Events */}
+                  {(eventData.change_type === 'governance_lock' || eventData.change_type === 'governance_unlock') && (
+                    <div className={`border rounded p-3 ${
+                      eventData.change_type === 'governance_lock' 
+                        ? 'bg-gray-50 border-gray-300' 
+                        : 'bg-green-50 border-green-300'
+                    }`}>
+                      <div className="flex items-start gap-2">
+                        {eventData.change_type === 'governance_lock' ? (
+                          <Lock size={16} className="text-gray-700 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <Unlock size={16} className="text-green-700 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="text-sm">
+                          <div className={`font-medium ${
+                            eventData.change_type === 'governance_lock' 
+                              ? 'text-gray-900' 
+                              : 'text-green-900'
+                          }`}>
+                            {eventData.change_type === 'governance_lock' ? '🔒 Decision Locked' : '🔓 Decision Unlocked'}
+                          </div>
+                          {eventData.changed_fields?.justification && (
+                            <div className="text-gray-700 mt-1">
+                              {eventData.changed_fields.justification}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {eventData.review_comment && (
                     <div className="bg-white border border-gray-200 rounded p-3">
                       <div className="flex items-start gap-2">
@@ -283,15 +318,28 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
 
     return (
       <div className="space-y-3">
-        {versions.map((version, idx) => (
-          <div key={version.version_id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+        {versions.map((version, idx) => {
+          // Check if this is a governance event
+          const isGovernanceEvent = version.change_type === 'governance_lock' || version.change_type === 'governance_unlock';
+          
+          return (
+          <div key={version.id || version.version_id || `version-${idx}`} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-lg text-gray-900">v{version.version_number}</span>
+                  {version.version_number !== null && version.version_number !== undefined ? (
+                    <span className="font-semibold text-lg text-gray-900">v{version.version_number}</span>
+                  ) : (
+                    <span className="font-semibold text-lg text-gray-900 flex items-center gap-1">
+                      {version.change_type === 'governance_lock' ? <Lock size={18} /> : <Unlock size={18} />}
+                      {version.change_type === 'governance_lock' ? 'Locked' : 'Unlocked'}
+                    </span>
+                  )}
                   <span className={`px-2 py-1 text-xs rounded ${
                     version.change_type === 'created' ? 'bg-green-100 text-green-700' :
                     version.change_type === 'field_updated' ? 'bg-blue-100 text-blue-700' :
+                    version.change_type === 'governance_lock' ? 'bg-gray-100 text-gray-700' :
+                    version.change_type === 'governance_unlock' ? 'bg-green-100 text-green-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
                     {version.change_type.replace(/_/g, ' ')}
@@ -302,7 +350,21 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
               <span className="text-sm text-gray-500">{formatDate(version.changed_at)}</span>
             </div>
 
-            {version.changed_fields && (() => {
+            {/* Show governance event details */}
+            {isGovernanceEvent && version.changed_fields && (
+              <div className={`border rounded p-3 mb-3 ${
+                version.change_type === 'governance_lock' 
+                  ? 'bg-gray-50 border-gray-300' 
+                  : 'bg-green-50 border-green-300'
+              }`}>
+                <div className="text-sm text-gray-700">
+                  {version.changed_fields.justification || 'No reason provided'}
+                </div>
+              </div>
+            )}
+
+            {/* Show field changes for regular versions */}
+            {!isGovernanceEvent && version.changed_fields && (() => {
               try {
                 // Handle both JSONB array and plain string formats
                 let fields = Array.isArray(version.changed_fields) 
@@ -329,11 +391,13 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
               }
             })()}
 
+            {/* Show decision details only for regular versions */}
+            {!isGovernanceEvent && (
             <div className="bg-gray-50 rounded p-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Title</p>
-                  <p className="font-medium text-gray-900">{version.title}</p>
+                  <p className="font-medium text-gray-900">{version.title || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Category</p>
@@ -341,6 +405,7 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Lifecycle</p>
+                  {version.lifecycle ? (
                   <span className={`px-2 py-1 text-xs rounded ${
                     version.lifecycle === 'STABLE' ? 'bg-teal-100 text-teal-700' :
                     version.lifecycle === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-700' :
@@ -349,10 +414,11 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
                   }`}>
                     {version.lifecycle}
                   </span>
+                  ) : <p className="text-gray-700">N/A</p>}
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Health Signal</p>
-                  <p className="text-gray-700">{version.health_signal}%</p>
+                  <p className="text-gray-700">{version.health_signal !== null && version.health_signal !== undefined ? `${version.health_signal}%` : 'N/A'}</p>
                 </div>
               </div>
               {version.description && (
@@ -362,14 +428,15 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
                 </div>
               )}
             </div>
+            )}
 
-            {version.changed_by_email && (
+            {(version.user_email || version.changed_by_email) && (
               <p className="text-xs text-gray-500 mt-2">
-                Changed by: {version.changed_by_email}
+                {isGovernanceEvent ? 'By' : 'Changed by'}: {version.user_email || version.changed_by_email}
               </p>
             )}
           </div>
-        ))}
+        )})}
       </div>
     );
   };

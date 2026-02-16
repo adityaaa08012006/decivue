@@ -205,7 +205,14 @@ export class DecisionRepository {
         fullName: row.creator.full_name,
         email: row.creator.email
       } : undefined,
-      metadata: row.metadata
+      metadata: row.metadata,
+      // Governance fields
+      governanceTier: row.governance_tier,
+      lockedAt: row.locked_at ? new Date(row.locked_at) : undefined,
+      lockedBy: row.locked_by,
+      reviewUrgencyScore: row.review_urgency_score,
+      nextReviewDate: row.next_review_date ? new Date(row.next_review_date) : undefined,
+      consecutiveDeferrals: row.consecutive_deferrals
     };
   }
 }

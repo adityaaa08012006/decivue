@@ -37,6 +37,13 @@ export interface Decision {
   category?: string; // Decision category for structured conflict detection
   parameters?: Record<string, any>; // Structured parameters for conflict detection
   metadata?: Record<string, any>; // Additional context
+  // Governance fields (Migration 027)
+  governanceTier?: string; // standard | high_impact | critical
+  lockedAt?: Date; // When the decision was locked (prevents editing by non-leads)
+  lockedBy?: string; // User ID who locked the decision
+  reviewUrgencyScore?: number; // Calculated urgency score for review prioritization
+  nextReviewDate?: Date; // Scheduled next review date
+  consecutiveDeferrals?: number; // Count of consecutive review deferrals
 }
 
 export interface DecisionCreate {

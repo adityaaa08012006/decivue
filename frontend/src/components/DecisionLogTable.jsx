@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
 const DecisionLogTable = ({ onNavigate }) => {
-  const { isLead } = useAuth();
+  const { isLead, loading: authLoading, user } = useAuth();
   const [decisions, setDecisions] = useState([]);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,12 +12,20 @@ const DecisionLogTable = ({ onNavigate }) => {
   const [approving, setApproving] = useState(null);
 
   useEffect(() => {
+    // Wait for auth to load and user to be available
+    if (authLoading || !user) {
+      console.log('Waiting for auth to load...', { authLoading, hasUser: !!user });
+      return;
+    }
+
+    console.log('Auth loaded, fetching data...', { isLead, userId: user.id });
+    
     if (isLead) {
       fetchPendingApprovals();
     } else {
       fetchDecisions();
     }
-  }, [isLead]);
+  }, [isLead, authLoading, user]);
 
   const fetchDecisions = async () => {
     try {
@@ -36,12 +44,15 @@ const DecisionLogTable = ({ onNavigate }) => {
   const fetchPendingApprovals = async () => {
     try {
       setLoading(true);
+      console.log('Fetching pending approvals as team lead...');
       const data = await api.getPendingApprovals();
+      console.log('Pending approvals fetched:', data);
       setPendingApprovals(data);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch pending approvals:', err);
-      setError('Failed to load pending approvals.');
+      console.error('Error details:', err.message);
+      setError(`Failed to load pending approvals: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -129,10 +140,10 @@ const DecisionLogTable = ({ onNavigate }) => {
         </button>
       </div>
 
-      {loading && (
+      {(loading || authLoading) && (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-blue"></div>
-          <p className="mt-2 text-neutral-gray-600">Loading...</p>
+          <p className="mt-2 text-neutral-gray-600">{authLoading ? 'Initializing...' : 'Loading...'}</p>
         </div>
       )}
 
@@ -143,7 +154,7 @@ const DecisionLogTable = ({ onNavigate }) => {
       )}
 
       {/* TEAM LEAD VIEW - Pending Approvals */}
-      {isLead && !loading && !error && pendingApprovals.length === 0 && (
+      {isLead && !authLoading && !loading && !error && pendingApprovals.length === 0 && (
         <div className="text-center py-8">
           <CheckCircle className="mx-auto text-green-500 mb-3" size={48} />
           <p className="text-neutral-gray-600 font-medium">No pending approvals</p>
@@ -151,7 +162,7 @@ const DecisionLogTable = ({ onNavigate }) => {
         </div>
       )}
 
-      {isLead && !loading && !error && pendingApprovals.length > 0 && (
+      {isLead && !authLoading && !loading && !error && pendingApprovals.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -242,13 +253,13 @@ const DecisionLogTable = ({ onNavigate }) => {
       )}
 
       {/* MEMBER VIEW - Decision Log (no action buttons) */}
-      {!isLead && !loading && !error && decisions.length === 0 && (
+      {!isLead && !authLoading && !loading && !error && decisions.length === 0 && (
         <div className="text-center py-8">
           <p className="text-neutral-gray-600">No decisions found. Create your first decision!</p>
         </div>
       )}
 
-      {!isLead && !loading && !error && decisions.length > 0 && (
+      {!isLead && !authLoading && !loading && !error && decisions.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

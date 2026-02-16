@@ -23,10 +23,12 @@ import {
   History,
 } from "lucide-react";
 import api from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import DecisionVersionsModal from "./DecisionVersionsModal";
 import ReviewDecisionModal from "./ReviewDecisionModal";
 
 const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
+  const { user, isLead } = useAuth();
   const [decisions, setDecisions] = useState([]);
   const [expandedDecision, setExpandedDecision] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
@@ -482,6 +484,28 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     }
   };
 
+  const handleToggleLock = async (decisionId, currentlyLocked, decisionTitle) => {
+    try {
+      const action = currentlyLocked ? "unlock" : "lock";
+      console.log(`🔒 ${action}ing decision:`, decisionId);
+      
+      await api.toggleDecisionLock(decisionId, {
+        lock: !currentlyLocked,
+        reason: currentlyLocked 
+          ? "Unlocking decision for editing" 
+          : "Locking decision to prevent unauthorized changes"
+      });
+      
+      showToast("success", `Decision "${decisionTitle}" ${currentlyLocked ? "unlocked" : "locked"} successfully`);
+      
+      // Refresh decisions to show updated lock status
+      await fetchDecisions();
+    } catch (err) {
+      console.error("Failed to toggle lock:", err);
+      showToast("error", `Failed to ${currentlyLocked ? "unlock" : "lock"} decision. ${err.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-white p-8">
       {/* Toast Notification */}
@@ -715,6 +739,26 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                               : ""}
                           </span>
                         )}
+                        {/* Locked Badge */}
+                        {decision.lockedAt && (
+                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300 flex items-center gap-1">
+                            <Lock size={12} />
+                            Locked
+                          </span>
+                        )}
+                        {/* Governance Tier Badge */}
+                        {decision.governanceTier && decision.governanceTier !== 'standard' && (
+                          <span className={`px-3 py-1 rounded-md text-xs font-bold flex items-center gap-1 ${
+                            decision.governanceTier === 'critical' 
+                              ? 'bg-red-100 text-red-700 border border-red-300'
+                              : decision.governanceTier === 'high_impact'
+                              ? 'bg-orange-100 text-orange-700 border border-orange-300'
+                              : 'bg-blue-100 text-blue-700 border border-blue-300'
+                          }`}>
+                            <Shield size={12} />
+                            {decision.governanceTier.replace('_', ' ').toUpperCase()}
+                          </span>
+                        )}
                         {/* Expiry Badge */}
                         {decision.expiryDate &&
                           (() => {
@@ -834,6 +878,23 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Lock/Unlock Button - Team Leads Only */}
+                      {isLead && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleLock(decision.id, decision.lockedAt, decision.title);
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${
+                            decision.lockedAt
+                              ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                          title={decision.lockedAt ? "Unlock decision (allow editing)" : "Lock decision (prevent editing)"}
+                        >
+                          <Lock size={18} />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -849,11 +910,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           e.stopPropagation();
                           handleEvaluateNow(decision.id, decision.title);
                         }}
-                        disabled={decision.lifecycle === "RETIRED"}
+                        disabled={decision.lifecycle === "RETIRED" || (decision.lockedAt && !isLead)}
                         className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
                           decision.lifecycle === "RETIRED"
                             ? "Cannot evaluate retired decisions"
+                            : decision.lockedAt && !isLead
+                            ? "Decision is locked (team lead access only)"
                             : "Evaluate now"
                         }
                       >
@@ -865,6 +928,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           handleMarkReviewed(decision.id, decision.title);
                         }}
                         disabled={
+                          (decision.lockedAt && !isLead) ||
                           decision.lifecycle === "RETIRED" ||
                           (decision.expiryDate &&
                             (() => {
@@ -877,7 +941,9 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                         }
                         className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={
-                          decision.lifecycle === "RETIRED"
+                          decision.lockedAt && !isLead
+                            ? "Decision is locked (team lead access only)"
+                            : decision.lifecycle === "RETIRED"
                             ? "Cannot review retired decisions"
                             : "Mark as reviewed"
                         }
@@ -890,8 +956,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                             e.stopPropagation();
                             handleRetireDecision(decision.id, decision.title);
                           }}
-                          className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                          title="Retire decision (mark as deprecated)"
+                          disabled={decision.lockedAt && !isLead}
+                          className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            decision.lockedAt && !isLead
+                              ? "Decision is locked (team lead access only)"
+                              : "Retire decision (mark as deprecated)"
+                          }
                         >
                           <Archive size={18} />
                         </button>
@@ -901,8 +972,13 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           e.stopPropagation();
                           handleDeleteDecision(decision.id, decision.title);
                         }}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete decision"
+                        disabled={decision.lockedAt && !isLead}
+                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={
+                          decision.lockedAt && !isLead
+                            ? "Decision is locked (team lead access only)"
+                            : "Delete decision"
+                        }
                       >
                         <Trash2 size={18} />
                       </button>

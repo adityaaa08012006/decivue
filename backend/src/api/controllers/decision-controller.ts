@@ -1092,7 +1092,7 @@ export class DecisionController {
   async toggleLock(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const userId = req.user?.userId;
+      const userId = req.user?.id;
       const { lock, reason } = req.body;
 
       if (!userId) {
@@ -1140,7 +1140,7 @@ export class DecisionController {
   async updateGovernanceSettings(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const userId = req.user?.userId;
+      const userId = req.user?.id;
       const { 
         governanceMode, 
         governanceTier, 
@@ -1202,27 +1202,41 @@ export class DecisionController {
    */
   async getPendingApprovals(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?.userId;
+      console.log('🔍 getPendingApprovals called');
+      const userId = req.user?.id;
       const organizationId = req.user?.organizationId;
 
+      console.log('📋 Request user:', { userId, organizationId });
+
       if (!userId || !organizationId) {
+        console.error('❌ Missing auth credentials');
         return res.status(401).json({ error: 'Authentication required' });
       }
 
       const db = getAdminDatabase();
 
       // Check if user is a team lead
-      const { data: user } = await db
+      console.log('🔍 Checking user role...');
+      const { data: user, error: userError } = await db
         .from('users')
         .select('role')
         .eq('id', userId)
         .single();
 
+      if (userError) {
+        console.error('❌ Error fetching user:', userError);
+        throw userError;
+      }
+
+      console.log('👤 User role:', user?.role);
+
       if (!user || user.role !== 'lead') {
+        console.warn('⚠️ User is not a team lead');
         return res.status(403).json({ error: 'Only team leads can view pending approvals' });
       }
 
       // Get pending edit requests for this organization
+      console.log('🔍 Querying governance_audit_log for pending approvals...');
       const { data: pendingApprovals, error } = await db
         .from('governance_audit_log')
         .select(`
@@ -1233,15 +1247,20 @@ export class DecisionController {
           justification,
           new_state,
           created_at,
-          decisions!governance_audit_log_decision_id_fkey(id, title, description, lifecycle, health_signal, governance_tier),
-          users!governance_audit_log_requested_by_fkey(id, full_name, email)
+          decisions(id, title, description, lifecycle, health_signal, governance_tier),
+          users:requested_by(id, full_name, email)
         `)
         .eq('organization_id', organizationId)
         .eq('action', 'edit_requested')
         .is('resolved_at', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Query error:', error);
+        throw error;
+      }
+
+      console.log('✅ Query successful, found', pendingApprovals?.length || 0, 'pending approvals');
 
       // Format the response
       const formattedApprovals = (pendingApprovals || []).map((approval: any) => ({
@@ -1259,8 +1278,10 @@ export class DecisionController {
         requestedAt: approval.created_at
       }));
 
+      console.log('📤 Sending formatted response with', formattedApprovals.length, 'approvals');
       res.json(formattedApprovals);
     } catch (error) {
+      console.error('💥 Exception in getPendingApprovals:', error);
       logger.error('Failed to get pending approvals', { error });
       return next(error);
     }
