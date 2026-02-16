@@ -27,6 +27,7 @@ import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import DecisionVersionsModal from "./DecisionVersionsModal";
 import ReviewDecisionModal from "./ReviewDecisionModal";
+import EditDecisionModal from "./EditDecisionModal";
 
 const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const { user, isLead } = useAuth();
@@ -38,6 +39,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [selectedDecisionForVersions, setSelectedDecisionForVersions] =
     useState(null);
   const [reviewDecision, setReviewDecision] = useState(null); // For review modal
+  const [editDecision, setEditDecision] = useState(null); // For edit modal
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, title }
   const [retireConfirmation, setRetireConfirmation] = useState(null); // { id, title }
@@ -896,6 +898,28 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                           <Lock size={18} />
                         </button>
                       )}
+                      
+                      {/* Edit Button - Shows for all users, but behavior differs */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditDecision(decision);
+                        }}
+                        disabled={decision.lifecycle === "RETIRED" || (decision.lockedAt && !isLead)}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={
+                          decision.lifecycle === "RETIRED"
+                            ? "Cannot edit retired decisions"
+                            : decision.lockedAt && !isLead
+                            ? "Decision is locked (team lead access only)"
+                            : isLead
+                            ? "Edit decision (direct - no approval needed)"
+                            : "Edit decision (requires approval)"
+                        }
+                      >
+                        <Edit size={18} />
+                      </button>
+                      
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1923,6 +1947,19 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
           decision={reviewDecision}
           onClose={() => setReviewDecision(null)}
           onSubmit={handleSubmitReview}
+        />
+      )}
+
+      {/* Edit Decision Modal */}
+      {editDecision && (
+        <EditDecisionModal
+          decision={editDecision}
+          isLead={isLead}
+          onClose={() => setEditDecision(null)}
+          onSuccess={(message) => {
+            showToast('success', message);
+            fetchDecisions(); // Refresh the list
+          }}
         />
       )}
     </div>

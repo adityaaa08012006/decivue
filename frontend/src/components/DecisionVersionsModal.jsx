@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield, Lock, Unlock } from 'lucide-react';
+import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield, Lock, Unlock, Edit, CheckCircle, XCircle } from 'lucide-react';
 import api from '../services/api';
 
 /**
@@ -73,6 +73,12 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
           return <Lock size={18} className="text-gray-700" />;
         case 'governance_unlock':
           return <Unlock size={18} className="text-green-600" />;
+        case 'edit_requested':
+          return <Edit size={18} className="text-yellow-600" />;
+        case 'edit_approved':
+          return <CheckCircle size={18} className="text-green-600" />;
+        case 'edit_rejected':
+          return <XCircle size={18} className="text-red-600" />;
         case 'manual_review':
           return <Check size={18} className="text-green-600" />;
         case 'assumption_conflict_resolved':
@@ -319,8 +325,10 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
     return (
       <div className="space-y-3">
         {versions.map((version, idx) => {
-          // Check if this is a governance event
-          const isGovernanceEvent = version.change_type === 'governance_lock' || version.change_type === 'governance_unlock';
+          // Check if this is a governance event (doesn't have version_number)
+          const isGovernanceEvent = ['governance_lock', 'governance_unlock', 'edit_requested', 'edit_approved', 'edit_rejected'].includes(version.change_type);
+          const isConflictResolution = ['assumption_conflict_resolved', 'decision_conflict_resolved'].includes(version.change_type);
+          const isEditEvent = ['edit_requested', 'edit_approved', 'edit_rejected'].includes(version.change_type);
           
           return (
           <div key={version.id || version.version_id || `version-${idx}`} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
@@ -331,8 +339,12 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
                     <span className="font-semibold text-lg text-gray-900">v{version.version_number}</span>
                   ) : (
                     <span className="font-semibold text-lg text-gray-900 flex items-center gap-1">
-                      {version.change_type === 'governance_lock' ? <Lock size={18} /> : <Unlock size={18} />}
-                      {version.change_type === 'governance_lock' ? 'Locked' : 'Unlocked'}
+                      {version.change_type === 'governance_lock' && <><Lock size={18} /> Locked</>}
+                      {version.change_type === 'governance_unlock' && <><Unlock size={18} /> Unlocked</>}
+                      {version.change_type === 'edit_requested' && <><Edit size={18} /> Edit Requested</>}
+                      {version.change_type === 'edit_approved' && <><CheckCircle size={18} /> Edit Approved</>}
+                      {version.change_type === 'edit_rejected' && <><XCircle size={18} /> Edit Rejected</>}
+                      {isConflictResolution && <><Shield size={18} /> Conflict Resolved</>}
                     </span>
                   )}
                   <span className={`px-2 py-1 text-xs rounded ${
@@ -340,6 +352,10 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
                     version.change_type === 'field_updated' ? 'bg-blue-100 text-blue-700' :
                     version.change_type === 'governance_lock' ? 'bg-gray-100 text-gray-700' :
                     version.change_type === 'governance_unlock' ? 'bg-green-100 text-green-700' :
+                    version.change_type === 'edit_requested' ? 'bg-yellow-100 text-yellow-700' :
+                    version.change_type === 'edit_approved' ? 'bg-green-100 text-green-700' :
+                    version.change_type === 'edit_rejected' ? 'bg-red-100 text-red-700' :
+                    isConflictResolution ? 'bg-purple-100 text-purple-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
                     {version.change_type.replace(/_/g, ' ')}
@@ -350,8 +366,8 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
               <span className="text-sm text-gray-500">{formatDate(version.changed_at)}</span>
             </div>
 
-            {/* Show governance event details */}
-            {isGovernanceEvent && version.changed_fields && (
+            {/* Show governance event details (lock/unlock justification) */}
+            {(version.change_type === 'governance_lock' || version.change_type === 'governance_unlock') && version.changed_fields && (
               <div className={`border rounded p-3 mb-3 ${
                 version.change_type === 'governance_lock' 
                   ? 'bg-gray-50 border-gray-300' 
@@ -363,8 +379,60 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
               </div>
             )}
 
+            {/* Show edit request details */}
+            {isEditEvent && version.changed_fields && (
+              <div className={`border rounded p-3 mb-3 ${
+                version.change_type === 'edit_requested' ? 'bg-yellow-50 border-yellow-300' :
+                version.change_type === 'edit_approved' ? 'bg-green-50 border-green-300' :
+                'bg-red-50 border-red-300'
+              }`}>
+                <div className="text-sm space-y-2">
+                  {version.changed_fields.justification && (
+                    <div>
+                      <p className="font-semibold text-gray-700">Reason:</p>
+                      <p className="text-gray-700">{version.changed_fields.justification}</p>
+                    </div>
+                  )}
+                  {version.changed_fields.proposed_changes && (
+                    <div>
+                      <p className="font-semibold text-gray-700">Proposed Changes:</p>
+                      <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
+                        {JSON.stringify(version.changed_fields.proposed_changes, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Show conflict resolution details */}
+            {isConflictResolution && version.metadata && (
+              <div className="border rounded p-3 mb-3 bg-purple-50 border-purple-300">
+                <div className="text-sm space-y-2">
+                  {version.metadata.conflict_type && (
+                    <div>
+                      <p className="font-semibold text-purple-900">Conflict Type:</p>
+                      <p className="text-purple-800">{version.metadata.conflict_type.replace(/_/g, ' ')}</p>
+                    </div>
+                  )}
+                  {version.metadata.resolution_action && (
+                    <div>
+                      <p className="font-semibold text-purple-900">Resolution:</p>
+                      <p className="text-purple-800">{version.metadata.resolution_action.replace(/_/g, ' ')}</p>
+                    </div>
+                  )}
+                  {version.review_comment && (
+                    <div>
+                      <p className="font-semibold text-purple-900">Notes:</p>
+                      <p className="text-purple-800">{version.review_comment}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Show field changes for regular versions */}
-            {!isGovernanceEvent && version.changed_fields && (() => {
+            {!isGovernanceEvent && !isConflictResolution && version.changed_fields && (() => {
               try {
                 // Handle both JSONB array and plain string formats
                 let fields = Array.isArray(version.changed_fields) 
@@ -392,7 +460,7 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
             })()}
 
             {/* Show decision details only for regular versions */}
-            {!isGovernanceEvent && (
+            {!isGovernanceEvent && !isConflictResolution && (
             <div className="bg-gray-50 rounded p-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>

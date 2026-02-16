@@ -30,14 +30,17 @@ export class DecisionRepository {
       insertData.expiry_date = data.expiry_date;
     }
 
-    // Extract category and parameters from metadata if present
-    if (data.metadata) {
-      if (data.metadata.category) {
-        insertData.category = data.metadata.category;
-      }
-      if (data.metadata.parameters) {
-        insertData.parameters = data.metadata.parameters;
-      }
+    // Handle category and parameters (support both top-level and metadata)
+    if (data.category) {
+      insertData.category = data.category;
+    } else if (data.metadata?.category) {
+      insertData.category = data.metadata.category;
+    }
+
+    if (data.parameters) {
+      insertData.parameters = data.parameters;
+    } else if (data.metadata?.parameters) {
+      insertData.parameters = data.metadata.parameters;
     }
 
     const { data: decision, error } = await this.db
@@ -205,6 +208,8 @@ export class DecisionRepository {
         fullName: row.creator.full_name,
         email: row.creator.email
       } : undefined,
+      category: row.category,
+      parameters: row.parameters,
       metadata: row.metadata,
       // Governance fields
       governanceTier: row.governance_tier,
