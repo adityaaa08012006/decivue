@@ -4,6 +4,7 @@ import {
   ChevronUp,
   Clock,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   XCircle,
   TrendingDown,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import DecisionVersionsModal from "./DecisionVersionsModal";
+import ReviewDecisionModal from "./ReviewDecisionModal";
 
 const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [decisions, setDecisions] = useState([]);
@@ -32,6 +34,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [error, setError] = useState(null);
   const [selectedDecisionForVersions, setSelectedDecisionForVersions] =
     useState(null);
+  const [reviewDecision, setReviewDecision] = useState(null); // For review modal
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, title }
   const [retireConfirmation, setRetireConfirmation] = useState(null); // { id, title }
@@ -384,18 +387,27 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
     }
   };
 
-  const handleMarkReviewed = async (decisionId, decisionTitle) => {
+  const handleMarkReviewed = (decisionId, decisionTitle) => {
+    const decision = decisions.find((d) => d.id === decisionId);
+    if (decision) {
+      setReviewDecision(decision);
+    }
+  };
+
+  const handleSubmitReview = async (decisionId, reviewComment, reviewType) => {
     try {
-      await api.markDecisionReviewed(decisionId);
+      await api.markDecisionReviewed(decisionId, reviewComment, reviewType);
       // Refresh the list WITHOUT auto-evaluation to preserve the reviewed state
       const data = await api.getDecisions();
       setDecisions(data);
-      showToast("success", `"${decisionTitle}" marked as reviewed`);
+      const decision = decisions.find((d) => d.id === decisionId);
+      showToast("success", `"${decision?.title}" marked as reviewed`);
     } catch (err) {
       console.error("Failed to mark decision as reviewed:", err);
       const errorMessage =
         err.message || "Failed to mark as reviewed. Please try again.";
       showToast("error", errorMessage);
+      throw err; // Re-throw so modal knows it failed
     }
   };
 
@@ -1817,6 +1829,15 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
         <DecisionVersionsModal
           decision={selectedDecisionForVersions}
           onClose={() => setSelectedDecisionForVersions(null)}
+        />
+      )}
+
+      {/* Review Decision Modal */}
+      {reviewDecision && (
+        <ReviewDecisionModal
+          decision={reviewDecision}
+          onClose={() => setReviewDecision(null)}
+          onSubmit={handleSubmitReview}
         />
       )}
     </div>

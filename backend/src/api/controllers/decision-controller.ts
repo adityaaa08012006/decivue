@@ -395,11 +395,21 @@ export class DecisionController {
   /**
    * PUT /api/decisions/:id/mark-reviewed
    * Mark a decision as reviewed (updates last_reviewed_at to now and re-evaluates to restore health)
+   * 
+   * Request body:
+   * - reviewComment: string (optional) - User's review notes/comments
+   * - reviewType: 'routine' | 'conflict_resolution' | 'expiry_check' | 'manual' (optional, defaults to 'routine')
    */
   async markReviewed(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      const { reviewComment, reviewType = 'routine' } = req.body;
+      const userId = req.user?.id;
       const db = getAdminDatabase();
+
+      if (!userId) {
+        return res.status(401).json({ error: 'User ID required' });
+      }
 
       // First, check the decision's current state
       const { data: currentDecision } = await db
@@ -432,6 +442,19 @@ export class DecisionController {
             message: `This decision expired ${Math.floor(Math.abs(daysUntilExpiry))} days ago and should be retired.`
           });
         }
+      }
+
+      // Create review record BEFORE updating decision
+      const { data: reviewRecord, error: reviewError } = await db.rpc('create_decision_review', {
+        p_decision_id: id,
+        p_reviewer_id: userId,
+        p_review_type: reviewType,
+        p_review_comment: reviewComment || null,
+        p_metadata: {}
+      });
+
+      if (reviewError) {
+        logger.error(`Failed to create review record: ${reviewError.message}`);
       }
 
       // Update last_reviewed_at to current timestamp
@@ -575,6 +598,15 @@ export class DecisionController {
         logger.error(`Failed to update decision after review: ${updateError.message}`);
       } else {
         logger.info(`Decision ${id} reviewed and health restored to ${newHealth}`);
+      }
+
+      // Update review record with post-review state
+      if (reviewRecord) {
+        await db.rpc('update_review_outcome', {
+          p_review_id: reviewRecord,
+          p_new_lifecycle: newLifecycle,
+          p_new_health_signal: newHealth
+        });
       }
 
       // Dismiss any "NEEDS_REVIEW" notifications for this decision

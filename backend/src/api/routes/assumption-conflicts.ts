@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
+import { AuthRequest } from '@middleware/authenticate';
 import { getDatabase, getAdminDatabase } from '@data/database';
 import { AssumptionConflictDetector } from '../../services/assumption-conflict-detector';
 import { logger } from '@utils/logger';
@@ -160,13 +161,18 @@ router.post('/detect', async (req: Request, res: Response, next: NextFunction) =
  * PUT /api/assumption-conflicts/:id/resolve
  * Resolve a conflict with a specific action
  */
-router.put('/:id/resolve', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id/resolve', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { resolutionAction, resolutionNotes } = req.body;
+    const userId = req.user?.id;
 
     if (!resolutionAction) {
       return res.status(400).json({ error: 'resolutionAction is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID required' });
     }
 
     const validActions = ['VALIDATE_A', 'VALIDATE_B', 'MERGE', 'DEPRECATE_BOTH', 'KEEP_BOTH'];
@@ -400,6 +406,20 @@ router.put('/:id/resolve', async (req: Request, res: Response, next: NextFunctio
           logger.error(`Failed to re-evaluate decision ${decisionId}`, { error: evalError });
         }
       }
+    }
+
+    // Track conflict resolution in version history for affected decisions
+    try {
+      await db.rpc('track_assumption_conflict_resolution', {
+        p_conflict_id: id,
+        p_resolution_action: resolutionAction,
+        p_resolution_notes: resolutionNotes || '',
+        p_resolved_by: userId
+      });
+      logger.info('Assumption conflict resolution tracked in version history', { conflictId: id });
+    } catch (trackError) {
+      logger.error('Failed to track assumption conflict resolution in version history', { trackError });
+      // Don't fail the request if tracking fails
     }
 
     logger.info('Assumption conflict resolved', {

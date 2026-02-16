@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle } from 'lucide-react';
+import { X, History, Link, Activity, FileText, GitBranch, TrendingDown, TrendingUp, AlertCircle, Check, MessageSquare, Shield } from 'lucide-react';
 import api from '../services/api';
 
 /**
@@ -8,6 +8,8 @@ import api from '../services/api';
  * - Field changes (title, description, category, etc.)
  * - Assumption/constraint linking/unlinking
  * - Health signal changes with explanations
+ * - Reviews with comments
+ * - Conflict resolutions
  */
 const DecisionVersionsModal = ({ decision, onClose }) => {
   const [activeTab, setActiveTab] = useState('timeline');
@@ -63,13 +65,29 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
     });
   };
 
-  const getEventIcon = (eventType) => {
+  const getEventIcon = (eventType, eventData) => {
+    // For version events, check the change_type in event_data
+    if (eventType === 'version' && eventData) {
+      switch (eventData.change_type) {
+        case 'manual_review':
+          return <Check size={18} className="text-green-600" />;
+        case 'assumption_conflict_resolved':
+        case 'decision_conflict_resolved':
+          return <Shield size={18} className="text-purple-600" />;
+        case 'field_updated':
+        case 'lifecycle_changed':
+          return <FileText size={18} className="text-blue-600" />;
+        default:
+          return <History size={18} className="text-gray-600" />;
+      }
+    }
+    
     switch (eventType) {
-      case 'field_change':
-        return <FileText size={18} className="text-blue-600" />;
-      case 'relation_change':
+      case 'review':
+        return <MessageSquare size={18} className="text-green-600" />;
+      case 'relation':
         return <Link size={18} className="text-purple-600" />;
-      case 'health_change':
+      case 'evaluation':
         return <Activity size={18} className="text-orange-600" />;
       default:
         return <History size={18} className="text-gray-600" />;
@@ -94,122 +112,161 @@ const DecisionVersionsModal = ({ decision, onClose }) => {
 
     return (
       <div className="space-y-4">
-        {timeline.map((event, idx) => (
+        {timeline.map((event, idx) => {
+          const eventData = event.event_data || {};
+          
+          return (
           <div key={event.event_id} className="flex gap-3">
             {/* Icon */}
             <div className="flex-shrink-0 mt-1">
-              {getEventIcon(event.event_type)}
+              {getEventIcon(event.event_type, eventData)}
             </div>
 
             {/* Content */}
             <div className="flex-1 bg-gray-50 rounded-lg p-4">
+              {/* Header */}
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h4 className="font-medium text-gray-900">{event.summary}</h4>
+                  <h4 className="font-medium text-gray-900">
+                    {event.event_type === 'version' && eventData.change_summary}
+                    {event.event_type === 'review' && `Decision Reviewed (${eventData.review_type?.replace(/_/g, ' ')})`}
+                    {event.event_type === 'relation' && `${eventData.relation_type} ${eventData.action}`}
+                    {event.event_type === 'evaluation' && 'Automated Evaluation'}
+                  </h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    {event.changed_by_email && (
-                      <span className="font-medium">{event.changed_by_email}</span>
-                    )}
-                    {!event.changed_by_email && event.event_type === 'health_change' && (
-                      <span className="italic">System Evaluation</span>
-                    )}
+                    {eventData.user_name || eventData.reviewer_name || <span className="italic">System</span>}
                   </p>
                 </div>
                 <span className="text-sm text-gray-500">{formatDate(event.event_time)}</span>
               </div>
 
-              {/* Event-specific details */}
-              {event.event_type === 'field_change' && event.details && (
-                <div className="mt-2 text-sm">
-                  {event.details.changed_fields && (() => {
-                    try {
-                      // Handle both JSONB array and plain string formats
-                      const fields = Array.isArray(event.details.changed_fields)
-                        ? event.details.changed_fields
-                        : typeof event.details.changed_fields === 'string'
-                        ? event.details.changed_fields.split(',').map(f => f.trim())
-                        : [];
-                      
-                      return fields.length > 0 && (
-                        <p className="text-gray-600">
-                          Changed: <span className="font-mono text-xs bg-gray-200 px-2 py-1 rounded">
-                            {fields.join(', ')}
-                          </span>
-                        </p>
-                      );
-                    } catch (e) {
-                      console.error('Error parsing changed_fields:', e);
-                      return null;
-                    }
-                  })()}
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      event.details.lifecycle === 'STABLE' ? 'bg-teal-100 text-teal-700' :
-                      event.details.lifecycle === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-700' :
-                      event.details.lifecycle === 'AT_RISK' ? 'bg-orange-100 text-orange-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {event.details.lifecycle}
-                    </span>
-                    <span className="text-gray-600">
-                      Health: {event.details.health_signal}%
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {event.event_type === 'relation_change' && event.details && (
-                <div className="mt-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      event.details.action === 'linked' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {event.details.action}
-                    </span>
-                    <span className="text-gray-700 capitalize">{event.details.relation_type}</span>
-                  </div>
-                  {event.details.reason && (
-                    <p className="mt-1 text-gray-600 italic">{event.details.reason}</p>
+              {/* Version Event Details */}
+              {event.event_type === 'version' && (
+                <div className="mt-2 space-y-2">
+                  {eventData.review_comment && (
+                    <div className="bg-white border border-gray-200 rounded p-3">
+                      <div className="flex items-start gap-2">
+                        <MessageSquare size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-gray-700">{eventData.review_comment}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {eventData.metadata && eventData.metadata.conflict_id && (
+                    <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                      <div className="text-sm">
+                        <span className="font-medium text-purple-900">
+                          {eventData.change_type === 'assumption_conflict_resolved' ? 'Assumption' : 'Decision'} Conflict Resolved
+                        </span>
+                        <div className="text-purple-700 mt-1">
+                          {eventData.metadata.resolution_action && (
+                            <div>Action: {eventData.metadata.resolution_action.replace(/_/g, ' ')}</div>
+                          )}
+                          {eventData.metadata.conflict_type && (
+                            <div>Type: {eventData.metadata.conflict_type}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
 
-              {event.event_type === 'health_change' && event.details && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    {getHealthChangeIcon(event.details.new_health_signal - event.details.old_health_signal)}
-                    <span className="font-medium">
-                      {event.details.old_health_signal}% → {event.details.new_health_signal}%
-                    </span>
-                    <span className={
-                      event.details.new_health_signal > event.details.old_health_signal 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
-                    }>
-                      ({event.details.new_health_signal > event.details.old_health_signal ? '+' : ''}
-                      {event.details.new_health_signal - event.details.old_health_signal}%)
-                    </span>
-                  </div>
-                  <div className="mt-1 text-sm">
+              {/* Review Event Details */}
+              {event.event_type === 'review' && (
+                <div className="mt-2 space-y-2">
+                  {eventData.review_comment && (
+                    <div className="bg-white border border-gray-200 rounded p-3">
+                      <div className="flex items-start gap-2">
+                        <MessageSquare size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-gray-700">
+                          {eventData.review_comment}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {eventData.previous_lifecycle && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        eventData.previous_lifecycle === 'STABLE' ? 'bg-teal-100 text-teal-700' :
+                        eventData.previous_lifecycle === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-700' :
+                        eventData.previous_lifecycle === 'AT_RISK' ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {eventData.previous_lifecycle}
+                      </span>
+                      →
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        eventData.new_lifecycle === 'STABLE' ? 'bg-teal-100 text-teal-700' :
+                        eventData.new_lifecycle === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-700' :
+                        eventData.new_lifecycle === 'AT_RISK' ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {eventData.new_lifecycle || eventData.previous_lifecycle}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Relation Event Details */}
+              {event.event_type === 'relation' && (
+                <div className="mt-2 text-sm">
+                  <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs rounded ${
-                      event.details.new_lifecycle === 'STABLE' ? 'bg-teal-100 text-teal-700' :
-                      event.details.new_lifecycle === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-700' :
-                      event.details.new_lifecycle === 'AT_RISK' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
+                      eventData.action === 'linked' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
-                      {event.details.old_lifecycle} → {event.details.new_lifecycle}
+                      {eventData.action}
                     </span>
+                    <span className="text-gray-700">{eventData.relation_description || 'Relation'}</span>
                   </div>
-                  {event.details.triggered_by && (
-                    <p className="mt-2 text-xs text-gray-500">
-                      Triggered by: {event.details.triggered_by.replace(/_/g, ' ')}
+                  {eventData.reason && (
+                    <p className="mt-1 text-gray-600 italic">{eventData.reason}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Evaluation Event Details */}
+              {event.event_type === 'evaluation' && (
+                <div className="mt-2">
+                  {eventData.old_health_signal !== undefined && eventData.new_health_signal !== undefined && (
+                    <div className="flex items-center gap-2 text-sm">
+                      {getHealthChangeIcon(eventData.new_health_signal - eventData.old_health_signal)}
+                      <span className="font-medium">
+                        {eventData.old_health_signal}% → {eventData.new_health_signal}%
+                      </span>
+                      <span className={
+                        eventData.new_health_signal > eventData.old_health_signal 
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                      }>
+                        ({eventData.new_health_signal > eventData.old_health_signal ? '+' : ''}
+                        {eventData.new_health_signal - eventData.old_health_signal}%)
+                      </span>
+                    </div>
+                  )}
+                  {eventData.old_lifecycle !== eventData.new_lifecycle && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Lifecycle: <span className="font-medium">{eventData.old_lifecycle}</span> → <span className="font-medium">{eventData.new_lifecycle}</span>
+                    </p>
+                  )}
+                  {eventData.change_explanation && (
+                    <p className="mt-2 text-sm text-gray-600">{eventData.change_explanation}</p>
+                  )}
+                  {eventData.invalidated_reason && (
+                    <p className="mt-2 text-sm text-gray-600">{eventData.invalidated_reason}</p>
+                  )}
+                  {eventData.triggered_by && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Triggered by: {eventData.triggered_by.replace(/_/g, ' ')}
                     </p>
                   )}
                 </div>
               )}
             </div>
           </div>
-        ))}
+        )})}
       </div>
     );
   };

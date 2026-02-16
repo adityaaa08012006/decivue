@@ -124,9 +124,10 @@ class ApiService {
     });
   }
 
-  async markDecisionReviewed(id) {
+  async markDecisionReviewed(id, reviewComment = null, reviewType = 'routine') {
     return this.request(`/decisions/${id}/mark-reviewed`, {
       method: 'PUT',
+      body: JSON.stringify({ reviewComment, reviewType }),
     });
   }
 

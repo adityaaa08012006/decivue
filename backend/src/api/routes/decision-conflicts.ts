@@ -196,9 +196,14 @@ router.put(
     try {
       const { id } = req.params;
       const { resolutionAction, resolutionNotes } = req.body;
+      const userId = req.user?.id;
 
       if (!resolutionAction) {
         return res.status(400).json({ error: "Resolution action is required" });
+      }
+
+      if (!userId) {
+        return res.status(401).json({ error: "User ID required" });
       }
 
       const validActions = [
@@ -213,6 +218,7 @@ router.put(
       }
 
       const db = getAuthenticatedDatabase(req.accessToken!);
+      const adminDb = getAdminDatabase();
 
       // Update the conflict
       const { data, error } = await db
@@ -232,6 +238,22 @@ router.put(
         conflictId: id,
         resolutionAction,
       });
+
+      // Track conflict resolution in version history for both decisions
+      if (data) {
+        try {
+          await adminDb.rpc('track_decision_conflict_resolution', {
+            p_conflict_id: id,
+            p_resolution_action: resolutionAction,
+            p_resolution_notes: resolutionNotes || '',
+            p_resolved_by: userId
+          });
+          logger.info("Conflict resolution tracked in version history", { conflictId: id });
+        } catch (trackError) {
+          logger.error("Failed to track conflict resolution in version history", { trackError });
+          // Don't fail the request if tracking fails
+        }
+      }
 
       // Apply resolution actions to the decisions if needed
       if (resolutionAction === "DEPRECATE_BOTH" && data) {
