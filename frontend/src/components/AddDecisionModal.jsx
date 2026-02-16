@@ -187,12 +187,10 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
         decisionData.expiry_date = new Date(formData.expiryDate).toISOString();
       }
 
-      // Add metadata (category and parameters) if provided
+      // Add category and parameters as top-level fields
       if (formData.category) {
-        decisionData.metadata = {
-          category: formData.category,
-          parameters: formData.parameters || {}
-        };
+        decisionData.category = formData.category;
+        decisionData.parameters = formData.parameters || {};
       }
 
       const decision = await api.createDecision(decisionData);
@@ -331,8 +329,8 @@ const AddDecisionModal = ({ isOpen, onClose, onSuccess }) => {
                 ...formData,
                 title: decisionData.title,
                 description: decisionData.description,
-                category: decisionData.metadata?.category || '',
-                parameters: decisionData.metadata?.parameters || {},
+                category: decisionData.category || '',
+                parameters: decisionData.parameters || {},
                 expiryDate: decisionData.expiry_date 
                   ? new Date(decisionData.expiry_date).toISOString().split('T')[0] 
                   : ''

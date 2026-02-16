@@ -17,8 +17,8 @@ const StructuredDecisionForm = ({
   const [formData, setFormData] = useState({
     title: existingDecision?.title || '',
     description: existingDecision?.description || '',
-    category: existingDecision?.metadata?.category || '',
-    parameters: existingDecision?.metadata?.parameters || {},
+    category: existingDecision?.category || existingDecision?.metadata?.category || '',
+    parameters: existingDecision?.parameters || existingDecision?.metadata?.parameters || {},
     expiryDate: existingDecision?.expiry_date ? new Date(existingDecision.expiry_date).toISOString().split('T')[0] : '',
     customCategory: '',
     showCustomCategory: false,
@@ -113,10 +113,8 @@ const StructuredDecisionForm = ({
     const decisionData = {
       title: formData.title.trim(),
       description: formData.description.trim(),
-      metadata: {
-        category: formData.category,
-        parameters: formData.parameters
-      }
+      category: formData.category,
+      parameters: formData.parameters
     };
 
     // Add expiry date if provided

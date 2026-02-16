@@ -221,6 +221,17 @@ class ApiService {
     });
   }
 
+  async unlinkAssumptionFromDecision(assumptionId, decisionId, reason = null) {
+    return this.request(`/assumptions/${assumptionId}/link/${decisionId}`, {
+      method: 'DELETE',
+      body: reason ? JSON.stringify({ reason }) : undefined,
+    });
+  }
+
+  async getAllAssumptions() {
+    return this.request('/assumptions');
+  }
+
   async reportConflict(assumptionId, conflictingAssumptionId, reason) {
     return this.request(`/assumptions/${assumptionId}/conflicts`, {
       method: 'POST',
