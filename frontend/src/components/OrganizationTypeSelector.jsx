@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { organizationTypes } from '../utils/organizationTemplates';
 import Aurora from './Aurora';
 import ClickSpark from './ClickSpark';
+import Squares from './Squares';
 
 // Organization background images from public folder
 const orgBackgrounds = {
@@ -32,8 +33,19 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
       duration={400}
     >
     <div className="org-selector-page fixed inset-0 z-50 overflow-y-auto">
+      {/* Animated Squares Background */}
+      <div className="fixed inset-0 z-0">
+        <Squares
+          speed={0.28}
+          squareSize={40}
+          direction="diagonal"
+          borderColor="rgba(59, 130, 246, 0.4)"
+          hoverFillColor="rgba(59, 130, 246, 0.2)"
+        />
+      </div>
+      
       {/* Aurora Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff]">
+      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] opacity-70">
         <Aurora
           colorStops={["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
           amplitude={0.5}
@@ -41,22 +53,25 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
         />
       </div>
       
+      {/* Subtle overlay for depth */}
+      <div className="fixed inset-0 bg-white/20 pointer-events-none" />
+      
       {/* Subtle Noise Texture Overlay */}
       <div className="fixed inset-0 noise-texture pointer-events-none" />
 
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-12">
+      <div className="relative min-h-screen flex flex-col items-center justify-center py-12">
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="absolute top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          className="absolute top-8 left-8 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-50 cursor-pointer opacity-60 hover:opacity-100 px-3 py-1.5 rounded-lg text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="font-medium">Back</span>
         </button>
 
-        <div className={`max-w-4xl w-full transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <div className={`w-full transition-all duration-1000 relative z-0 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {/* Header */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 px-6">
             <div className="inline-block mb-4">
               <div className="text-[#1d4ed8] font-semibold text-sm tracking-wider uppercase flex items-center gap-2 justify-center">
                 <div className="w-8 h-[1px] bg-[#1d4ed8]" />
@@ -73,7 +88,7 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
           </div>
 
           {/* Organization Type Cards - Full Width Edge to Edge */}
-          <div className="flex gap-4 w-full">
+          <div className="flex gap-3 w-full px-3">
             {organizationTypes.map((orgType, index) => {
               const Icon = orgType.icon;
               
@@ -135,7 +150,7 @@ const OrganizationTypeSelector = ({ onSelect, onBack }) => {
           </div>
 
           {/* Skip Option */}
-          <div className="text-center mt-12">
+          <div className="text-center mt-12 px-6">
             <button
               onClick={() => onSelect({ id: 'skip', name: 'Skip' })}
               className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"

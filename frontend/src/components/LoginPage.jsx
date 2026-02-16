@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import decivueLogo from '../../assets/Main logo.png';
+import Squares from './Squares';
+import Aurora from './Aurora';
+import ClickSpark from './ClickSpark';
 
 export default function LoginPage({ onNavigateToRegister }) {
   const { login } = useAuth();
@@ -29,15 +32,45 @@ export default function LoginPage({ onNavigateToRegister }) {
   const isFormValid = email.trim() !== '' && password.trim() !== '';
 
   return (
-    <div className="bg-white h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-gray-200 h-[60px] flex items-center justify-center px-8 flex-shrink-0">
-        <img src={decivueLogo} alt="Decivue" className="h-8" />
-      </header>
+    <ClickSpark
+      sparkColor='#3b82f6'
+      sparkSize={14}
+      sparkRadius={25}
+      sparkCount={8}
+      duration={400}
+    >
+    <div className="h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Animated Squares Background */}
+      <div className="fixed inset-0 z-0">
+        <Squares
+          speed={0.28}
+          squareSize={40}
+          direction="diagonal"
+          borderColor="rgba(59, 130, 246, 0.4)"
+          hoverFillColor="rgba(59, 130, 246, 0.2)"
+        />
+      </div>
+      
+      {/* Aurora Animated Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] opacity-70">
+        <Aurora
+          colorStops={["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]}
+          amplitude={0.5}
+          blend={0.35}
+        />
+      </div>
+      
+      {/* Subtle overlay for depth */}
+      <div className="fixed inset-0 bg-white/20 pointer-events-none" />
+      
+      {/* Logo on right side */}
+      <div className="fixed top-6 right-6 z-20">
+        <img src={decivueLogo} alt="Decivue" className="h-10" />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center py-8 px-4 overflow-hidden">
-        <div className="w-full max-w-[580px] space-y-5">
+      <div className="w-full flex items-center justify-center px-4 relative z-10">
+        <div className="w-full max-w-[580px] bg-white border border-[rgba(102,102,102,0.15)] rounded-3xl shadow-sm p-8 space-y-5">
           {/* Title */}
           <div className="text-center">
             <h1 className="text-[26px] font-semibold text-[#333]">
@@ -172,7 +205,8 @@ export default function LoginPage({ onNavigateToRegister }) {
             </p>
           </div>
         </div>
-      </main>
+      </div>
     </div>
+    </ClickSpark>
   );
 }
