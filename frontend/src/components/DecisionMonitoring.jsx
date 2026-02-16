@@ -18,9 +18,11 @@ import {
   Trash2,
   X,
   Check,
-  Archive
+  Archive,
+  History
 } from 'lucide-react';
 import api from '../services/api';
+import DecisionVersionsModal from './DecisionVersionsModal';
 
 const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [decisions, setDecisions] = useState([]);
@@ -28,6 +30,7 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedDecisionForVersions, setSelectedDecisionForVersions] = useState(null);
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, title }
   const [retireConfirmation, setRetireConfirmation] = useState(null); // { id, title }
@@ -620,6 +623,16 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDecisionForVersions(decision);
+                        }}
+                        className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="View version history"
+                      >
+                        <History size={18} />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1253,6 +1266,14 @@ const DecisionMonitoring = ({ onAddDecision, onEditDecision }) => {
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No decisions here yet</h3>
           <p className="text-gray-500">Try changing your filters or create your first decision!</p>
         </div>
+      )}
+
+      {/* Version History Modal */}
+      {selectedDecisionForVersions && (
+        <DecisionVersionsModal
+          decision={selectedDecisionForVersions}
+          onClose={() => setSelectedDecisionForVersions(null)}
+        />
       )}
     </div>
   );

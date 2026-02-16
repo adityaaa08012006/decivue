@@ -313,12 +313,31 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         .insert({
           decision_id: linkToDecisionId,
           assumption_id: assumption.id,
+          organization_id: organizationId,
         })
         .select();
 
       // Ignore unique constraint violation if already linked
       if (linkError && linkError.code !== '23505') {
         throw linkError;
+      }
+
+      // Track the relation change for version control
+      if (!linkError) {
+        try {
+          await db.rpc('track_relation_change', {
+            p_decision_id: linkToDecisionId,
+            p_relation_type: 'assumption',
+            p_relation_id: assumption.id,
+            p_action: 'linked',
+            p_relation_description: assumption.description,
+            p_changed_by: req.user?.id,
+            p_reason: 'Linked during assumption creation'
+          });
+        } catch (trackError) {
+          logger.error('Failed to track relation change:', trackError);
+          // Don't fail the request if tracking fails
+        }
       }
     }
 
@@ -460,7 +479,8 @@ router.post('/:id/link', async (req: AuthRequest, res: Response, next: NextFunct
       .from('decision_assumptions')
       .insert({
         decision_id: decisionId,
-        assumption_id: id
+        assumption_id: id,
+        organization_id: organizationId,
       })
       .select()
       .single();
@@ -472,14 +492,86 @@ router.post('/:id/link', async (req: AuthRequest, res: Response, next: NextFunct
       throw error;
     }
 
+    // Track the relation change for version control
+    try {
+      await db.rpc('track_relation_change', {
+        p_decision_id: decisionId,
+        p_relation_type: 'assumption',
+        p_relation_id: id,
+        p_action: 'linked',
+        p_relation_description: assumption.description,
+        p_changed_by: req.user?.id,
+        p_reason: req.body.reason || null
+      });
+    } catch (trackError) {
+      logger.error('Failed to track relation change:', trackError);
+      // Don't fail the request if tracking fails
+    }
+
     return res.status(201).json(data);
   } catch (error) {
     return next(error);
   }
 });
 
-/**
- * POST /api/assumptions/:id/conflicts
+/** * DELETE /api/assumptions/:id/link/:decisionId
+ * Unlink an assumption from a decision
+ */
+router.delete('/:id/link/:decisionId', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id, decisionId } = req.params;
+
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
+
+    // Get assumption description for tracking
+    const { data: assumption } = await db
+      .from('assumptions')
+      .select('description')
+      .eq('id', id)
+      .single();
+
+    if (!assumption) {
+      return res.status(404).json({ error: 'Assumption not found' });
+    }
+
+    // Delete the link
+    const { error } = await db
+      .from('decision_assumptions')
+      .delete()
+      .eq('decision_id', decisionId)
+      .eq('assumption_id', id);
+
+    if (error) throw error;
+
+    // Track the relation change for version control
+    try {
+      await db.rpc('track_relation_change', {
+        p_decision_id: decisionId,
+        p_relation_type: 'assumption',
+        p_relation_id: id,
+        p_action: 'unlinked',
+        p_relation_description: assumption.description,
+        p_changed_by: req.user?.id,
+        p_reason: req.body?.reason || null
+      });
+    } catch (trackError) {
+      logger.error('Failed to track relation change:', trackError);
+      // Don't fail the request if tracking fails
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/** * POST /api/assumptions/:id/conflicts
  * Report a conflict between two assumptions
  * Body: { conflictingAssumptionId: string, reason: string }
  */

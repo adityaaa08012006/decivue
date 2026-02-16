@@ -143,6 +143,23 @@ class ApiService {
     });
   }
 
+  // Decision Version Control endpoints
+  async getDecisionVersions(id) {
+    return this.request(`/decisions/${id}/versions`);
+  }
+
+  async getDecisionRelationHistory(id) {
+    return this.request(`/decisions/${id}/relation-history`);
+  }
+
+  async getDecisionHealthHistory(id) {
+    return this.request(`/decisions/${id}/health-history`);
+  }
+
+  async getDecisionTimeline(id) {
+    return this.request(`/decisions/${id}/timeline`);
+  }
+
   // Assumptions endpoints
   async getAssumptions(decisionId, includeConflicts = true) {
     let query = '';

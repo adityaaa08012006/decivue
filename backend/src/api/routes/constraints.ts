@@ -157,7 +157,8 @@ router.post('/link', async (req: AuthRequest, res: Response, next: NextFunction)
       .from('decision_constraints')
       .insert({
         constraint_id: constraintId,
-        decision_id: decisionId
+        decision_id: decisionId,
+        organization_id: organizationId,
       })
       .select()
       .single();

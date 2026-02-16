@@ -108,14 +108,15 @@ export class DecisionController {
 
   /**
    * PUT /api/decisions/:id
-   * Update a decision
+   * Update a decision (with version control)
    */
   async update(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
 
-      if (!organizationId) {
-        return res.status(401).json({ error: 'Organization ID required' });
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: 'Authentication required' });
       }
 
       const db = getAdminDatabase();
@@ -127,7 +128,39 @@ export class DecisionController {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      const decision = await repository.update(req.params.id, req.body);
+      // Track which fields changed
+      const changedFields: string[] = [];
+      const trackableFields = ['title', 'description', 'category', 'parameters'];
+      
+      trackableFields.forEach(field => {
+        if (req.body[field] !== undefined && req.body[field] !== (existing as any)[field]) {
+          changedFields.push(field);
+        }
+      });
+
+      // Update decision with modified_at and modified_by
+      const updateData = {
+        ...req.body,
+        modified_at: new Date().toISOString(),
+        modified_by: userId
+      };
+      
+      const decision = await repository.update(req.params.id, updateData);
+
+      // Create version snapshot if fields changed
+      if (changedFields.length > 0) {
+        const changeSummary = this.generateChangeSummary(changedFields);
+        
+        await db.rpc('create_decision_version', {
+          p_decision_id: req.params.id,
+          p_change_type: 'field_updated',
+          p_change_summary: changeSummary,
+          p_changed_fields: changedFields,
+          p_changed_by: userId
+        });
+
+        logger.info(`Decision version created: ${decision.id}, changed: ${changedFields.join(', ')}`);
+      }
 
       // Emit event
       await eventBus.emit({
@@ -143,6 +176,21 @@ export class DecisionController {
     } catch (error) {
       return next(error);
     }
+  }
+
+  /**
+   * Generate a human-readable summary of what changed
+   */
+  private generateChangeSummary(changedFields: string[]): string {
+    if (changedFields.length === 0) return 'No changes';
+    if (changedFields.length === 1) {
+      const field = changedFields[0];
+      return `Updated ${field}`;
+    }
+    if (changedFields.length === 2) {
+      return `Updated ${changedFields[0]} and ${changedFields[1]}`;
+    }
+    return `Updated ${changedFields.slice(0, -1).join(', ')}, and ${changedFields[changedFields.length - 1]}`;
   }
 
   /**
@@ -450,8 +498,9 @@ export class DecisionController {
         evaluationResult: result
       });
 
-      // If decision was deprecated, check and deprecate orphaned assumptions
-      if (result.newLifecycle === 'INVALIDATED' || result.newLifecycle === 'RETIRED') {
+      // If decision was truly retired, check and deprecate orphaned assumptions
+      // Note: INVALIDATED decisions can recover, so we don't deprecate their assumptions
+      if (result.newLifecycle === 'RETIRED') {
         await AssumptionValidationService.deprecateOrphanedAssumptions(decisionId);
       }
 
@@ -682,6 +731,130 @@ export class DecisionController {
         .single();
 
       return res.json(updatedDecision || decision);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/decisions/:id/versions
+   * Get version history for a decision
+   */
+  async getVersionHistory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('get_decision_version_history', {
+        p_decision_id: req.params.id
+      });
+
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/decisions/:id/relation-history
+   * Get assumption/constraint/dependency change history
+   */
+  async getRelationHistory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('get_decision_relation_history', {
+        p_decision_id: req.params.id
+      });
+
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/decisions/:id/health-history
+   * Get health signal change history with explanations
+   */
+  async getHealthHistory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('get_decision_health_history', {
+        p_decision_id: req.params.id
+      });
+
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/decisions/:id/timeline
+   * Get comprehensive change timeline (all history types combined)
+   */
+  async getTimeline(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('get_decision_change_timeline', {
+        p_decision_id: req.params.id
+      });
+
+      if (error) throw error;
+      return res.json(data || []);
     } catch (error) {
       return next(error);
     }

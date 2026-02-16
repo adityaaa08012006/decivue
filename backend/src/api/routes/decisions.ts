@@ -19,4 +19,10 @@ router.put('/:id/retire', controller.retire.bind(controller));
 router.post('/:id/evaluate', controller.evaluate.bind(controller));
 router.put('/:id/mark-reviewed', controller.markReviewed.bind(controller));
 
+// Version control endpoints
+router.get('/:id/versions', controller.getVersionHistory.bind(controller));
+router.get('/:id/relation-history', controller.getRelationHistory.bind(controller));
+router.get('/:id/health-history', controller.getHealthHistory.bind(controller));
+router.get('/:id/timeline', controller.getTimeline.bind(controller));
+
 export default router;

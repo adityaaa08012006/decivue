@@ -183,8 +183,9 @@ router.post('/', async (req: Request, res: Response): Promise<any> => {
 
         logger.info(`Successfully updated decision ${decision.id}`);
 
-        // If decision was deprecated, check and deprecate orphaned assumptions
-        if (result.newLifecycle === 'INVALIDATED' || result.newLifecycle === 'RETIRED') {
+        // If decision was truly retired, check and deprecate orphaned assumptions
+        // Note: INVALIDATED decisions can recover, so we don't deprecate their assumptions
+        if (result.newLifecycle === 'RETIRED') {
           await AssumptionValidationService.deprecateOrphanedAssumptions(decision.id);
         }
 

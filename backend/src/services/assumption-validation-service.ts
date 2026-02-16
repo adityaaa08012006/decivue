@@ -257,8 +257,11 @@ export class AssumptionValidationService {
   }
 
   /**
-   * Deprecate decision-specific assumptions when all their linked decisions are deprecated
-   * Called when a decision is retired or invalidated
+   * Deprecate decision-specific assumptions when all their linked decisions are retired
+   * Called when a decision is permanently retired (not for INVALIDATED which can recover)
+   * 
+   * Note: INVALIDATED decisions are temporarily broken and can recover, so we don't
+   * deprecate their assumptions. Only RETIRED decisions are permanently deprecated.
    */
   static async deprecateOrphanedAssumptions(decisionId: string): Promise<void> {
     try {
@@ -326,9 +329,9 @@ export class AssumptionValidationService {
 
         if (!allLinks || allLinks.length === 0) continue;
 
-        // Check if ALL linked decisions are deprecated
+        // Check if ALL linked decisions are truly deprecated (RETIRED)
+        // Note: INVALIDATED decisions can recover, so we don't treat them as deprecated
         const allDeprecated = allLinks.every((link: any) => 
-          link.decisions?.lifecycle === 'INVALIDATED' || 
           link.decisions?.lifecycle === 'RETIRED'
         );
 
@@ -350,7 +353,7 @@ export class AssumptionValidationService {
           } else {
             logger.info(`Deprecated assumption: ${assumption.description.substring(0, 60)}...`, {
               assumptionId: assumption.id,
-              reason: 'All linked decisions are deprecated'
+              reason: 'All linked decisions are retired (permanently deprecated)'
             });
 
             // Check if notification already exists for this assumption deprecation
@@ -370,11 +373,11 @@ export class AssumptionValidationService {
                 type: 'ASSUMPTION_BROKEN',
                 severity: 'INFO',
                 title: '📋 Assumption Auto-Deprecated',
-                message: `"${assumption.description}" was marked as BROKEN because all decisions using it are deprecated.`,
+                message: `"${assumption.description}" was marked as BROKEN because all decisions using it have been permanently retired.`,
                 assumptionId: assumption.id,
                 metadata: {
-                  reason: 'all_decisions_deprecated',
-                  deprecatedDecisionCount: allLinks.length
+                  reason: 'all_decisions_retired',
+                  retiredDecisionCount: allLinks.length
                 }
               });
             } else {
@@ -382,9 +385,9 @@ export class AssumptionValidationService {
             }
           }
         } else {
-          // At least one active decision - keep assumption active
+          // At least one non-retired decision - keep assumption active
+          // Note: INVALIDATED decisions can still recover, so we keep their assumptions
           const activeCount = allLinks.filter((link: any) => 
-            link.decisions?.lifecycle !== 'INVALIDATED' && 
             link.decisions?.lifecycle !== 'RETIRED'
           ).length;
 
