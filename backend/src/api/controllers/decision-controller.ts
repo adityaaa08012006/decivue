@@ -403,12 +403,29 @@ export class DecisionController {
   async markReviewed(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { reviewComment, reviewType = 'routine' } = req.body;
+      const { 
+        reviewComment, 
+        reviewType = 'routine',
+        reviewOutcome = 'reaffirmed', // NEW: reaffirmed, revised, escalated, deferred
+        deferralReason,
+        nextReviewDate
+      } = req.body;
       const userId = req.user?.id;
       const db = getAdminDatabase();
 
       if (!userId) {
         return res.status(401).json({ error: 'User ID required' });
+      }
+
+      // Validate review outcome
+      const validOutcomes = ['reaffirmed', 'revised', 'escalated', 'deferred'];
+      if (!validOutcomes.includes(reviewOutcome)) {
+        return res.status(400).json({ error: `Invalid review outcome. Must be one of: ${validOutcomes.join(', ')}` });
+      }
+
+      // If deferred, require deferral reason
+      if (reviewOutcome === 'deferred' && (!deferralReason || deferralReason.trim().length < 10)) {
+        return res.status(400).json({ error: 'Deferral reason required (minimum 10 characters)' });
       }
 
       // First, check the decision's current state
@@ -444,17 +461,37 @@ export class DecisionController {
         }
       }
 
-      // Create review record BEFORE updating decision
+      // Create review record BEFORE updating decision (with outcome)
       const { data: reviewRecord, error: reviewError } = await db.rpc('create_decision_review', {
         p_decision_id: id,
         p_reviewer_id: userId,
         p_review_type: reviewType,
         p_review_comment: reviewComment || null,
-        p_metadata: {}
+        p_metadata: {
+          review_outcome: reviewOutcome,
+          deferral_reason: deferralReason || null,
+          next_review_date: nextReviewDate || null
+        }
       });
 
       if (reviewError) {
         logger.error(`Failed to create review record: ${reviewError.message}`);
+      }
+
+      // Update the review record with outcome information
+      if (reviewRecord) {
+        const { error: updateReviewError } = await db
+          .from('decision_reviews')
+          .update({
+            review_outcome: reviewOutcome,
+            deferral_reason: deferralReason || null,
+            next_review_date: nextReviewDate || null
+          })
+          .eq('id', reviewRecord);
+
+        if (updateReviewError) {
+          logger.error(`Failed to update review outcome: ${updateReviewError.message}`);
+        }
       }
 
       // Update last_reviewed_at to current timestamp
@@ -755,6 +792,239 @@ export class DecisionController {
   }
 
   /**
+   * GET /api/decisions/:id/review-urgency
+   * Calculate and return review urgency score for a decision
+   */
+  async getReviewUrgency(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify organization ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('calculate_review_urgency_score', {
+        p_decision_id: req.params.id
+      });
+
+      if (error) throw error;
+      
+      const urgencyData = data && data.length > 0 ? data[0] : null;
+      return res.json(urgencyData || { urgency_score: 50, factors: {}, next_review_date: null, recommended_frequency_days: 90 });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/:id/recalculate-urgency
+   * Force recalculation of review urgency score
+   */
+  async recalculateUrgency(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify organization ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      // Calculate urgency
+      const { data: urgencyData, error: urgencyError } = await db.rpc('calculate_review_urgency_score', {
+        p_decision_id: req.params.id
+      });
+
+      if (urgencyError) throw urgencyError;
+      
+      const urgency = urgencyData && urgencyData.length > 0 ? urgencyData[0] : null;
+      
+      if (urgency) {
+        // Update decision with new urgency data
+        const { error: updateError } = await db
+          .from('decisions')
+          .update({
+            review_urgency_score: urgency.urgency_score,
+            next_review_date: urgency.next_review_date,
+            review_frequency_days: urgency.recommended_frequency_days,
+            urgency_factors: urgency.factors,
+            last_urgency_calculation: new Date().toISOString()
+          })
+          .eq('id', req.params.id);
+
+        if (updateError) throw updateError;
+      }
+
+      return res.json(urgency || { urgency_score: 50, factors: {}, next_review_date: null, recommended_frequency_days: 90 });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/:id/check-edit-permission
+   * Check if user can edit a governed decision
+   */
+  async checkEditPermission(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      const organizationId = req.user?.organizationId;
+      const { justification } = req.body;
+
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify organization ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('can_edit_decision', {
+        p_decision_id: req.params.id,
+        p_user_id: userId,
+        p_justification: justification || null
+      });
+
+      if (error) throw error;
+      
+      const permission = data && data.length > 0 ? data[0] : { can_edit: false, reason: 'Unknown error', requires_approval: false };
+      return res.json(permission);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/:id/request-edit-approval
+   * Request approval to edit a governed decision
+   */
+  async requestEditApproval(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      const organizationId = req.user?.organizationId;
+      const { justification, proposedChanges } = req.body;
+
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      if (!justification || justification.trim().length < 10) {
+        return res.status(400).json({ error: 'Justification required (minimum 10 characters)' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify organization ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db.rpc('request_edit_approval', {
+        p_decision_id: req.params.id,
+        p_user_id: userId,
+        p_justification: justification,
+        p_proposed_changes: proposedChanges || {}
+      });
+
+      if (error) throw error;
+      
+      return res.json({ auditId: data, message: 'Edit request submitted for approval' });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/governance/approve-edit/:auditId
+   * Approve or reject an edit request
+   */
+  async resolveEditRequest(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      const organizationId = req.user?.organizationId;
+      const { approved, reviewerNotes } = req.body;
+      const { auditId } = req.params;
+
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const db = getAdminDatabase();
+
+      const { data, error } = await db.rpc('resolve_edit_request', {
+        p_audit_id: auditId,
+        p_reviewer_id: userId,
+        p_approved: approved === true,
+        p_reviewer_notes: reviewerNotes || null
+      });
+
+      if (error) throw error;
+      
+      return res.json({ 
+        success: true, 
+        approved: approved === true,
+        message: approved ? 'Edit request approved' : 'Edit request rejected'
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/decisions/:id/governance-audit
+   * Get governance audit log for a decision
+   */
+  async getGovernanceAudit(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: 'Organization ID required' });
+      }
+
+      const db = getAdminDatabase();
+      
+      // Verify organization ownership
+      const repository = new DecisionRepository(db);
+      const decision = await repository.findById(req.params.id);
+      if ((decision as any).organizationId !== organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { data, error } = await db
+        .from('governance_audit_log')
+        .select('*, requested_by:users!governance_audit_log_requested_by_fkey(full_name, email), approved_by:users!governance_audit_log_approved_by_fkey(full_name, email)')
+        .eq('decision_id', req.params.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
    * POST /api/decisions/batch-evaluate
    * Batch evaluate multiple decisions
    * 
@@ -811,6 +1081,187 @@ export class DecisionController {
       });
     } catch (error) {
       logger.error('Batch evaluation failed', { error });
+      return next(error);
+    }
+  }
+
+  /**
+   * POST /api/decisions/:id/toggle-lock
+   * Lock or unlock a decision (TEAM LEADS ONLY)
+   */
+  async toggleLock(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.userId;
+      const { lock, reason } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      if (typeof lock !== 'boolean') {
+        return res.status(400).json({ error: 'lock parameter must be boolean' });
+      }
+
+      const db = getAdminDatabase();
+
+      const { data, error } = await db.rpc('toggle_decision_lock', {
+        p_decision_id: id,
+        p_user_id: userId,
+        p_lock: lock,
+        p_reason: reason || null
+      });
+
+      if (error) {
+        // Check if it's a permission error
+        if (error.message.includes('Only team leads')) {
+          return res.status(403).json({ error: 'Only team leads can lock/unlock decisions' });
+        }
+        throw error;
+      }
+
+      logger.info(`Decision ${lock ? 'locked' : 'unlocked'}: ${id} by ${userId}`);
+
+      res.json({ 
+        success: true, 
+        locked: lock,
+        message: `Decision ${lock ? 'locked' : 'unlocked'} successfully`
+      });
+    } catch (error) {
+      logger.error('Failed to toggle decision lock', { error, decisionId: req.params.id });
+      return next(error);
+    }
+  }
+
+  /**
+   * PUT /api/decisions/:id/governance-settings
+   * Update governance settings for a decision (TEAM LEADS ONLY)
+   */
+  async updateGovernanceSettings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.userId;
+      const { 
+        governanceMode, 
+        governanceTier, 
+        requiresSecondReviewer, 
+        editJustificationRequired,
+        reason 
+      } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      // Validate governance tier if provided
+      if (governanceTier && !['standard', 'high_impact', 'critical'].includes(governanceTier)) {
+        return res.status(400).json({ 
+          error: 'Invalid governance tier. Must be: standard, high_impact, or critical' 
+        });
+      }
+
+      const db = getAdminDatabase();
+
+      const { data, error } = await db.rpc('update_governance_settings', {
+        p_decision_id: id,
+        p_user_id: userId,
+        p_governance_mode: governanceMode !== undefined ? governanceMode : null,
+        p_governance_tier: governanceTier || null,
+        p_requires_second_reviewer: requiresSecondReviewer !== undefined ? requiresSecondReviewer : null,
+        p_edit_justification_required: editJustificationRequired !== undefined ? editJustificationRequired : null,
+        p_reason: reason || null
+      });
+
+      if (error) {
+        if (error.message.includes('Only team leads')) {
+          return res.status(403).json({ error: 'Only team leads can modify governance settings' });
+        }
+        throw error;
+      }
+
+      logger.info(`Governance settings updated for decision: ${id} by ${userId}`, {
+        governanceMode,
+        governanceTier,
+        requiresSecondReviewer,
+        editJustificationRequired
+      });
+
+      res.json({ 
+        success: true,
+        message: 'Governance settings updated successfully'
+      });
+    } catch (error) {
+      logger.error('Failed to update governance settings', { error, decisionId: req.params.id });
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/decisions/governance/pending-approvals
+   * Get pending edit approval requests for team leads
+   */
+  async getPendingApprovals(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.userId;
+      const organizationId = req.user?.organizationId;
+
+      if (!userId || !organizationId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const db = getAdminDatabase();
+
+      // Check if user is a team lead
+      const { data: user } = await db
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (!user || user.role !== 'lead') {
+        return res.status(403).json({ error: 'Only team leads can view pending approvals' });
+      }
+
+      // Get pending edit requests for this organization
+      const { data: pendingApprovals, error } = await db
+        .from('governance_audit_log')
+        .select(`
+          id,
+          decision_id,
+          action,
+          requested_by,
+          justification,
+          new_state,
+          created_at,
+          decisions!governance_audit_log_decision_id_fkey(id, title, description, lifecycle, health_signal, governance_tier),
+          users!governance_audit_log_requested_by_fkey(id, full_name, email)
+        `)
+        .eq('organization_id', organizationId)
+        .eq('action', 'edit_requested')
+        .is('resolved_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Format the response
+      const formattedApprovals = (pendingApprovals || []).map((approval: any) => ({
+        auditId: approval.id,
+        decisionId: approval.decision_id,
+        decisionTitle: approval.decisions?.title || 'Unknown Decision',
+        decisionDescription: approval.decisions?.description,
+        decisionLifecycle: approval.decisions?.lifecycle,
+        decisionHealth: approval.decisions?.health_signal,
+        governanceTier: approval.decisions?.governance_tier,
+        requestedBy: approval.users?.full_name || approval.users?.email || 'Unknown User',
+        requestedByEmail: approval.users?.email,
+        justification: approval.justification,
+        proposedChanges: approval.new_state,
+        requestedAt: approval.created_at
+      }));
+
+      res.json(formattedApprovals);
+    } catch (error) {
+      logger.error('Failed to get pending approvals', { error });
       return next(error);
     }
   }

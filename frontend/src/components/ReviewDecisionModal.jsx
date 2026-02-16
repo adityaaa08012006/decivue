@@ -1,20 +1,30 @@
 import React, { useState } from "react";
-import { X, FileText, Check } from "lucide-react";
+import { X, FileText, Check, Calendar, AlertTriangle } from "lucide-react";
 
 const ReviewDecisionModal = ({ decision, onClose, onSubmit }) => {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewType, setReviewType] = useState("routine");
+  const [reviewOutcome, setReviewOutcome] = useState("reaffirmed");
+  const [deferralReason, setDeferralReason] = useState("");
+  const [nextReviewDate, setNextReviewDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (!decision) return null;
 
   const handleSubmit = async () => {
+    // Validation
+    if (reviewOutcome === 'deferred' && deferralReason.trim().length < 10) {
+      alert('Please provide a deferral reason (minimum 10 characters)');
+      return;
+    }
+
     try {
       setSubmitting(true);
-      await onSubmit(decision.id, reviewComment, reviewType);
+      await onSubmit(decision.id, reviewComment, reviewType, reviewOutcome, deferralReason, nextReviewDate);
       onClose();
     } catch (error) {
       console.error("Failed to submit review:", error);
+      alert("Failed to submit review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -25,6 +35,13 @@ const ReviewDecisionModal = ({ decision, onClose, onSubmit }) => {
     { value: "conflict_resolution", label: "Conflict Resolution", description: "Review after resolving conflicts" },
     { value: "expiry_check", label: "Expiry Check", description: "Review near expiry date" },
     { value: "manual", label: "Manual Review", description: "Ad-hoc manual review" },
+  ];
+
+  const outcomeOptions = [
+    { value: "reaffirmed", label: "Reaffirmed", description: "Decision remains valid", color: "green" },
+    { value: "revised", label: "Revised", description: "Decision updated with changes", color: "blue" },
+    { value: "escalated", label: "Escalated", description: "Requires higher-level review", color: "orange" },
+    { value: "deferred", label: "Deferred", description: "Review postponed", color: "gray" },
   ];
 
   return (
@@ -90,6 +107,78 @@ const ReviewDecisionModal = ({ decision, onClose, onSubmit }) => {
             </div>
           </div>
 
+          {/* Review Outcome Selection */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-black mb-3">
+              Review Outcome
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {outcomeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setReviewOutcome(option.value)}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    reviewOutcome === option.value
+                      ? `border-${option.color}-500 bg-${option.color}-50`
+                      : "border-neutral-gray-200 bg-white hover:border-neutral-gray-300"
+                  }`}
+                >
+                  <div className="font-medium text-neutral-black mb-1">
+                    {option.label}
+                  </div>
+                  <div className="text-xs text-neutral-gray-600">
+                    {option.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Deferral Reason (shown only for deferred outcome) */}
+          {reviewOutcome === 'deferred' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <AlertTriangle className="text-orange-600 flex-shrink-0 mt-0.5" size={18} />
+                <div>
+                  <div className="text-sm font-medium text-orange-900">Deferral Reason Required</div>
+                  <div className="text-xs text-orange-700 mt-1">
+                    Deferring reviews repeatedly may increase urgency scoring. Please provide a clear justification.
+                  </div>
+                </div>
+              </div>
+              <textarea
+                value={deferralReason}
+                onChange={(e) => setDeferralReason(e.target.value)}
+                className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                rows="3"
+                placeholder="Explain why this review is being deferred (minimum 10 characters)..."
+              />
+              <div className="text-xs text-orange-700 mt-1">
+                {deferralReason.length} / 10 characters minimum
+              </div>
+            </div>
+          )}
+
+          {/* Next Review Date (shown for deferred or escalated) */}
+          {(reviewOutcome === 'deferred' || reviewOutcome === 'escalated') && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-neutral-black mb-2">
+                <Calendar size={16} />
+                Next Review Date <span className="text-neutral-gray-500">(Optional)</span>
+              </label>
+              <input
+                type="date"
+                value={nextReviewDate}
+                onChange={(e) => setNextReviewDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="px-3 py-2 border border-neutral-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue w-full md:w-auto"
+              />
+              <div className="text-xs text-neutral-gray-600 mt-1">
+                Leave blank for automatic scheduling based on urgency
+              </div>
+            </div>
+          )}
+
           {/* Review Comments */}
           <div>
             <label
@@ -140,7 +229,7 @@ const ReviewDecisionModal = ({ decision, onClose, onSubmit }) => {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 py-2.5 bg-gradient-to-r from-primary-blue to-primary-purple text-white font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:transform-none flex items-center gap-2"
+            className="px-6 py-2.5 bg-primary-blue text-white font-medium rounded-lg hover:bg-blue-600 hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:transform-none flex items-center gap-2"
           >
             {submitting ? (
               <>
