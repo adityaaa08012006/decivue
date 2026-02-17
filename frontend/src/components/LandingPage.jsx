@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ArrowRight, CheckCircle, Flag, TrendingUp, Activity, AlertTriangle, Clock, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { gsap } from 'gsap';
 import Aurora from './Aurora';
 import ClickSpark from './ClickSpark';
 import ScrollFloat from './ScrollFloat';
@@ -10,9 +11,59 @@ import { DecisionFlowGraph } from './DecisionFlowGraph';
 
 const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const ctaHeadingRef = useRef(null);
 
   useEffect(() => {
     setIsVisible(true);
+  }, []);
+
+  // GSAP text animation for CTA heading
+  useEffect(() => {
+    const heading = ctaHeadingRef.current;
+    if (!heading) return;
+
+    const chars = heading.querySelectorAll('.char');
+    if (chars.length === 0) return;
+
+    // Set initial opacity to 0 for animation
+    gsap.set(chars, { opacity: 0 });
+
+    // Create intersection observer to trigger animation when scrolled to section
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Animate characters
+            gsap.fromTo(
+              chars,
+              {
+                opacity: 0,
+                scale: 0,
+                y: 80,
+                rotationX: 180,
+                transformOrigin: '0% 50% -50'
+              },
+              {
+                duration: 1,
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                rotationX: 0,
+                ease: 'back.out(1.7)',
+                stagger: 0.05
+              }
+            );
+            // Only animate once
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -100px 0px' }
+    );
+
+    observer.observe(heading);
+
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -480,8 +531,12 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] bg-[#8fa7ff]/25 rounded-full blur-[135px] pointer-events-none" />
             
             <div className="relative z-10 space-y-7">
-              <h2 className="text-5xl font-bold leading-tight text-gray-900">
-                Ready to Make Better Decisions?
+              <h2 ref={ctaHeadingRef} className="text-5xl font-bold leading-tight text-gray-900">
+                {'Ready to Make Better Decisions?'.split('').map((char, index) => (
+                  <span key={index} className="char inline-block" style={{ display: 'inline-block' }}>
+                    {char === ' ' ? '\u00A0' : char}
+                  </span>
+                ))}
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Join thousands of teams using Decivue to track, monitor, and optimize their decision-making process.

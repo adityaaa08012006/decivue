@@ -10,6 +10,7 @@
     "clear-db": "tsx scripts/clear-all-data.ts",
     "create-test-conflict": "tsx scripts/create-test-conflict.ts",
     "create-full-test-data": "tsx scripts/create-full-test-data.ts",
+    "seed-plot-armor": "tsx scripts/seed-plot-armor-complete.ts",
     "verify-rls": "tsx scripts/verify-and-fix-rls.ts",
     "migrate:015": "tsx scripts/run-migration-015.ts",
     "test": "jest",
