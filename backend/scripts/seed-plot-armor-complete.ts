@@ -1368,11 +1368,14 @@ async function seedPlotArmorData() {
       }
       
       if (assumptionA && assumptionB) {
+        // Sort IDs to satisfy CHECK constraint (assumption_a_id < assumption_b_id)
+        const [minId, maxId] = [assumptionA.id, assumptionB.id].sort();
+        
         const { error } = await supabase
           .from('assumption_conflicts')
           .insert({
-            assumption_a_id: assumptionA.id,
-            assumption_b_id: assumptionB.id,
+            assumption_a_id: minId,
+            assumption_b_id: maxId,
             conflict_type: conflict.conflict_type,
             conflict_reason: conflict.conflict_reason,
             confidence_score: conflict.confidence_score,
