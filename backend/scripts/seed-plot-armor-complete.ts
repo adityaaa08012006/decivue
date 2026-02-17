@@ -211,6 +211,7 @@ async function seedPlotArmorData() {
     console.log('📝 Step 4: Creating parameter templates...');
     
     const templates = [
+      // Decision Categories
       { category: 'Operations', template_name: 'Store Operations', display_order: 1 },
       { category: 'Operations', template_name: 'Supply Chain', display_order: 2 },
       { category: 'Operations', template_name: 'Staff Management', display_order: 3 },
@@ -222,7 +223,79 @@ async function seedPlotArmorData() {
       { category: 'Product', template_name: 'Menu Development', display_order: 1 },
       { category: 'Product', template_name: 'Quality Standards', display_order: 2 },
       { category: 'Expansion', template_name: 'New Locations', display_order: 1 },
-      { category: 'Expansion', template_name: 'Partnerships', display_order: 2 }
+      { category: 'Expansion', template_name: 'Partnerships', display_order: 2 },
+      
+      // Assumption Categories (for structured mode)
+      { category: 'assumption_category', template_name: 'Budget & Financial', display_order: 1 },
+      { category: 'assumption_category', template_name: 'Timeline & Schedule', display_order: 2 },
+      { category: 'assumption_category', template_name: 'Resource & Staffing', display_order: 3 },
+      { category: 'assumption_category', template_name: 'Technical & Infrastructure', display_order: 4 },
+      { category: 'assumption_category', template_name: 'Market & Business', display_order: 5 },
+      { category: 'assumption_category', template_name: 'Compliance & Legal', display_order: 6 },
+      { category: 'assumption_category', template_name: 'Other', display_order: 99 },
+      
+      // Priority Levels (for conflict severity)
+      { category: 'priority_level', template_name: 'Critical', display_order: 1 },
+      { category: 'priority_level', template_name: 'High', display_order: 2 },
+      { category: 'priority_level', template_name: 'Medium', display_order: 3 },
+      { category: 'priority_level', template_name: 'Low', display_order: 4 },
+      
+      // Impact Areas (where the assumption affects)
+      { category: 'impact_area', template_name: 'Revenue', display_order: 1 },
+      { category: 'impact_area', template_name: 'Cost', display_order: 2 },
+      { category: 'impact_area', template_name: 'Timeline', display_order: 3 },
+      { category: 'impact_area', template_name: 'Quality', display_order: 4 },
+      { category: 'impact_area', template_name: 'Compliance', display_order: 5 },
+      { category: 'impact_area', template_name: 'Customer Experience', display_order: 6 },
+      { category: 'impact_area', template_name: 'Team Capacity', display_order: 7 },
+      
+      // Common Timeframes
+      { category: 'timeframe', template_name: 'Q1 2026', display_order: 1 },
+      { category: 'timeframe', template_name: 'Q2 2026', display_order: 2 },
+      { category: 'timeframe', template_name: 'Q3 2026', display_order: 3 },
+      { category: 'timeframe', template_name: 'Q4 2026', display_order: 4 },
+      { category: 'timeframe', template_name: 'H1 2026', display_order: 5 },
+      { category: 'timeframe', template_name: 'H2 2026', display_order: 6 },
+      { category: 'timeframe', template_name: '2026', display_order: 7 },
+      { category: 'timeframe', template_name: '2027', display_order: 8 },
+      
+      // Outcome Types (for what's expected)
+      { category: 'outcome_type', template_name: 'Approval Required', display_order: 1 },
+      { category: 'outcome_type', template_name: 'Funding Secured', display_order: 2 },
+      { category: 'outcome_type', template_name: 'Resource Available', display_order: 3 },
+      { category: 'outcome_type', template_name: 'Deadline Met', display_order: 4 },
+      { category: 'outcome_type', template_name: 'Milestone Achieved', display_order: 5 },
+      { category: 'outcome_type', template_name: 'Condition Satisfied', display_order: 6 },
+      
+      // Budget Types (for Budget & Financial)
+      { category: 'budget_type', template_name: 'budget', display_order: 1 },
+      { category: 'budget_type', template_name: 'operating', display_order: 2 },
+      { category: 'budget_type', template_name: 'capital', display_order: 3 },
+      { category: 'budget_type', template_name: 'contingency', display_order: 4 },
+      
+      // Timeline Types (for Timeline & Schedule)
+      { category: 'timeline_type', template_name: 'minimum', display_order: 1 },
+      { category: 'timeline_type', template_name: 'maximum', display_order: 2 },
+      { category: 'timeline_type', template_name: 'deadline', display_order: 3 },
+      { category: 'timeline_type', template_name: 'estimate', display_order: 4 },
+      
+      // Duration Units (for Timeline & Schedule)
+      { category: 'duration_unit', template_name: 'days', display_order: 1 },
+      { category: 'duration_unit', template_name: 'weeks', display_order: 2 },
+      { category: 'duration_unit', template_name: 'months', display_order: 3 },
+      { category: 'duration_unit', template_name: 'years', display_order: 4 },
+      
+      // Market Directions (for Market & Business)
+      { category: 'market_direction', template_name: 'increase', display_order: 1 },
+      { category: 'market_direction', template_name: 'decrease', display_order: 2 },
+      { category: 'market_direction', template_name: 'positive', display_order: 3 },
+      { category: 'market_direction', template_name: 'negative', display_order: 4 },
+      { category: 'market_direction', template_name: 'stable', display_order: 5 },
+      
+      // Resource Availability (for Resource & Staffing)
+      { category: 'resource_availability', template_name: 'high', display_order: 1 },
+      { category: 'resource_availability', template_name: 'medium', display_order: 2 },
+      { category: 'resource_availability', template_name: 'low', display_order: 3 }
     ];
 
     for (const template of templates) {
@@ -234,28 +307,137 @@ async function seedPlotArmorData() {
           is_active: true
         });
     }
-    console.log(`   ✅ Created ${templates.length} parameter templates\n`);
+    console.log(`   ✅ Created ${templates.length} parameter templates (decisions, assumptions & dropdowns)\n`);
 
     // ========================================
-    // STEP 4: CREATE ASSUMPTIONS
+    // STEP 4: CREATE ASSUMPTIONS (STRUCTURED FORMAT)
     // ========================================
-    console.log('💭 Step 5: Creating assumptions...');
+    console.log('💭 Step 5: Creating assumptions with structured parameters...');
     
     const assumptionsData = [
-      // UNIVERSAL - Market & Competition
+      // BUDGET CONFLICTS - Same timeframe, different amounts
       {
-        description: 'Coffee consumption continues to grow at 3-5% annually in our markets',
+        description: 'Q3 2026 expansion budget will be $800,000 for new locations',
         status: 'VALID',
-        scope: 'UNIVERSAL',
-        category: 'Market Trends',
+        scope: 'DECISION_SPECIFIC',
+        category: 'Budget & Financial',
+        parameters: {
+          amount: 800000,
+          timeframe: 'Q3 2026',
+          type: 'budget'
+        },
         validated_at: daysAgo(10),
         created_at: daysAgo(180)
       },
       {
+        description: 'Q3 2026 expansion budget allocation is $500,000 for new stores',
+        status: 'VALID',
+        scope: 'DECISION_SPECIFIC',
+        category: 'Budget & Financial',
+        parameters: {
+          amount: 500000,
+          timeframe: 'Q3 2026',
+          type: 'budget'
+        },
+        validated_at: daysAgo(8),
+        created_at: daysAgo(175)
+      },
+
+      // MARKET DIRECTION CONFLICTS - Opposite trends
+      {
+        description: 'Coffee consumption in premium segment will increase significantly',
+        status: 'VALID',
+        scope: 'UNIVERSAL',
+        category: 'Market & Business',
+        parameters: {
+          metric: 'coffee consumption',
+          direction: 'increase',
+          segment: 'premium'
+        },
+        validated_at: daysAgo(15),
+        created_at: daysAgo(200)
+      },
+      {
+        description: 'Coffee consumption in premium markets will decrease due to saturation',
+        status: 'SHAKY',
+        scope: 'UNIVERSAL',
+        category: 'Market & Business',
+        parameters: {
+          metric: 'coffee consumption',
+          direction: 'decrease',
+          segment: 'premium'
+        },
+        validated_at: daysAgo(40),
+        created_at: daysAgo(190)
+      },
+
+      // TIMELINE CONFLICTS - Minimum > Deadline
+      {
+        description: 'New store setup requires minimum 6 months for full buildout',
+        status: 'VALID',
+        scope: 'DECISION_SPECIFIC',
+        category: 'Timeline & Schedule',
+        parameters: {
+          duration: 6,
+          unit: 'months',
+          type: 'minimum'
+        },
+        validated_at: daysAgo(12),
+        created_at: daysAgo(160)
+      },
+      {
+        description: 'Store opening deadline set at 4 months to meet Q3 targets',
+        status: 'VALID',
+        scope: 'DECISION_SPECIFIC',
+        category: 'Timeline & Schedule',
+        parameters: {
+          duration: 4,
+          unit: 'months',
+          type: 'deadline'
+        },
+        validated_at: daysAgo(5),
+        created_at: daysAgo(155)
+      },
+
+      // RESOURCE CONFLICTS - Opposite availability
+      {
+        description: 'Skilled baristas are readily available in current job market',
+        status: 'VALID',
+        scope: 'UNIVERSAL',
+        category: 'Resource & Staffing',
+        parameters: {
+          resource: 'skilled baristas',
+          availability: 'high',
+          timeframe: 'current'
+        },
+        validated_at: daysAgo(20),
+        created_at: daysAgo(170)
+      },
+      {
+        description: 'Skilled barista shortage in current market requires premium wages',
+        status: 'SHAKY',
+        scope: 'UNIVERSAL',
+        category: 'Resource & Staffing',
+        parameters: {
+          resource: 'skilled baristas',
+          availability: 'low',
+          timeframe: 'current'
+        },
+        validated_at: daysAgo(30),
+        created_at: daysAgo(165)
+      },
+
+      // NON-CONFLICTING ASSUMPTIONS
+      {
         description: 'Customers value sustainability and are willing to pay premium for ethical sourcing',
         status: 'VALID',
         scope: 'UNIVERSAL',
-        category: 'Customer Behavior',
+        category: 'Market & Business',
+        parameters: {
+          metric: 'customer willingness to pay',
+          direction: 'positive',
+          factor: 'sustainability'
+        },
         validated_at: daysAgo(15),
         created_at: daysAgo(200)
       },
@@ -263,97 +445,64 @@ async function seedPlotArmorData() {
         description: 'Specialty coffee market has room for 15-20 additional locations in our region',
         status: 'SHAKY',
         scope: 'UNIVERSAL',
-        category: 'Market Capacity',
+        category: 'Market & Business',
+        parameters: {
+          metric: 'market capacity',
+          value: '15-20 locations',
+          region: 'current'
+        },
         validated_at: daysAgo(45),
         created_at: daysAgo(150)
       },
       {
-        description: 'Third-wave coffee shops maintain stable profit margins despite economic pressures',
-        status: 'SHAKY',
-        scope: 'UNIVERSAL',
-        category: 'Financial',
-        validated_at: daysAgo(25),
-        created_at: daysAgo(220)
-      },
-
-      // UNIVERSAL - Operations
-      {
-        description: 'Skilled baristas can be recruited and retained with competitive compensation',
-        status: 'SHAKY',
-        scope: 'UNIVERSAL',
-        category: 'Workforce',
-        validated_at: daysAgo(30),
-        created_at: daysAgo(190)
-      },
-      {
-        description: 'Real estate availability supports aggressive expansion plans',
-        status: 'SHAKY',
-        scope: 'UNIVERSAL',
-        category: 'Real Estate',
-        validated_at: daysAgo(30),
-        created_at: daysAgo(160)
-      },
-
-      // DECISION-SPECIFIC - Expansion
-      {
         description: 'Downtown locations generate 40% higher foot traffic than suburban',
         status: 'VALID',
         scope: 'DECISION_SPECIFIC',
-        category: 'Location Strategy',
+        category: 'Market & Business',
+        parameters: {
+          metric: 'foot traffic',
+          comparison: 'downtown vs suburban',
+          difference: '40% higher'
+        },
         validated_at: daysAgo(8),
         created_at: daysAgo(120)
       },
       {
-        description: 'University district locations provide stable year-round revenue',
-        status: 'SHAKY',
-        scope: 'DECISION_SPECIFIC',
-        category: 'Location Strategy',
-        validated_at: daysAgo(35),
-        created_at: daysAgo(110)
-      },
-
-      // DECISION-SPECIFIC - Operations
-      {
         description: 'Automation of ordering reduces labor costs by 15%',
         status: 'VALID',
         scope: 'DECISION_SPECIFIC',
-        category: 'Technology',
+        category: 'Technical & Infrastructure',
+        parameters: {
+          technology: 'ordering automation',
+          impact: 'cost reduction',
+          percentage: 15
+        },
         validated_at: daysAgo(12),
         created_at: daysAgo(90)
-      },
-      {
-        description: 'Customers prefer personalized service over speed',
-        status: 'VALID',
-        scope: 'DECISION_SPECIFIC',
-        category: 'Customer Experience',
-        validated_at: daysAgo(25),
-        created_at: daysAgo(140)
-      },
-
-      // DECISION-SPECIFIC - Product
-      {
-        description: 'Seasonal menu items drive 20% increase in trial visits',
-        status: 'VALID',
-        scope: 'DECISION_SPECIFIC',
-        category: 'Menu Strategy',
-        validated_at: daysAgo(18),
-        created_at: daysAgo(100)
       },
       {
         description: 'Plant-based milk alternatives have reached market saturation',
         status: 'BROKEN',
         scope: 'DECISION_SPECIFIC',
-        category: 'Product Trends',
+        category: 'Market & Business',
+        parameters: {
+          metric: 'market saturation',
+          product: 'plant-based milk',
+          status: 'saturated'
+        },
         validated_at: daysAgo(7),
         created_at: daysAgo(130)
       },
-
-      // DECISION-SPECIFIC - Marketing
       {
         description: 'Social media marketing provides 3x ROI compared to traditional advertising',
         status: 'VALID',
         scope: 'DECISION_SPECIFIC',
-        category: 'Marketing',
+        category: 'Market & Business',
+        parameters: {
+          channel: 'social media',
+          metric: 'ROI',
+          comparison: '3x traditional'
+        },
         validated_at: daysAgo(22),
         created_at: daysAgo(170)
       },
@@ -361,9 +510,27 @@ async function seedPlotArmorData() {
         description: 'Loyalty programs increase customer lifetime value by 40%',
         status: 'VALID',
         scope: 'DECISION_SPECIFIC',
-        category: 'Customer Retention',
+        category: 'Market & Business',
+        parameters: {
+          program: 'loyalty',
+          metric: 'customer lifetime value',
+          increase: '40%'
+        },
         validated_at: daysAgo(14),
         created_at: daysAgo(155)
+      },
+      {
+        description: 'Q4 2026 operating budget needs to account for 20% increase in supply costs',
+        status: 'VALID',
+        scope: 'DECISION_SPECIFIC',
+        category: 'Budget & Financial',
+        parameters: {
+          amount: 1200000,
+          timeframe: 'Q4 2026',
+          type: 'operating'
+        },
+        validated_at: daysAgo(5),
+        created_at: daysAgo(140)
       }
     ];
 
@@ -489,6 +656,7 @@ async function seedPlotArmorData() {
           seating_capacity: 60,
           staff_required: 12
         },
+        expiry_date: daysFromNow(120), // Construction permit expires
         created_at: daysAgo(120),
         last_reviewed_at: daysAgo(10),
         last_evaluated_at: daysAgo(10),
@@ -511,6 +679,7 @@ async function seedPlotArmorData() {
           staff_required: 9,
           concerns: 'Summer revenue drops significantly'
         },
+        expiry_date: daysFromNow(60), // Lease agreement deadline
         created_at: daysAgo(90),
         last_reviewed_at: daysAgo(5),
         last_evaluated_at: daysAgo(5),
@@ -533,6 +702,7 @@ async function seedPlotArmorData() {
           staff_required: 5,
           concerns: 'Mall traffic declining, competing with food court chains'
         },
+        expiry_date: daysFromNow(15), // Decision deadline - URGENT!
         created_at: daysAgo(60),
         last_reviewed_at: daysAgo(3),
         last_evaluated_at: daysAgo(3),
@@ -604,6 +774,7 @@ async function seedPlotArmorData() {
           expected_waste_reduction: '20%',
           rollout_phase: 'Pilot at 3 locations'
         },
+        expiry_date: daysFromNow(50), // Vendor proposal expires
         created_at: daysAgo(110),
         last_reviewed_at: daysAgo(15),
         last_evaluated_at: daysAgo(15),
@@ -697,6 +868,7 @@ async function seedPlotArmorData() {
           current_subscribers: 342,
           margin: '45%'
         },
+        expiry_date: daysFromNow(75), // Promotional pricing period ends
         created_at: daysAgo(130),
         last_reviewed_at: daysAgo(18),
         last_evaluated_at: daysAgo(18),
@@ -720,6 +892,7 @@ async function seedPlotArmorData() {
           content_type: 'Instagram posts, Stories, Reels',
           kpi: 'Brand awareness +40%, foot traffic +15%'
         },
+        expiry_date: daysFromNow(45), // Campaign duration ends
         created_at: daysAgo(95),
         last_reviewed_at: daysAgo(11),
         last_evaluated_at: daysAgo(11),
@@ -741,6 +914,7 @@ async function seedPlotArmorData() {
           current_members: 4723,
           repeat_visit_increase: '32%'
         },
+        expiry_date: daysFromNow(90), // Pilot program evaluation deadline
         created_at: daysAgo(140),
         last_reviewed_at: daysAgo(9),
         last_evaluated_at: daysAgo(9),
@@ -763,6 +937,7 @@ async function seedPlotArmorData() {
           measurable_impact: 'Minimal - estimated 2% increase in awareness',
           roi: '0.4x - Significantly below digital channels'
         },
+        expiry_date: daysAgo(90), // Campaign ended - ALREADY EXPIRED
         created_at: daysAgo(210),
         last_reviewed_at: daysAgo(90),
         last_evaluated_at: daysAgo(90),
@@ -869,6 +1044,7 @@ async function seedPlotArmorData() {
           payback_period: '4.5 years',
           concern: 'Stretches budget limits'
         },
+        expiry_date: daysFromNow(20), // Financing offer expires - URGENT!
         created_at: daysAgo(55),
         last_reviewed_at: daysAgo(4),
         last_evaluated_at: daysAgo(4),
@@ -913,6 +1089,7 @@ async function seedPlotArmorData() {
           employee_contribution: '25%',
           concern: 'High cost relative to profit margins'
         },
+        expiry_date: daysFromNow(30), // Open enrollment deadline
         created_at: daysAgo(70),
         last_reviewed_at: daysAgo(7),
         last_evaluated_at: daysAgo(7),
@@ -986,41 +1163,41 @@ async function seedPlotArmorData() {
     
     const decisionAssumptionLinks = [
       // Downtown Location
-      { decision: 'Open Downtown Location on Market Street', assumptions: ['Coffee consumption continues', 'Customers value sustainability', 'Downtown locations generate 40%'] },
+      { decision: 'Open Downtown Location on Market Street', assumptions: ['Q3 2026 expansion budget will be $800,000', 'Customers value sustainability', 'Downtown locations generate 40%'] },
       // University District
-      { decision: 'Establish University District Location', assumptions: ['Coffee consumption continues', 'University district locations provide', 'Skilled baristas can be recruited'] },
+      { decision: 'Establish University District Location', assumptions: ['Q3 2026 expansion budget allocation is $500,000', 'Coffee consumption in premium segment will increase', 'Skilled baristas are readily available'] },
       // Mall Location
-      { decision: 'Expand to Suburban Mall Food Court', assumptions: ['Coffee consumption continues', 'Real estate availability supports'] },
+      { decision: 'Expand to Suburban Mall Food Court', assumptions: ['Coffee consumption in premium segment will increase', 'New store setup requires minimum 6 months'] },
       // Failed Downtown
       { decision: 'Open Second Downtown Location (Failed)', assumptions: ['Specialty coffee market has room', 'Downtown locations generate 40%'] },
       
       // Operations
-      { decision: 'Implement Mobile Ordering System', assumptions: ['Automation of ordering reduces', 'Customers prefer personalized'] },
+      { decision: 'Implement Mobile Ordering System', assumptions: ['Automation of ordering reduces'] },
       { decision: 'Automate Inventory Management', assumptions: ['Automation of ordering reduces'] },
-      { decision: 'Reduce Staff Hours to Cut Costs', assumptions: ['Skilled baristas can be recruited', 'Third-wave coffee shops maintain'] },
+      { decision: 'Reduce Staff Hours to Cut Costs', assumptions: ['Skilled baristas are readily available', 'Q4 2026 operating budget needs'] },
       
       // Product
-      { decision: 'Launch Seasonal Specialty Drink Menu', assumptions: ['Seasonal menu items drive', 'Customers value sustainability'] },
+      { decision: 'Launch Seasonal Specialty Drink Menu', assumptions: ['Customers value sustainability'] },
       { decision: 'Expand Plant-Based Menu Options', assumptions: ['Plant-based milk alternatives', 'Customers value sustainability'] },
-      { decision: 'Introduce Coffee Subscription Service', assumptions: ['Customers value sustainability', 'Coffee consumption continues'] },
+      { decision: 'Introduce Coffee Subscription Service', assumptions: ['Customers value sustainability', 'Coffee consumption in premium segment will increase'] },
       
       // Marketing
       { decision: 'Launch Instagram Influencer Partnerships', assumptions: ['Social media marketing provides'] },
       { decision: 'Implement Tiered Loyalty Rewards Program', assumptions: ['Loyalty programs increase'] },
-      { decision: 'Radio Advertising Campaign (Deprecated)', assumptions: ['Coffee consumption continues'] },
+      { decision: 'Radio Advertising Campaign (Deprecated)', assumptions: ['Coffee consumption in premium segment will increase'] },
       
       // Sustainability
       { decision: 'Transition to 100% Compostable Packaging', assumptions: ['Customers value sustainability'] },
       { decision: 'Source 100% Fair Trade Certified Coffee', assumptions: ['Customers value sustainability'] },
       
       // Finance
-      { decision: 'Secure $2M Line of Credit for Expansion', assumptions: ['Specialty coffee market has room', 'Third-wave coffee shops maintain'] },
-      { decision: 'Invest in Equipment Upgrade Program', assumptions: ['Third-wave coffee shops maintain'] },
+      { decision: 'Secure $2M Line of Credit for Expansion', assumptions: ['Specialty coffee market has room', 'Q3 2026 expansion budget will be $800,000'] },
+      { decision: 'Invest in Equipment Upgrade Program', assumptions: ['Q4 2026 operating budget needs'] },
       
       // Workforce
-      { decision: 'Implement Comprehensive Barista Training Program', assumptions: ['Skilled baristas can be recruited'] },
-      { decision: 'Offer Health Insurance to Part-Time Staff', assumptions: ['Skilled baristas can be recruited', 'Third-wave coffee shops maintain'] },
-      { decision: 'Cut Employee Discount from 50% to 30%', assumptions: ['Third-wave coffee shops maintain'] }
+      { decision: 'Implement Comprehensive Barista Training Program', assumptions: ['Skilled barista shortage in current market'] },
+      { decision: 'Offer Health Insurance to Part-Time Staff', assumptions: ['Skilled barista shortage in current market', 'Q4 2026 operating budget needs'] },
+      { decision: 'Cut Employee Discount from 50% to 30%', assumptions: ['Q4 2026 operating budget needs'] }
     ];
 
     let linksCreated = 0;
@@ -1123,45 +1300,58 @@ async function seedPlotArmorData() {
     console.log(`   ✅ Created ${dependenciesCreated} dependencies\n`);
 
     // ========================================
-    // STEP 10: CREATE ASSUMPTION CONFLICTS
+    // STEP 10: CREATE ASSUMPTION CONFLICTS (STRUCTURED)
     // ========================================
-    console.log('⚠️  Step 11: Creating assumption conflicts...');
+    console.log('⚠️  Step 11: Creating assumption conflicts from structured data...');
     
     const assumptionConflictsData = [
+      // Budget Conflict - Same timeframe, different amounts
       {
-        assumptionA: 'Skilled baristas can be recruited',
-        assumptionB: 'Third-wave coffee shops maintain',
+        assumptionA: 'Q3 2026 expansion budget will be $800,000',
+        assumptionB: 'Q3 2026 expansion budget allocation is $500,000',
         conflict_type: 'CONTRADICTORY',
-        conflict_reason: 'Difficult to maintain stable profit margins when barista recruitment requires competitive compensation packages. Labor costs directly impact profitability.',
-        confidence_score: 0.72,
+        conflict_reason: 'Q3 2026 expansion budget conflict: one assumption states $800,000 while another states $500,000 for the same timeframe',
+        confidence_score: 0.95,
         resolved: false
       },
+      // Market Direction Conflict - Opposite trends
       {
-        assumptionA: 'University district locations provide',
-        assumptionB: 'Real estate availability supports',
-        conflict_type: 'INCOMPATIBLE',
-        conflict_reason: 'University district showing instability (summer drops) while assuming aggressive expansion is sustainable. Market may not support rapid growth.',
-        confidence_score: 0.72,
+        assumptionA: 'Coffee consumption in premium segment will increase',
+        assumptionB: 'Coffee consumption in premium markets will decrease',
+        conflict_type: 'CONTRADICTORY',
+        conflict_reason: 'Conflicting market direction for coffee consumption: one assumes increase in premium segment, another assumes decrease due to saturation',
+        confidence_score: 0.92,
         resolved: false
       },
+      // Timeline Conflict - Minimum > Deadline
       {
-        assumptionA: 'Customers prefer personalized',
-        assumptionB: 'Automation of ordering reduces',
-        conflict_type: 'MUTUALLY_EXCLUSIVE',
-        conflict_reason: 'Automation reduces personal interaction, but customers value personalized service. Cannot optimize for both simultaneously.',
-        confidence_score: 0.65,
-        resolved: true,
-        resolved_at: daysAgo(18),
-        resolution_action: 'KEEP_BOTH',
-        resolution_notes: 'Balanced approach: Use automation for ordering efficiency but maintain barista interaction during fulfillment. Apps handle transactions, staff focus on experience.'
+        assumptionA: 'New store setup requires minimum 6 months',
+        assumptionB: 'Store opening deadline set at 4 months',
+        conflict_type: 'CONTRADICTORY',
+        conflict_reason: 'Timeline conflict: Minimum duration (6 months) exceeds deadline (4 months) - physically impossible to meet targets',
+        confidence_score: 0.98,
+        resolved: false
       },
+      // Resource Availability Conflict
+      {
+        assumptionA: 'Skilled baristas are readily available',
+        assumptionB: 'Skilled barista shortage in current market',
+        conflict_type: 'CONTRADICTORY',
+        conflict_reason: 'Conflicting resource availability: one assumes high availability of skilled baristas, another assumes shortage requiring premium wages',
+        confidence_score: 0.88,
+        resolved: false
+      },
+      // Resolved conflict - Product vs Sustainability
       {
         assumptionA: 'Plant-based milk alternatives',
         assumptionB: 'Customers value sustainability',
-        conflict_type: 'CONTRADICTORY',
-        conflict_reason: 'Assumption states plant-based market is saturated, yet sustainability values should drive continued demand for these options.',
+        conflict_type: 'INCOMPATIBLE',
+        conflict_reason: 'Market saturation of plant-based milk conflicts with strong sustainability values that should drive continued demand for these options',
         confidence_score: 0.79,
-        resolved: false
+        resolved: true,
+        resolved_at: daysAgo(18),
+        resolution_action: 'KEEP_BOTH',
+        resolution_notes: 'Market saturation refers to variety/options, not demand. Sustainability drives continued usage of existing options. Both valid in different contexts.'
       }
     ];
 
@@ -1169,6 +1359,13 @@ async function seedPlotArmorData() {
     for (const conflict of assumptionConflictsData) {
       const assumptionA = assumptions.find(a => a.description.includes(conflict.assumptionA));
       const assumptionB = assumptions.find(a => a.description.includes(conflict.assumptionB));
+      
+      if (!assumptionA) {
+        console.log(`   ⚠️  Could not find assumption A: "${conflict.assumptionA}"`);
+      }
+      if (!assumptionB) {
+        console.log(`   ⚠️  Could not find assumption B: "${conflict.assumptionB}"`);
+      }
       
       if (assumptionA && assumptionB) {
         const { error } = await supabase
@@ -1187,10 +1384,46 @@ async function seedPlotArmorData() {
             organization_id: organizationId
           });
 
-        if (!error) conflictsCreated++;
+        if (error) {
+          console.log(`   ⚠️  Error creating conflict: ${error.message}`);
+        } else {
+          conflictsCreated++;
+        }
       }
     }
     console.log(`   ✅ Created ${conflictsCreated} assumption conflicts\n`);
+
+    // Verify conflicts were created properly
+    const { data: verifyConflicts, error: verifyError } = await supabase
+      .from('assumption_conflicts')
+      .select('id, assumption_a_id, assumption_b_id, organization_id, conflict_type')
+      .eq('organization_id', organizationId);
+    
+    if (!verifyError && verifyConflicts) {
+      console.log(`   🔍 Verification: Found ${verifyConflicts.length} conflicts in database for this org`);
+      verifyConflicts.forEach(c => {
+        console.log(`      - Conflict ${c.id.substring(0, 8)}: ${c.conflict_type} (org: ${c.organization_id.substring(0, 8)})`);
+      });
+    } else if (verifyError) {
+      console.log(`   ⚠️  Verification error: ${verifyError.message}`);
+    }
+
+    // Test RPC function to see if it returns conflicts
+    console.log(`   🧪 Testing get_all_assumption_conflicts RPC function...`);
+    const { data: rpcConflicts, error: rpcError } = await supabase
+      .rpc('get_all_assumption_conflicts', { include_resolved: true });
+    
+    if (!rpcError && rpcConflicts) {
+      console.log(`   ✅ RPC returned ${rpcConflicts.length} conflicts`);
+      if (rpcConflicts.length === 0) {
+        console.log(`   ⚠️  WARNING: RPC returned 0 conflicts but direct query found ${verifyConflicts?.length || 0}`);
+        console.log(`   💡 This suggests an RLS or auth issue with the RPC function`);
+      }
+    } else if (rpcError) {
+      console.log(`   ❌ RPC error: ${rpcError.message}`);
+    }
+
+
 
     // ========================================
     // STEP 11: CREATE DECISION CONFLICTS
@@ -1764,31 +1997,38 @@ async function seedPlotArmorData() {
       },
       {
         type: 'ASSUMPTION_CONFLICT',
+        severity: 'CRITICAL',
+        title: 'Budget Conflict: Q3 2026 Expansion - $800K vs $500K',
+        message: 'Critical budget conflict detected: Two assumptions for Q3 2026 expansion disagree on amount ($800K vs $500K). Structured parameters detected mismatch.',
+        assumption: 'Q3 2026 expansion budget will be $800,000'
+      },
+      {
+        type: 'ASSUMPTION_CONFLICT',
+        severity: 'CRITICAL',
+        title: 'Market Direction Conflict: Premium Coffee Consumption',
+        message: 'Contradictory market assumptions: One predicts premium coffee consumption increase, another predicts decrease. Requires resolution for expansion planning.',
+        assumption: 'Coffee consumption in premium segment will increase'
+      },
+      {
+        type: 'ASSUMPTION_CONFLICT',
+        severity: 'CRITICAL',
+        title: 'Timeline Impossible: 6-Month Minimum vs 4-Month Deadline',
+        message: 'Critical timeline conflict: Store setup requires minimum 6 months but deadline is 4 months. Physically impossible to meet.',
+        assumption: 'New store setup requires minimum 6 months'
+      },
+      {
+        type: 'ASSUMPTION_CONFLICT',
         severity: 'WARNING',
-        title: 'Conflicting Assumptions: Labor Availability vs Margins',
-        message: 'Barista scarcity conflicts with profit margin expectations. Cannot maintain margins if labor is scarce and expensive.',
-        assumption: 'Skilled baristas are readily'
+        title: 'Barista Availability: Conflicting Labor Market Views',
+        message: 'Labor market assumptions conflict: High availability vs shortage requiring premium wages. Both impact hiring and expansion strategies.',
+        assumption: 'Skilled baristas are readily available'
       },
       {
         type: 'ASSUMPTION_CONFLICT',
         severity: 'INFO',
-        title: 'Assumption Conflict Resolved: Service vs Automation',
-        message: 'Balanced approach adopted: automation handles transactions, staff focuses on experience. Both assumptions accommodated.',
-        assumption: 'Customers prefer personalized'
-      },
-      {
-        type: 'ASSUMPTION_CONFLICT',
-        severity: 'WARNING',
-        title: 'Assumption Under Pressure: Profit Margins',
-        message: 'Profit margin stability showing signs of stress. Economic pressures and increased costs require closer monitoring.',
-        assumption: 'Third-wave coffee shops maintain'
-      },
-      {
-        type: 'ASSUMPTION_CONFLICT',
-        severity: 'WARNING',
-        title: 'Assumption Challenged: Barista Recruitment',
-        message: 'Labor market tightening. Competitive compensation packages needed to recruit and retain skilled baristas. Monitoring situation closely.',
-        assumption: 'Skilled baristas can be recruited'
+        title: 'Assumption Conflict Resolved: Plant-Based Saturation vs Sustainability',
+        message: 'Conflict resolved: Market saturation refers to variety, not demand. Sustainability continues to drive usage. Both valid in context.',
+        assumption: 'Plant-based milk alternatives'
       },
       {
         type: 'NEEDS_REVIEW',

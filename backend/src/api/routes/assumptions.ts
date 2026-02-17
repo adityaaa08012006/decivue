@@ -351,6 +351,72 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       }
     }
 
+    // AUTOMATIC CONFLICT DETECTION: Check for conflicts with existing assumptions
+    try {
+      const { data: existingAssumptions } = await db
+        .from('assumptions')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .neq('id', assumption.id); // Exclude the newly created assumption
+
+      if (existingAssumptions && existingAssumptions.length > 0) {
+        console.log(`🔍 Checking new assumption "${assumption.description?.substring(0, 50)}" against ${existingAssumptions.length} existing assumptions...`);
+
+        for (const existingAssumption of existingAssumptions) {
+          // Run conflict detection
+          const detectionResult = conflictDetector.detectConflict(
+            {
+              id: assumption.id,
+              text: assumption.description,
+              status: assumption.status,
+              scope: assumption.scope,
+              category: assumption.category,
+              parameters: assumption.parameters || {}
+            },
+            {
+              id: existingAssumption.id,
+              text: existingAssumption.description,
+              status: existingAssumption.status,
+              scope: existingAssumption.scope,
+              category: existingAssumption.category,
+              parameters: existingAssumption.parameters || {}
+            }
+          );
+
+          // If conflict detected with sufficient confidence, create conflict record
+          if (detectionResult && detectionResult.confidenceScore >= 0.7) {
+            // Ensure IDs are ordered to prevent duplicates
+            const [aId, bId] = [assumption.id, existingAssumption.id].sort();
+
+            const { error: conflictError } = await db
+              .from('assumption_conflicts')
+              .insert({
+                assumption_a_id: aId,
+                assumption_b_id: bId,
+                conflict_type: detectionResult.conflictType,
+                conflict_reason: detectionResult.reason,
+                confidence_score: detectionResult.confidenceScore,
+                metadata: {
+                  auto_detected: true,
+                  detected_at: new Date().toISOString()
+                },
+                organization_id: organizationId
+              });
+
+            // Ignore unique constraint violations (conflict already exists)
+            if (!conflictError || conflictError.code === '23505') {
+              console.log(`   ✅ Detected conflict with "${existingAssumption.description?.substring(0, 40)}" (confidence: ${detectionResult.confidenceScore})`);
+            } else {
+              console.error(`   ❌ Failed to create conflict record:`, conflictError);
+            }
+          }
+        }
+      }
+    } catch (conflictCheckError) {
+      logger.error('Error during automatic conflict detection:', conflictCheckError);
+      // Don't fail the request if conflict detection fails - log and continue
+    }
+
     return res.status(201).json(assumption);
   } catch (error) {
     return next(error);
