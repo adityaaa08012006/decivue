@@ -128,7 +128,7 @@ export default function RegisterPage({ onNavigateToLogin }) {
 
       {/* Main Content */}
       <div className="w-full flex items-center justify-center px-4 relative z-10">
-        <div className="max-w-[1000px] w-full h-[calc(100vh-48px)] bg-white/40 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
+        <div className="max-w-[1000px] w-full h-[calc(100vh-48px)] bg-white/40 backdrop-blur-[120px] border border-white/50 rounded-3xl overflow-hidden shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
           <div className="grid lg:grid-cols-2 gap-0 h-full">
             {/* Left Column - Form */}
             <div className="p-6 lg:p-8 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">

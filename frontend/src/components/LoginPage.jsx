@@ -87,7 +87,7 @@ export default function LoginPage({ onNavigateToRegister }) {
 
       {/* Main Content */}
       <div className="w-full flex items-center justify-center px-4 relative z-10">
-        <div className="w-full max-w-[580px] bg-white border border-[rgba(102,102,102,0.15)] rounded-3xl shadow-sm p-8 space-y-5">
+        <div className="w-full max-w-[580px] bg-white/40 backdrop-blur-[120px] border border-white/50 rounded-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-8 space-y-5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {/* Title */}
           <div className="text-center">
             <h1 className="text-[26px] font-semibold text-[#333]">
