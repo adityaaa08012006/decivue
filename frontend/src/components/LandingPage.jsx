@@ -8,6 +8,7 @@ import ScrollFloat from './ScrollFloat';
 import Squares from './Squares';
 import ScrollVelocity from './ScrollVelocity';
 import { DecisionFlowGraph } from './DecisionFlowGraph';
+import decivueLogo from '../../assets/Main logo.png';
 
 const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -148,7 +149,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
               className="flex items-center gap-4 mb-2"
             >
               <img 
-                src="/assets/Main logo.png" 
+                src={decivueLogo} 
                 alt="Decivue Logo" 
                 className="h-12 lg:h-14"
               />
