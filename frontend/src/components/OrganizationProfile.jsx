@@ -1,7 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Plus, Pencil, Check, X, Flame } from 'lucide-react';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+
+const TiltCard = ({ children, className }) => {
+    const ref = useRef(null);
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+
+    const mouseX = useSpring(x, { stiffness: 500, damping: 50 });
+    const mouseY = useSpring(y, { stiffness: 500, damping: 50 });
+
+    const rotateX = useTransform(mouseY, [-0.5, 0.5], ["17.5deg", "-17.5deg"]);
+    const rotateY = useTransform(mouseX, [-0.5, 0.5], ["-17.5deg", "17.5deg"]);
+
+    const handleMouseMove = (e) => {
+        if (!ref.current) return;
+        const rect = ref.current.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const mouseXFromCenter = e.clientX - rect.left - width / 2;
+        const mouseYFromCenter = e.clientY - rect.top - height / 2;
+        x.set(mouseXFromCenter / width);
+        y.set(mouseYFromCenter / height);
+    };
+
+    const handleMouseLeave = () => {
+        x.set(0);
+        y.set(0);
+    };
+
+    return (
+        <motion.div
+            ref={ref}
+            className={className}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                rotateX,
+                rotateY,
+                transformStyle: "preserve-3d",
+            }}
+        >
+            <div style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}>
+                {children}
+            </div>
+        </motion.div>
+    );
+};
 
 const OrganizationProfile = () => {
     const { user, logout } = useAuth();
@@ -137,7 +184,7 @@ const OrganizationProfile = () => {
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#fafbff] dark:from-neutral-gray-900 dark:via-neutral-gray-900 dark:to-neutral-gray-800">
             <div className="text-center">
-                <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="w-16 h-16 border-4 border-[#3788E5]/30 dark:border-[#3788E5]/30 border-t-[#3788E5] dark:border-t-[#3788E5] rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-gray-700 dark:text-neutral-gray-300 font-medium">Loading organization profile...</p>
             </div>
         </div>
@@ -150,11 +197,11 @@ const OrganizationProfile = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                     {/* Left - Organization Info */}
                     <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 shadow-lg dark:shadow-2xl">
-                        <div className="border-l-4 border-blue-600 dark:border-blue-400 pl-6">
+                        <div className="border-l-4 border-[#3788E5] dark:border-[#3788E5] pl-6">
                             <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">
                                 {orgName || 'Organization'}
                             </h1>
-                            <div className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-1 rounded-full text-sm mt-2 mb-4 w-fit hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
+                            <div className="bg-[#3788E5] dark:bg-[#3788E5] text-white px-4 py-1 rounded-full text-sm mt-2 mb-4 w-fit hover:bg-[#2b6cb8] dark:hover:bg-[#2b6cb8] transition-colors">
                                 {orgCode}
                             </div>
                             <p className="text-gray-600 dark:text-neutral-gray-300 text-base leading-relaxed mb-2">
@@ -164,11 +211,11 @@ const OrganizationProfile = () => {
                     </div>
 
                     {/* Right - User Profile Card */}
-                    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center border-4 border-blue-600 dark:border-blue-400 shadow-lg dark:shadow-2xl">
+                    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center border-4 border-[#3788E5] dark:border-[#3788E5] shadow-lg dark:shadow-2xl">
                         <div className="mb-4">
-                            <Flame className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            <Flame className="w-6 h-6 text-[#3788E5] dark:text-[#3788E5]" />
                         </div>
-                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-blue-400 to-purple-600 dark:from-blue-500 dark:to-purple-700 rounded-full flex items-center justify-center border-4 border-blue-600 dark:border-blue-400 mb-4">
+                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-[#3788E5] to-purple-600 dark:from-[#3788E5] dark:to-purple-700 rounded-full flex items-center justify-center border-4 border-[#3788E5] dark:border-[#3788E5] mb-4">
                             <span className="text-white text-2xl md:text-3xl font-bold">
                                 {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
                             </span>
@@ -181,7 +228,7 @@ const OrganizationProfile = () => {
                         </p>
                         <button 
                             onClick={logout}
-                            className="bg-blue-600 dark:bg-blue-500 text-white px-8 py-2 rounded-full text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md"
+                            className="bg-[#3788E5] dark:bg-[#3788E5] text-white px-8 py-2 rounded-full text-sm hover:bg-[#2b6cb8] dark:hover:bg-[#2b6cb8] transition-colors shadow-md"
                         >
                             LOGOUT
                         </button>
@@ -189,14 +236,14 @@ const OrganizationProfile = () => {
                 </div>
 
                 {/* Bottom - Organizational Constraints */}
-                <div className="bg-gradient-to-br from-blue-600 to-blue-800 dark:from-neutral-gray-800 dark:to-neutral-gray-900 rounded-2xl p-6 md:p-8 text-white shadow-xl dark:shadow-2xl dark:border dark:border-neutral-gray-700">
+                <div className="bg-[#3788E5] dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 text-white shadow-xl dark:shadow-2xl dark:border dark:border-neutral-gray-700">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                         <h2 className="text-lg md:text-xl font-semibold uppercase tracking-wide">
                             Organizational Constraints
                         </h2>
                         <button 
                             onClick={() => setShowAddModal(true)}
-                            className="bg-white dark:bg-blue-600 text-blue-700 dark:text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+                            className="bg-white dark:bg-[#3788E5] text-[#3788E5] dark:text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-50 dark:hover:bg-[#2b6cb8] transition-colors flex items-center gap-2 shadow-md"
                         >
                             ADD CONSTRAINTS <Plus className="w-4 h-4" />
                         </button>
@@ -204,128 +251,140 @@ const OrganizationProfile = () => {
 
                     {constraints.length > 0 ? (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                                 {constraints.slice(0, 3).map((constraint) => (
-                                    <div key={constraint.id} className="group relative">
+                                    <TiltCard 
+                                        key={constraint.id} 
+                                        className="group relative h-full bg-white/95 backdrop-blur-md hover:bg-white p-5 rounded-2xl border border-white/40 shadow-sm hover:shadow-xl transition-all"
+                                    >
                                         {editingConstraint !== constraint.id ? (
                                             <>
-                                                <p className="text-sm leading-relaxed">
-                                                    <strong className="block mb-1">{constraint.name}</strong>
-                                                    {constraint.description}
-                                                </p>
-                                                <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="min-h-[100px] flex flex-col">
+                                                    <h3 className="font-bold text-lg mb-2 text-[#3788E5]">{constraint.name}</h3>
+                                                    <p className="text-sm leading-relaxed text-gray-600 font-medium">
+                                                        {constraint.description}
+                                                    </p>
+                                                </div>
+                                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
-                                                        onClick={() => startEditing(constraint)}
-                                                        className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                        onClick={(e) => { e.stopPropagation(); startEditing(constraint); }}
+                                                        className="p-1.5 bg-[#3788E5]/10 hover:bg-[#3788E5]/20 text-[#3788E5] rounded-lg transition-colors"
                                                         title="Edit"
                                                     >
-                                                        <Pencil className="w-3 h-3" />
+                                                        <Pencil className="w-3.5 h-3.5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteConstraint(constraint.id)}
-                                                        className="p-1.5 bg-white/10 hover:bg-red-500/20 rounded transition-colors"
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteConstraint(constraint.id); }}
+                                                        className="p-1.5 bg-red-100/80 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                                                         title="Delete"
                                                     >
-                                                        <Trash2 className="w-3 h-3" />
+                                                        <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className="space-y-2">
+                                            <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="text"
                                                     value={editTitle}
                                                     onChange={(e) => setEditTitle(e.target.value)}
-                                                    className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40"
+                                                    className="w-full bg-white border-2 border-[#3788E5]/30 text-gray-900 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#3788E5] focus:ring-2 focus:ring-[#3788E5]/20 placeholder-gray-400"
                                                     placeholder="Title"
+                                                    autoFocus
                                                 />
                                                 <textarea
                                                     value={editDescription}
                                                     onChange={(e) => setEditDescription(e.target.value)}
-                                                    className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40 resize-none"
-                                                    rows={3}
+                                                    className="w-full bg-white border-2 border-[#3788E5]/30 text-gray-900 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#3788E5] focus:ring-2 focus:ring-[#3788E5]/20 resize-none placeholder-gray-400"
+                                                    rows={4}
                                                     placeholder="Description"
                                                 />
-                                                <div className="flex gap-1 justify-end">
+                                                <div className="flex gap-2 justify-end">
                                                     <button
                                                         onClick={cancelEditing}
-                                                        className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                        className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                                                     >
-                                                        <X className="w-3 h-3" />
+                                                        <X className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={saveEdits}
-                                                        className="p-1.5 bg-green-600 hover:bg-green-700 rounded transition-colors"
+                                                        className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-sm"
                                                     >
-                                                        <Check className="w-3 h-3" />
+                                                        <Check className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </div>
                                         )}
-                                    </div>
+                                    </TiltCard>
                                 ))}
                             </div>
 
                             {constraints.length > 3 && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                                     {constraints.slice(3).map((constraint) => (
-                                        <div key={constraint.id} className="group relative">
+                                        <TiltCard 
+                                            key={constraint.id}
+                                            className="group relative h-full bg-white/95 backdrop-blur-md hover:bg-white p-5 rounded-2xl border border-white/40 shadow-sm hover:shadow-xl transition-all"
+                                        >
                                             {editingConstraint !== constraint.id ? (
                                                 <>
-                                                    <p className="text-sm leading-relaxed">
-                                                        <strong className="block mb-1">{constraint.name}</strong>
-                                                        {constraint.description}
-                                                    </p>
-                                                    <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="min-h-[100px] flex flex-col">
+                                                        <h3 className="font-bold text-lg mb-2 text-[#3788E5]">{constraint.name}</h3>
+                                                        <p className="text-sm leading-relaxed text-gray-600 font-medium">
+                                                            {constraint.description}
+                                                        </p>
+                                                    </div>
+                                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
-                                                            onClick={() => startEditing(constraint)}
-                                                            className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                            onClick={(e) => { e.stopPropagation(); startEditing(constraint); }}
+                                                            className="p-1.5 bg-[#3788E5]/10 hover:bg-[#3788E5]/20 text-[#3788E5] rounded-lg transition-colors"
                                                             title="Edit"
                                                         >
-                                                            <Pencil className="w-3 h-3" />
+                                                            <Pencil className="w-3.5 h-3.5" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDeleteConstraint(constraint.id)}
-                                                            className="p-1.5 bg-white/10 hover:bg-red-500/20 rounded transition-colors"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteConstraint(constraint.id); }}
+                                                            className="p-1.5 bg-red-100/80 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                                                             title="Delete"
                                                         >
-                                                            <Trash2 className="w-3 h-3" />
+                                                            <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
                                                 </>
                                             ) : (
-                                                <div className="space-y-2">
+                                                <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                                                     <input
                                                         type="text"
                                                         value={editTitle}
                                                         onChange={(e) => setEditTitle(e.target.value)}
-                                                        className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40"
+                                                        className="w-full bg-white border-2 border-[#3788E5]/30 text-gray-900 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#3788E5] focus:ring-2 focus:ring-[#3788E5]/20 placeholder-gray-400"
                                                         placeholder="Title"
+                                                        autoFocus
                                                     />
                                                     <textarea
                                                         value={editDescription}
                                                         onChange={(e) => setEditDescription(e.target.value)}
-                                                        className="w-full bg-white/10 text-white px-2 py-1 rounded text-sm border border-white/20 focus:outline-none focus:border-white/40 resize-none"
-                                                        rows={3}
+                                                        className="w-full bg-white border-2 border-[#3788E5]/30 text-gray-900 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#3788E5] focus:ring-2 focus:ring-[#3788E5]/20 resize-none placeholder-gray-400"
+                                                        rows={4}
                                                         placeholder="Description"
                                                     />
-                                                    <div className="flex gap-1 justify-end">
+                                                    <div className="flex gap-2 justify-end">
                                                         <button
                                                             onClick={cancelEditing}
-                                                            className="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors"
+                                                            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                                                         >
-                                                            <X className="w-3 h-3" />
+                                                            <X className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={saveEdits}
-                                                            className="p-1.5 bg-green-600 hover:bg-green-700 rounded transition-colors"
+                                                            className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-sm"
                                                         >
-                                                            <Check className="w-3 h-3" />
+                                                            <Check className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
+                                        </TiltCard>
                                     ))}
                                 </div>
                             )}
@@ -340,7 +399,7 @@ const OrganizationProfile = () => {
                     )}
 
                     <div className="border-t border-white/20 dark:border-neutral-gray-600 pt-4 mt-6">
-                        <p className="text-xs italic text-blue-100 dark:text-neutral-gray-400 text-center">
+                        <p className="text-xs italic text-white/80 dark:text-neutral-gray-400 text-center">
                             All constraints automatically apply to every decision in your organization. They cannot be selectively disabled.
                         </p>
                     </div>
@@ -351,7 +410,7 @@ const OrganizationProfile = () => {
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl">
-                        <div className="px-6 md:px-8 py-6 border-b border-blue-100 dark:border-neutral-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-neutral-gray-700 dark:to-neutral-gray-800">
+                        <div className="px-6 md:px-8 py-6 border-b border-[#3788E5]/20 dark:border-neutral-gray-700 bg-gradient-to-r from-[#3788E5]/10 to-purple-50 dark:from-neutral-gray-700 dark:to-neutral-gray-800">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Add New Constraint</h2>
                                 <button
@@ -373,7 +432,7 @@ const OrganizationProfile = () => {
                                     value={newConstraint.name}
                                     onChange={(e) => setNewConstraint({ ...newConstraint, name: e.target.value })}
                                     placeholder='e.g., "Annual Budget Limit"'
-                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700 placeholder:text-gray-400 dark:placeholder:text-neutral-gray-500"
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-[#3788E5] dark:focus:border-[#3788E5] transition-colors text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700 placeholder:text-gray-400 dark:placeholder:text-neutral-gray-500"
                                 />
                             </div>
 
@@ -385,7 +444,7 @@ const OrganizationProfile = () => {
                                     value={newConstraint.description}
                                     onChange={(e) => setNewConstraint({ ...newConstraint, description: e.target.value })}
                                     placeholder='e.g., "All projects must stay within $500K annual budget"'
-                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors resize-none text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700 placeholder:text-gray-400 dark:placeholder:text-neutral-gray-500"
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-[#3788E5] dark:focus:border-[#3788E5] transition-colors resize-none text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700 placeholder:text-gray-400 dark:placeholder:text-neutral-gray-500"
                                     rows={4}
                                 />
                             </div>
@@ -397,7 +456,7 @@ const OrganizationProfile = () => {
                                 <select
                                     value={newConstraint.constraintType}
                                     onChange={(e) => setNewConstraint({ ...newConstraint, constraintType: e.target.value })}
-                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700"
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-neutral-gray-600 rounded-lg focus:outline-none focus:border-[#3788E5] dark:focus:border-[#3788E5] transition-colors text-gray-900 dark:text-white bg-white dark:bg-neutral-gray-700"
                                 >
                                     <option value="POLICY">Policy</option>
                                     <option value="BUDGET">Budget</option>
@@ -409,19 +468,19 @@ const OrganizationProfile = () => {
                             </div>
                         </div>
 
-                        <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-neutral-gray-700 dark:to-neutral-gray-800 rounded-b-2xl flex gap-3 justify-end border-t border-blue-100 dark:border-neutral-gray-700">
+                        <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-[#3788E5]/10 to-purple-50 dark:from-neutral-gray-700 dark:to-neutral-gray-800 rounded-b-2xl flex gap-3 justify-end border-t border-[#3788E5]/20 dark:border-neutral-gray-700">
                             <button
                                 onClick={() => {
                                     setShowAddModal(false);
                                     setNewConstraint({ name: '', description: '', constraintType: 'POLICY', validationConfig: {} });
                                 }}
-                                className="px-6 py-3 border-2 border-blue-200 dark:border-neutral-gray-600 text-gray-700 dark:text-neutral-gray-300 font-semibold rounded-lg hover:bg-white dark:hover:bg-neutral-gray-600 transition-colors"
+                                className="px-6 py-3 border-2 border-[#3788E5]/20 dark:border-neutral-gray-600 text-gray-700 dark:text-neutral-gray-300 font-semibold rounded-lg hover:bg-white dark:hover:bg-neutral-gray-600 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleAddConstraint}
-                                className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md"
+                                className="px-6 py-3 bg-[#3788E5] dark:bg-[#3788E5] text-white font-semibold rounded-lg hover:bg-[#2b6cb8] dark:hover:bg-[#2b6cb8] transition-colors shadow-md"
                             >
                                 Create Constraint
                             </button>

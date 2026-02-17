@@ -23,7 +23,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
       sparkCount={8}
       duration={400}
     >
-    <div className="landing-page text-gray-900 overflow-x-hidden relative">
+    <div className="landing-page text-gray-900 overflow-x-hidden relative bg-[#F2F5FA]">
       {/* Animated Squares Background */}
       <div className="fixed inset-0 z-0">
         <Squares

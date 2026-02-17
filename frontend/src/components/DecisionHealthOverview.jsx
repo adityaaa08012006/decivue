@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useSpring, useTransform, useInView } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import api from '../services/api';
+
+const AnimatedCounter = ({ value, delay = 0 }) => {
+  const springValue = useSpring(0, { stiffness: 50, damping: 20 });
+  const displayValue = useTransform(springValue, (latest) => Math.floor(latest));
+
+  useEffect(() => {
+    // Add a small delay before starting the count up
+    const timeout = setTimeout(() => {
+      springValue.set(value);
+    }, delay * 1000);
+    return () => clearTimeout(timeout);
+  }, [value, delay, springValue]);
+
+  return <motion.span>{displayValue}</motion.span>;
+};
 
 const HorizontalProgressCard = ({ title, value, total, status, index }) => {
   const percentage = total > 0 ? (value / total) * 100 : 0;
@@ -56,8 +71,8 @@ const HorizontalProgressCard = ({ title, value, total, status, index }) => {
       </div>
       
       {/* Value */}
-      <div className={`text-4xl font-bold ${colors.text}`}>
-        {value}
+      <div className={`text-4xl font-bold ${colors.text} tabular-nums tracking-tight`}>
+        <AnimatedCounter value={value} delay={index * 0.1} />
       </div>
     </motion.div>
   );

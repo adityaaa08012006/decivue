@@ -97,7 +97,7 @@ export default function RegisterPage({ onNavigateToLogin }) {
       sparkCount={8}
       duration={400}
     >
-    <div className="h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="h-screen flex items-center justify-center relative overflow-hidden bg-[#F2F5FA] text-gray-900">
       {/* Animated Squares Background */}
       <div className="fixed inset-0 z-0">
         <Squares
