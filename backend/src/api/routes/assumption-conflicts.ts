@@ -19,14 +19,29 @@ const detector = new AssumptionConflictDetector();
  * GET /api/assumption-conflicts
  * Get all assumption conflicts (optionally filter by unresolved)
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const includeResolved = req.query.includeResolved === 'true';
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
 
-    const { data, error } = await db.rpc('get_all_assumption_conflicts', {
-      include_resolved: includeResolved,
-    });
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
+
+    // Manually filter by organization since we're using admin DB
+    let query = db.from('assumption_conflicts').select(`
+      *,
+      assumption_a:assumptions!assumption_a_id(*),
+      assumption_b:assumptions!assumption_b_id(*)
+    `).eq('organization_id', organizationId);
+
+    if (!includeResolved) {
+      query = query.is('resolved_at', null);
+    }
+
+    const { data, error } = await query.order('detected_at', { ascending: false });
 
     if (error) throw error;
 
@@ -40,14 +55,28 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * GET /api/assumption-conflicts/:assumptionId
  * Get all conflicts for a specific assumption
  */
-router.get('/:assumptionId', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:assumptionId', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { assumptionId } = req.params;
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
 
-    const { data, error } = await db.rpc('get_assumption_conflicts', {
-      target_assumption_id: assumptionId,
-    });
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase();
+
+    // Manually filter by organization and assumption
+    const { data, error } = await db
+      .from('assumption_conflicts')
+      .select(`
+        *,
+        assumption_a:assumptions!assumption_a_id(*),
+        assumption_b:assumptions!assumption_b_id(*)
+      `)
+      .eq('organization_id', organizationId)
+      .or(`assumption_a_id.eq.${assumptionId},assumption_b_id.eq.${assumptionId}`)
+      .order('detected_at', { ascending: false });
 
     if (error) throw error;
 
@@ -61,13 +90,19 @@ router.get('/:assumptionId', async (req: Request, res: Response, next: NextFunct
  * POST /api/assumption-conflicts/detect
  * Run conflict detection on all assumptions or specific ones
  */
-router.post('/detect', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/detect', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { assumptionIds } = req.body; // Optional: specific assumptions to check
-    const db = getDatabase();
+    const organizationId = req.user?.organizationId;
 
-    // Fetch assumptions
-    let query = db.from('assumptions').select('*');
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Organization ID required' });
+    }
+
+    const db = getAdminDatabase(); // Use admin DB for organization-scoped queries
+
+    // Fetch assumptions filtered by organization
+    let query = db.from('assumptions').select('*').eq('organization_id', organizationId);
 
     if (assumptionIds && Array.isArray(assumptionIds)) {
       query = query.in('id', assumptionIds);

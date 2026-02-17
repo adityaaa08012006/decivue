@@ -9,11 +9,13 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 ## 📁 Files Created
 
 ### 1. **seed-plot-armor-complete.ts** (Main Script)
+
 **Location**: `backend/scripts/seed-plot-armor-complete.ts`  
 **Size**: ~1,200 lines  
 **Purpose**: Complete data seeder with 20 distinct creation steps
 
 **Features**:
+
 - ✅ Automatic cleanup before seeding
 - ✅ Detailed progress logging with emojis
 - ✅ Error handling and validation
@@ -21,11 +23,13 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 - ✅ Support for custom organization names
 
 ### 2. **PLOT-ARMOR-SEEDER-README.md** (Full Documentation)
+
 **Location**: `backend/scripts/PLOT-ARMOR-SEEDER-README.md`  
 **Size**: ~700 lines  
 **Purpose**: Complete guide with usage, features, troubleshooting
 
 **Sections**:
+
 - Organization context and background
 - All features demonstrated (15+ categories)
 - Data statistics table
@@ -36,11 +40,13 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 - Integration testing examples
 
 ### 3. **PLOT-ARMOR-QUICK-REFERENCE.md** (Cheat Sheet)
+
 **Location**: `backend/scripts/PLOT-ARMOR-QUICK-REFERENCE.md`  
 **Size**: ~400 lines  
 **Purpose**: Quick lookup for data structure and relationships
 
 **Sections**:
+
 - Decision tables by category with status
 - Assumption breakdown (VALID/SHAKY/BROKEN)
 - Conflict analysis (6 decision conflicts, 4 assumption conflicts)
@@ -53,6 +59,7 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 - Quick start commands
 
 ### 4. **Package.json Update**
+
 **Location**: `backend/package.json`  
 **Change**: Added `"seed-plot-armor"` script command
 
@@ -61,6 +68,7 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 ## 🎯 Organization: Plot Armor Coffee Co.
 
 ### Context
+
 - **Industry**: Food & Beverage (Specialty Coffee)
 - **Size**: Medium (50-200 employees)
 - **Scope**: Regional (3 states)
@@ -68,7 +76,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 - **Focus**: Expansion, sustainability, customer experience
 
 ### Why Coffee Shop?
+
 **Non-technical, relatable business decisions**:
+
 - ✅ Everyone understands coffee shops
 - ✅ Clear business problems (location, staffing, costs)
 - ✅ Realistic constraints (budget, compliance, competition)
@@ -79,34 +89,36 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 
 ## 📊 Data Created (Complete Statistics)
 
-| Category | Count | Details |
-|----------|-------|---------|
-| **Decisions** | 24 | 7 categories: Expansion, Operations, Product, Marketing, Sustainability, Finance, Workforce |
-| **Assumptions** | 14 | 8 VALID, 3 SHAKY, 3 BROKEN; Universal + Decision-specific |
-| **Constraints** | 6 | Budget, Compliance, Policy, Legal |
-| **Decision Conflicts** | 6 | Resource competition, contradictory, objective undermining |
-| **Assumption Conflicts** | 4 | Contradictory, mutually exclusive, incompatible |
-| **Constraint Violations** | 4 | Budget overruns, policy breaches |
-| **Dependencies** | 7 | Decision prerequisite chains |
-| **Decision-Assumption Links** | 30+ | Many-to-many relationships |
-| **Decision-Constraint Links** | 15+ | Compliance tracking |
-| **Decision Signals** | 17 | Progress (5), Risk (5), Note (4), Signal (3) |
-| **Decision Versions** | 35+ | Complete change history |
-| **Decision Reviews** | 12 | Routine, manual, conflict resolution |
-| **Evaluation History** | 10+ | Health signal tracking over time |
-| **Governance Audit Logs** | 10+ | Lock, approval, edit tracking |
-| **Relation Changes** | 5+ | Assumption/constraint linking events |
-| **Notifications** | 12 | 5 Critical, 6 Warning, 1 Info |
-| **Parameter Templates** | 12 | Structured categories |
-| **Organization Profile** | 1 | Complete org metadata |
-| **TOTAL RECORDS** | **150+** | Comprehensive dataset |
+| Category                      | Count    | Details                                                                                     |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| **Decisions**                 | 24       | 7 categories: Expansion, Operations, Product, Marketing, Sustainability, Finance, Workforce |
+| **Assumptions**               | 14       | 8 VALID, 3 SHAKY, 3 BROKEN; Universal + Decision-specific                                   |
+| **Constraints**               | 6        | Budget, Compliance, Policy, Legal                                                           |
+| **Decision Conflicts**        | 6        | Resource competition, contradictory, objective undermining                                  |
+| **Assumption Conflicts**      | 4        | Contradictory, mutually exclusive, incompatible                                             |
+| **Constraint Violations**     | 4        | Budget overruns, policy breaches                                                            |
+| **Dependencies**              | 7        | Decision prerequisite chains                                                                |
+| **Decision-Assumption Links** | 30+      | Many-to-many relationships                                                                  |
+| **Decision-Constraint Links** | 15+      | Compliance tracking                                                                         |
+| **Decision Signals**          | 17       | Progress (5), Risk (5), Note (4), Signal (3)                                                |
+| **Decision Versions**         | 35+      | Complete change history                                                                     |
+| **Decision Reviews**          | 12       | Routine, manual, conflict resolution                                                        |
+| **Evaluation History**        | 10+      | Health signal tracking over time                                                            |
+| **Governance Audit Logs**     | 10+      | Lock, approval, edit tracking                                                               |
+| **Relation Changes**          | 5+       | Assumption/constraint linking events                                                        |
+| **Notifications**             | 12       | 5 Critical, 6 Warning, 1 Info                                                               |
+| **Parameter Templates**       | 12       | Structured categories                                                                       |
+| **Organization Profile**      | 1        | Complete org metadata                                                                       |
+| **TOTAL RECORDS**             | **150+** | Comprehensive dataset                                                                       |
 
 ---
 
 ## ✨ Features Demonstrated
 
 ### 1. ⚔️ Decision Conflicts
+
 **6 conflicts showcasing**:
+
 - Resource competition (budget, capital)
 - Contradictory strategies (cost-cutting vs. investment)
 - Objective undermining (training vs. hour cuts)
@@ -116,7 +128,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Example**: Loyalty program conflicts with employee discount cuts (resolved by reversing cuts)
 
 ### 2. ⚠️ Assumption Conflicts
+
 **4 conflicts showcasing**:
+
 - Contradictory assumptions (barista availability vs. margins)
 - Mutually exclusive assumptions (automation vs. personalization)
 - Incompatible assumptions (university stability vs. expansion)
@@ -125,7 +139,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Example**: Automation vs. personalization resolved through balanced approach
 
 ### 3. 📋 Report Generation Data
+
 **Rich data for reports**:
+
 - 12 decision reviews with outcomes (reaffirmed, escalated, deferred, revised)
 - 10+ evaluation history records with health changes
 - 35+ version records with complete change tracking
@@ -135,7 +151,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Generate executive summary showing decision health trends over 220 days
 
 ### 4. ⏰ Time Jump (220-day Historical Span)
+
 **Historical timeline**:
+
 - Oldest decision: 220 days ago
 - Failed decisions at 50-75 days ago
 - Recent reviews and evaluations (1-20 days ago)
@@ -145,7 +163,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Time-travel analysis showing how decisions evolved
 
 ### 5. 📚 Version Control
+
 **Complete change tracking**:
+
 - Creation versions for all decisions
 - Governance lock versions for critical decisions
 - Lifecycle change versions (STABLE → AT_RISK → INVALIDATED)
@@ -155,7 +175,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Audit trail showing exactly when and why decisions changed
 
 ### 6. 🔍 Reviewing System
+
 **12 reviews showcasing**:
+
 - **Routine reviews**: Regular periodic checks (reaffirmed decisions)
 - **Manual reviews**: Ad-hoc management reviews (escalations, deferrals)
 - **Conflict resolution**: Reviews triggered by conflicts (revisions)
@@ -165,13 +187,16 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Review dashboard showing what needs immediate attention
 
 ### 7. 📉 Deprecation Tracking
+
 **4 failed decisions with full documentation**:
+
 - **Reduce Staff Hours**: Customer experience destroyed, staff turnover spiked
 - **Cut Employee Discount**: Morale plummeted, recruitment costs tripled savings
 - **Second Downtown Location**: Cannibalized existing store, distance policy violated
 - **Radio Advertising**: Poor ROI, wrong demographic, digital more effective
 
 **Each includes**:
+
 - Deprecation outcome (failed, partially_succeeded)
 - Lessons learned (3-5 points)
 - Financial impact
@@ -180,11 +205,14 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Learn from failures, extract insights, improve future decisions
 
 ### 8. 🔒 Governance Features
+
 **2 locked decisions with full governance**:
+
 - **Fair Trade Coffee**: High-Impact tier, requires second reviewer
 - **$2M Credit Line**: Critical tier, requires second reviewer, edit justification required
 
 **Audit trail includes**:
+
 - Decision lock events with justification
 - Edit request and approval records
 - Previous state → new state tracking
@@ -193,7 +221,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Test approval workflows for high-stakes decisions
 
 ### 9. 📊 Evaluation & Health Tracking
+
 **10+ evaluation records showing**:
+
 - Old lifecycle → new lifecycle transitions
 - Old health signal → new health signal changes
 - Detailed trace of health calculation logic
@@ -203,7 +233,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Understand why decision health degraded and when
 
 ### 10. 📡 Decision Signals
+
 **17 signals across 4 types**:
+
 - **PROGRESS** (5): Positive developments (exceeding projections, strong adoption)
 - **RISK** (5): Warning signs (declining traffic, cost overruns)
 - **NOTE** (4): General updates (permits approved, partnership metrics)
@@ -214,12 +246,15 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Real-time decision monitoring dashboard
 
 ### 11. 🔔 Notifications
+
 **12 notifications by severity**:
+
 - **CRITICAL** (5): Immediate action required (invalidations, critical health)
 - **WARNING** (6): Attention needed (health degradation, conflicts)
 - **INFO** (1): Informational (conflict resolved)
 
 **Types covered**:
+
 - HEALTH_DEGRADED
 - LIFECYCLE_CHANGED
 - DECISION_CONFLICT
@@ -230,7 +265,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Alert system for decision makers
 
 ### 12. 🚫 Constraint Violations
+
 **4 violations demonstrating**:
+
 - Budget cap violations (expansion combining to exceed limits)
 - Labor cost ratio violations (health insurance pushing beyond policy)
 - Distance policy violations (second downtown too close)
@@ -239,7 +276,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Compliance monitoring and policy enforcement
 
 ### 13. 🔗 Dependencies
+
 **7 dependency chains showing**:
+
 - Financial prerequisites (credit line → expansion projects)
 - Technical prerequisites (mobile ordering → loyalty program)
 - Operational prerequisites (training → new locations)
@@ -248,7 +287,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Impact analysis - what breaks if we cancel X?
 
 ### 14. 📝 Parameter Templates
+
 **12 templates across 6 categories**:
+
 - Operations (3): Store operations, supply chain, staff management
 - Marketing (3): Customer acquisition, brand development, loyalty
 - Finance (2): Budget allocation, investment
@@ -258,7 +299,9 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 **Use Case**: Structured decision entry with category-specific fields
 
 ### 15. 🏢 Organization Profile
+
 **Complete org metadata**:
+
 - Industry, size, decision style
 - Risk tolerance (55/100)
 - Strategic priorities (5 priorities)
@@ -271,6 +314,7 @@ A comprehensive TypeScript seeding script that creates **realistic, non-technica
 ## 🚀 How to Use
 
 ### Step 1: Verify Prerequisites
+
 ```bash
 # Check organization exists
 cd backend
@@ -284,38 +328,43 @@ cat .env | grep SUPABASE
 ```
 
 ### Step 2: Run the Seeder
+
 ```bash
 cd backend
 npm run seed-plot-armor
 ```
 
 Or directly:
+
 ```bash
 npx tsx scripts/seed-plot-armor-complete.ts
 ```
 
 ### Step 3: Verify Results
+
 Browser: Navigate to your Decivue app and explore:
+
 - **Decisions Page**: See all 24 decisions across categories
-- **Conflicts View**: View 6 decision conflicts, 4 assumption conflicts  
+- **Conflicts View**: View 6 decision conflicts, 4 assumption conflicts
 - **Review Dashboard**: See decisions needing review (high urgency scores)
 - **Notifications**: 12 notifications across severities
 - **Version History**: Complete audit trail for any decision
 
 Database: Check Supabase directly:
+
 ```sql
 -- Decision count by lifecycle
-SELECT lifecycle, COUNT(*) 
-FROM decisions 
+SELECT lifecycle, COUNT(*)
+FROM decisions
 WHERE organization_id = 'YOUR_ORG_ID'
 GROUP BY lifecycle;
 
 -- Active conflicts
-SELECT COUNT(*) FROM decision_conflicts 
+SELECT COUNT(*) FROM decision_conflicts
 WHERE organization_id = 'YOUR_ORG_ID' AND resolved_at IS NULL;
 
 -- Critical notifications
-SELECT * FROM notifications 
+SELECT * FROM notifications
 WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 ```
 
@@ -324,6 +373,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 ## 🎓 Testing Scenarios
 
 ### Scenario 1: Conflict Resolution Workflow
+
 1. Navigate to decision conflicts page
 2. Find "Loyalty Program vs Employee Discount" conflict
 3. Observe resolution: PRIORITIZE_A (restored benefits)
@@ -331,6 +381,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 5. Test your conflict resolution UI with remaining active conflicts
 
 ### Scenario 2: Health Signal Investigation
+
 1. Filter decisions with health < 60
 2. Select "Suburban Mall Food Court" (health: 45)
 3. View assumption links (checking for broken assumptions)
@@ -339,6 +390,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 6. Trace evaluation history showing health decline over time
 
 ### Scenario 3: Review Prioritization
+
 1. Sort decisions by review_urgency_score (descending)
 2. Top priority: "Part-Time Health Insurance" (urgency: 79)
 3. Review deferral history (consecutive_deferrals: 2)
@@ -346,6 +398,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 5. Perform manual review and update status
 
 ### Scenario 4: Deprecation Analysis
+
 1. Filter decisions with lifecycle = 'INVALIDATED' or 'RETIRED'
 2. Select "Reduce Staff Hours to Cut Costs"
 3. Read invalidated_reason: "Customer experience degraded 35%"
@@ -354,6 +407,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 6. Generate report on "What We Learned from Failures"
 
 ### Scenario 5: Governance Approval Flow
+
 1. Find locked decisions (governance_mode = true)
 2. Select "$2M Line of Credit" (governance_tier: 'critical')
 3. Test edit attempt (should require justification)
@@ -362,6 +416,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 6. Verify version created with governance_lock change type
 
 ### Scenario 6: Time-Series Analysis
+
 1. Select "Launch Seasonal Specialty Drink Menu"
 2. Load all decision_versions (order by version_number)
 3. Plot health_signal over time (created → now)
@@ -370,6 +425,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 6. Generate trend chart for executive dashboard
 
 ### Scenario 7: Real-Time Monitoring
+
 1. Dashboard: Load all decisions with signals from last 30 days
 2. Filter RISK signals with HIGH impact
 3. Group by decision category to identify problem areas
@@ -378,6 +434,7 @@ WHERE organization_id = 'YOUR_ORG_ID' AND severity = 'CRITICAL';
 6. Verify notification delivery
 
 ### Scenario 8: Assumption Impact Analysis
+
 1. Find broken assumptions (status = 'BROKEN')
 2. Select "Skilled baristas are readily available"
 3. Load all decision_assumptions linking to this assumption
@@ -424,19 +481,25 @@ backend/scripts/
 ## 🔧 Customization Points
 
 ### Change Organization Name
+
 Line 119 in `seed-plot-armor-complete.ts`:
+
 ```typescript
 .ilike('name', '%YOUR ORG NAME%')
 ```
 
 ### Adjust Time Span
+
 Lines 63-71 - modify `daysAgo()` calls:
+
 ```typescript
-created_at: daysAgo(90)  // Change to your desired lookback
+created_at: daysAgo(90); // Change to your desired lookback
 ```
 
 ### Add More Decisions
+
 Lines 280-650 - add to `decisionsData` array:
+
 ```typescript
 {
   title: 'Your Decision',
@@ -446,7 +509,9 @@ Lines 280-650 - add to `decisionsData` array:
 ```
 
 ### Modify Conflict Scenarios
+
 Lines 875-955 - add to `decisionConflictsData`:
+
 ```typescript
 {
   decisionA: 'Decision A Title',
@@ -488,18 +553,23 @@ After running the seeder, verify:
 ## 🐛 Common Issues & Solutions
 
 ### Issue: "Organization not found"
+
 **Solution**: Update line 119 with your actual organization name, or create "PLOT ARMOR" organization first
 
 ### Issue: "No users found"
+
 **Solution**: Register at least one user in the PLOT ARMOR organization
 
 ### Issue: Foreign key constraint violations
+
 **Solution**: Run `npm run clear-db` first to clean up orphaned records
 
 ### Issue: Timeout during seeding
+
 **Solution**: Check Supabase connection, verify service role key is correct
 
 ### Issue: Some records missing
+
 **Solution**: Check console output for specific errors, verify RLS policies allow service role
 
 ---

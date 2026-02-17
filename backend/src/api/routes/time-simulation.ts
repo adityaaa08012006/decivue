@@ -61,11 +61,12 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<any> => {
     simulatedTimeOffsets.set(organizationId, timeOffset);
 
     // Fetch decisions ONLY FOR THIS ORGANIZATION
+    // Exclude RETIRED and INVALIDATED decisions (they should not be changed by time simulation)
     const { data: decisions, error: decisionsError } = await supabase
       .from('decisions')
       .select('*')
       .eq('organization_id', organizationId)
-      .neq('lifecycle', 'RETIRED');
+      .not('lifecycle', 'in', '(RETIRED,INVALIDATED)');
 
     if (decisionsError) {
       throw decisionsError;
@@ -87,6 +88,12 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<any> => {
 
     // Evaluate each decision with simulated time
     for (const decision of decisions) {
+      // Skip if decision is INVALIDATED or RETIRED (safety check)
+      if (decision.lifecycle === 'INVALIDATED' || decision.lifecycle === 'RETIRED') {
+        logger.info(`Skipping ${decision.lifecycle} decision: ${decision.id}`);
+        continue;
+      }
+
       // Fetch related data
       const [assumptionsResult, constraintsResult, dependenciesResult] = await Promise.all([
         supabase
@@ -177,6 +184,12 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<any> => {
 
       // Update decision if changes detected
       if (result.changesDetected) {
+        // Final safety check: never update INVALIDATED or RETIRED decisions
+        if (decision.lifecycle === 'INVALIDATED' || decision.lifecycle === 'RETIRED') {
+          logger.warn(`Attempted to update ${decision.lifecycle} decision ${decision.id} - skipping`);
+          continue;
+        }
+
         logger.info(`Updating decision ${decision.id}: health ${decision.health_signal} -> ${result.newHealthSignal}, lifecycle ${decision.lifecycle} -> ${result.newLifecycle}`);
 
         const { error: updateError } = await supabase
@@ -186,7 +199,8 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<any> => {
             lifecycle: result.newLifecycle,
             invalidated_reason: result.invalidatedReason
           })
-          .eq('id', decision.id);
+          .eq('id', decision.id)
+          .not('lifecycle', 'in', '(RETIRED,INVALIDATED)'); // Extra database-level protection
 
         if (updateError) {
           logger.error(`Failed to update decision ${decision.id}:`, updateError);
