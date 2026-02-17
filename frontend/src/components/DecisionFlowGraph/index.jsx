@@ -23,6 +23,97 @@ import {
 import { RefreshCw } from "lucide-react";
 
 /**
+ * Cache utilities for persisting node positions
+ */
+const CACHE_VERSION = "v1";
+const CACHE_KEY = `decisionFlow_nodePositions_${CACHE_VERSION}`;
+
+// Generate a stable hash from data to detect STRUCTURAL changes only
+// Only invalidate cache when graph structure changes (nodes added/removed, edges change)
+// Do NOT invalidate for lifecycle/health/status changes (visual updates only)
+const generateDataHash = (decisions, assumptions, dependencies) => {
+  const dataString = JSON.stringify({
+    // Only track IDs - not lifecycle, health, or status
+    decisionIds: decisions.map(d => d.id).sort(),
+    assumptionIds: assumptions.map(a => a.id).sort(),
+    // Track dependency structure only
+    dependencyPairs: dependencies.map(d => `${d.depends_on_decision_id}->${d.decision_id}`).sort(),
+  });
+  
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < dataString.length; i++) {
+    const char = dataString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString();
+};
+
+// Save node positions to localStorage
+const savePositionsToCache = (nodes, dataHash) => {
+  try {
+    const positions = nodes.reduce((acc, node) => {
+      acc[node.id] = { x: node.position.x, y: node.position.y };
+      return acc;
+    }, {});
+    
+    const cacheData = {
+      dataHash,
+      positions,
+      timestamp: Date.now(),
+    };
+    
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    
+    console.log("💾 Saved", Object.keys(positions).length, "node positions to cache (hash:", dataHash, ")");
+  } catch (error) {
+    console.warn("Failed to save positions to cache:", error);
+  }
+};
+
+// Load node positions from localStorage
+const loadPositionsFromCache = (dataHash) => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) {
+      console.log("ℹ️ No cache found in localStorage");
+      return null;
+    }
+    
+    const { dataHash: cachedHash, positions, timestamp } = JSON.parse(cached);
+    
+    // Check if cache is valid (data hasn't changed)
+    if (cachedHash !== dataHash) {
+      console.log("🔄 Cache invalid - data has changed");
+      console.log("   Cached hash:", cachedHash);
+      console.log("   Current hash:", dataHash);
+      return null;
+    }
+    
+    // Cache expires after 7 days
+    const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
+    const cacheAge = Date.now() - timestamp;
+    if (cacheAge > CACHE_EXPIRY) {
+      console.log("⏰ Cache expired (age:", Math.floor(cacheAge / (1000 * 60 * 60 * 24)), "days)");
+      return null;
+    }
+    
+    console.log("✅ Loaded", Object.keys(positions).length, "cached positions (age:", Math.floor(cacheAge / (1000 * 60)), "minutes)");
+    return positions;
+  } catch (error) {
+    console.warn("Failed to load positions from cache:", error);
+    return null;
+  }
+};
+
+// Clear cache (useful for debugging)
+const clearPositionCache = () => {
+  localStorage.removeItem(CACHE_KEY);
+  console.log("🗑️ Cache cleared");
+};
+
+/**
  * DecisionFlowGraph Component
  *
  * Main graph visualization showing:
@@ -64,6 +155,9 @@ const DecisionFlowGraph = () => {
     });
   const [highlightedAssumption, setHighlightedAssumption] = useState(null);
   const [swimlaneLanes, setSwimlaneLanes] = useState([]);
+  const [currentDataHash, setCurrentDataHash] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAutoLayouting, setIsAutoLayouting] = useState(false); // Track if we're in auto-layout mode
 
   // Define custom node types
   const nodeTypes = useMemo(
@@ -178,13 +272,41 @@ const DecisionFlowGraph = () => {
   );
 
   /**
-   * Apply auto-layout to nodes using ELK
+   * Apply swimlane layout with ELK algorithm (with smart caching)
    */
   const layoutGraph = useCallback(
-    async (graphNodes, graphEdges) => {
+    async (graphNodes, graphEdges, dataHash, cachedPositions = null) => {
       setIsLayouting(true);
+      setIsAutoLayouting(true); // Mark that we're in auto-layout mode
 
       try {
+        // If we have valid cached positions, use them instead of recalculating
+        if (cachedPositions) {
+          console.log("⚡ Using cached positions - skipping layout calculation");
+          
+          const nodesWithCachedPositions = graphNodes.map(node => ({
+            ...node,
+            position: cachedPositions[node.id] || node.position,
+          }));
+          
+          // Generate swimlane background lanes
+          const decisionNodes = nodesWithCachedPositions.filter(n => n.type === "decision");
+          const lanes = generateSwimlaneLanes(decisionNodes, {
+            swimlaneSpacing: 200,
+            swimlaneHeight: 170,
+          });
+          setSwimlaneLanes(lanes);
+          
+          setNodes(nodesWithCachedPositions);
+          setEdges(graphEdges);
+          setIsLayouting(false);
+          setIsAutoLayouting(false); // Done with auto-layout
+          return;
+        }
+        
+        // No cache - calculate layout with ELK
+        console.log("🧮 Calculating layout with ELK (this may take a moment)...");
+        
         // Separate decision nodes from assumption nodes for layout
         const decisionNodes = graphNodes.filter((n) => n.type === "decision");
         const assumptionNodes = graphNodes.filter(
@@ -231,6 +353,9 @@ const DecisionFlowGraph = () => {
 
         setNodes(allLayoutedNodes);
         setEdges(graphEdges);
+        
+        // Save new layout to cache
+        savePositionsToCache(allLayoutedNodes, dataHash);
       } catch (err) {
         console.error("Layout failed:", err);
         // Fallback: use nodes without advanced layout
@@ -238,6 +363,7 @@ const DecisionFlowGraph = () => {
         setEdges(graphEdges);
       } finally {
         setIsLayouting(false);
+        setIsAutoLayouting(false); // Done with auto-layout
       }
     },
     [setNodes, setEdges],
@@ -335,8 +461,25 @@ const DecisionFlowGraph = () => {
         decisionAssumptionLinks,
       );
 
-      // Apply auto-layout
-      await layoutGraph(graphNodes, graphEdges);
+      // Generate data hash for cache validation
+      const dataHash = generateDataHash(
+        decisionsData || [],
+        orgAssumptions,
+        allDependencies
+      );
+      console.log("📌 Generated data hash:", dataHash);
+      setCurrentDataHash(dataHash);
+      
+      // Try to load cached positions
+      const cachedPositions = loadPositionsFromCache(dataHash);
+      if (cachedPositions) {
+        console.log("✅ Found valid cache with", Object.keys(cachedPositions).length, "node positions");
+      } else {
+        console.log("ℹ️ No valid cache found, will calculate layout");
+      }
+
+      // Apply auto-layout (uses cache if available)
+      await layoutGraph(graphNodes, graphEdges, dataHash, cachedPositions);
 
       console.log("✅ Graph layouted successfully");
     } catch (err) {
@@ -345,12 +488,56 @@ const DecisionFlowGraph = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [transformDataToGraph, layoutGraph]);
+  }, []); // Empty dependencies - layoutGraph and transformDataToGraph are called inline
 
-  // Fetch data on mount
+  // Fetch data on mount only
   useEffect(() => {
     fetchGraphData();
-  }, [fetchGraphData]);
+  }, []); // Run only once on mount
+  
+  /**
+   * Handle node position changes (e.g., when user drags a node)
+   * Debounced save to avoid excessive localStorage writes
+   * 
+   * Note: This effect tracks the 'nodes' array, which changes whenever positions
+   * OR data (lifecycle, health) changes. We use guards to only save when appropriate.
+   */
+  useEffect(() => {
+    // Don't save during initial load or auto-layout
+    if (!currentDataHash || nodes.length === 0 || isAutoLayouting) {
+      return;
+    }
+    
+    // Debounce: only save 500ms after changes settle
+    const timeoutId = setTimeout(() => {
+      // Final guard: don't save if still dragging or auto-layouting
+      if (isDragging || isAutoLayouting) return;
+      
+      console.log("🔄 Auto-saving node positions (user drag or manual change)...");
+      savePositionsToCache(nodes, currentDataHash);
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [nodes, currentDataHash, isDragging, isAutoLayouting]);
+  
+  /**
+   * Wrap onNodesChange to track dragging state
+   */
+  const handleNodesChange = useCallback((changes) => {
+    // Detect if user is dragging
+    const isDraggingChange = changes.some(change => 
+      change.type === 'position' && change.dragging === true
+    );
+    const hasDragEnded = changes.some(change => 
+      change.type === 'position' && change.dragging === false
+    );
+    
+    if (isDraggingChange) setIsDragging(true);
+    if (hasDragEnded) setIsDragging(false);
+    
+    // Call original handler
+    onNodesChange(changes);
+  }, [onNodesChange]);
 
   /**
    * Handle clicking a decision node
@@ -528,8 +715,8 @@ const DecisionFlowGraph = () => {
         </div>
       )}
 
-      {/* Refresh Button */}
-      <div className="absolute top-4 right-4 z-10">
+      {/* Refresh Button & Cache Controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <button
           onClick={fetchGraphData}
           disabled={isLayouting}
@@ -540,12 +727,22 @@ const DecisionFlowGraph = () => {
             className={`w-5 h-5 text-gray-700 ${isLayouting ? "animate-spin" : ""}`}
           />
         </button>
+        <button
+          onClick={() => {
+            clearPositionCache();
+            fetchGraphData();
+          }}
+          className="px-3 py-1 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors text-xs text-gray-600"
+          title="Reset Layout (clears cached positions)"
+        >
+          Reset Layout
+        </button>
       </div>
 
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
@@ -612,6 +809,7 @@ const DecisionFlowGraph = () => {
             • Click an <strong>org assumption</strong> to highlight connected
             decisions
           </li>
+          <li>• <strong>Drag nodes</strong> to customize layout (auto-saved)</li>
           <li>• Solid arrows = decision dependencies</li>
           <li>• Dotted lines = org assumption links</li>
           <li>• Decisions auto-organized by category into swimlanes</li>

@@ -14,13 +14,13 @@ export class NotificationScheduler {
    * Start the notification scheduler
    */
   start(): void {
-    // Get cron schedule from environment or use default (every 15 minutes)
-    const cronSchedule = process.env.NOTIFICATION_CHECK_CRON || '*/15 * * * *';
+    // Get cron schedule from environment or use default (every 6 hours)
+    const cronSchedule = process.env.NOTIFICATION_CHECK_CRON || '0 */6 * * *';
 
     // Validate cron expression
     if (!cron.validate(cronSchedule)) {
       logger.error('Invalid NOTIFICATION_CHECK_CRON expression', { cronSchedule });
-      logger.info('Using default schedule: */15 * * * * (every 15 minutes)');
+      logger.info('Using default schedule: 0 */6 * * * (every 6 hours)');
     }
 
     // Schedule the notification checks

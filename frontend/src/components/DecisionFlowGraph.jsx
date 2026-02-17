@@ -221,20 +221,20 @@ const getCurvyPath = (points) => {
 };
 
 export const DecisionFlowGraph = () => {
-  const width = 1400;
-  const height = 400;
+  const width = 1800;
+  const height = 500;
   
   // Define milestone points spanning full width edge-to-edge with dramatic, elegant curves
   const milestonePoints = [
-    { x: 0, y: height - 180 },        // Start absolute left edge
-    { x: 175, y: height - 260 },      // First peak - high
-    { x: 350, y: height - 140 },      // Valley - lower
-    { x: 525, y: height - 80 },       // Deep valley - lowest
-    { x: 700, y: height - 200 },      // Rising - center
-    { x: 875, y: height - 280 },      // High peak - highest
-    { x: 1050, y: height - 200 },     // Descent
-    { x: 1225, y: height - 160 },     // Mid descent
-    { x: 1400, y: height - 220 },     // End absolute right edge
+    { x: 0, y: height - 220 },        // Start absolute left edge
+    { x: 225, y: height - 320 },      // First peak - high
+    { x: 450, y: height - 180 },      // Valley - lower
+    { x: 675, y: height - 100 },      // Deep valley - lowest
+    { x: 900, y: height - 250 },      // Rising - center
+    { x: 1125, y: height - 350 },     // High peak - highest
+    { x: 1350, y: height - 250 },     // Descent
+    { x: 1575, y: height - 200 },     // Mid descent
+    { x: 1800, y: height - 280 },     // End absolute right edge
   ];
   
   // Generate curve
@@ -249,63 +249,63 @@ export const DecisionFlowGraph = () => {
   ];
 
   // Smart positioning logic with proper spacing
-  const labelOffset = 70; // pixels offset for labels from nodes
+  const labelOffset = 85; // pixels offset for labels from nodes
   
   const events = [
     // Node 1: Start - label BELOW
     { 
-      nodeX: 0, nodeY: height - 180, 
+      nodeX: 0, nodeY: height - 220, 
       labelX: 3, 
-      labelY: ((height - 180 + labelOffset) / height) * 100, 
+      labelY: ((height - 220 + labelOffset) / height) * 100, 
       text: 'Decision Created', color: 'green', delay: 0.3, size: 'large' 
     },
     // Node 2: First peak - label ABOVE
     { 
-      nodeX: 175, nodeY: height - 260,
-      labelX: (175 / width) * 100,
-      labelY: ((height - 260 - labelOffset) / height) * 100,
+      nodeX: 225, nodeY: height - 320,
+      labelX: (225 / width) * 100,
+      labelY: ((height - 320 - labelOffset) / height) * 100,
       text: 'Assumption Finalized', color: 'orange', delay: 0.6, icon: <Lock size={13} /> 
     },
     // Node 3: Valley - label ABOVE
     { 
-      nodeX: 350, nodeY: height - 140,
-      labelX: (350 / width) * 100,
-      labelY: ((height - 140 - labelOffset) / height) * 100,
+      nodeX: 450, nodeY: height - 180,
+      labelX: (450 / width) * 100,
+      labelY: ((height - 180 - labelOffset) / height) * 100,
       text: 'Stakeholder Review', color: 'blue', delay: 0.9 
     },
     // Node 4: Deep valley - label BELOW
     { 
-      nodeX: 525, nodeY: height - 80,
-      labelX: (525 / width) * 100,
-      labelY: ((height - 80 + labelOffset) / height) * 100,
+      nodeX: 675, nodeY: height - 100,
+      labelX: (675 / width) * 100,
+      labelY: ((height - 100 + labelOffset) / height) * 100,
       text: 'Risk Detected', color: 'red', delay: 1.2, icon: <AlertTriangle size={13} /> 
     },
     // Node 5: Rising - label BELOW
     { 
-      nodeX: 700, nodeY: height - 200,
-      labelX: (700 / width) * 100,
-      labelY: ((height - 200 + labelOffset) / height) * 100,
+      nodeX: 900, nodeY: height - 250,
+      labelX: (900 / width) * 100,
+      labelY: ((height - 250 + labelOffset) / height) * 100,
       text: 'Decision Updated', color: 'orange', delay: 1.5 
     },
     // Node 6: High peak - label ABOVE
     { 
-      nodeX: 875, nodeY: height - 280,
-      labelX: (875 / width) * 100,
-      labelY: ((height - 280 - labelOffset) / height) * 100,
+      nodeX: 1125, nodeY: height - 350,
+      labelX: (1125 / width) * 100,
+      labelY: ((height - 350 - labelOffset) / height) * 100,
       text: 'AI Insight Triggered', color: 'blue', delay: 1.8, icon: <Brain size={13} /> 
     },
     // Node 7: Descent - label ABOVE
     { 
-      nodeX: 1050, nodeY: height - 200,
-      labelX: (1050 / width) * 100,
-      labelY: ((height - 200 - labelOffset) / height) * 100,
+      nodeX: 1350, nodeY: height - 250,
+      labelX: (1350 / width) * 100,
+      labelY: ((height - 250 - labelOffset) / height) * 100,
       text: 'Audit Logged', color: 'blue', delay: 2.1, icon: <Shield size={13} /> 
     },
     // Node 8: End - label ABOVE
     { 
-      nodeX: 1400, nodeY: height - 220,
+      nodeX: 1800, nodeY: height - 280,
       labelX: 97,
-      labelY: ((height - 220 - labelOffset) / height) * 100,
+      labelY: ((height - 280 - labelOffset) / height) * 100,
       text: 'Decision Deprecated', color: 'gray', delay: 2.4, icon: <Pause size={13} /> 
     },
   ];

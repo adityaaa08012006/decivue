@@ -37,6 +37,20 @@ export class NotificationService {
     try {
       const db = getAdminDatabase();
 
+      // Apply smart throttling (skip for CRITICAL severity)
+      if (params.severity !== 'CRITICAL') {
+        const isThrottled = await this.checkThrottle(params);
+        if (isThrottled) {
+          logger.info('Throttling notification - duplicate within 24h', {
+            type: params.type,
+            decisionId: params.decisionId,
+            assumptionId: params.assumptionId,
+            severity: params.severity
+          });
+          return; // Skip creating this notification
+        }
+      }
+
       // If organizationId not provided, fetch it from decision or assumption
       let organizationId = params.organizationId;
 
@@ -64,7 +78,8 @@ export class NotificationService {
         decision_id: params.decisionId,
         assumption_id: params.assumptionId,
         organization_id: organizationId,
-        metadata: params.metadata || {}
+        metadata: params.metadata || {},
+        email_sent: false // Will be true after immediate send OR morning briefing
       });
 
       if (error) {
@@ -72,18 +87,44 @@ export class NotificationService {
         throw error;
       }
 
-      logger.info(`Notification created: ${params.type} - ${params.title}`);
+      logger.info(`Notification created (in-app): ${params.type} - ${params.title}`);
 
-      // Send email notifications
-      await EmailNotificationHandler.sendForNotification({
-        type: params.type,
-        severity: params.severity,
-        title: params.title,
-        message: params.message,
-        decisionId: params.decisionId,
-        assumptionId: params.assumptionId,
-        metadata: params.metadata
-      });
+      // Decide on email: immediate or queue for morning briefing
+      const needsImmediateEmail = this.isCritical(params);
+
+      if (needsImmediateEmail) {
+        // Send email immediately for critical issues
+        await EmailNotificationHandler.sendForNotification({
+          type: params.type,
+          severity: params.severity,
+          title: params.title,
+          message: params.message,
+          decisionId: params.decisionId,
+          assumptionId: params.assumptionId,
+          metadata: params.metadata
+        });
+
+        // Mark as email sent
+        if (params.decisionId) {
+          await db.from('notifications')
+            .update({ email_sent: true })
+            .eq('decision_id', params.decisionId)
+            .eq('type', params.type)
+            .is('email_sent', false)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        }
+
+        logger.info(`🚨 Critical notification - sent immediate email`, {
+          type: params.type,
+          decisionId: params.decisionId
+        });
+      } else {
+        logger.info(`📬 Non-critical notification - queued for morning briefing`, {
+          type: params.type,
+          decisionId: params.decisionId
+        });
+      }
     } catch (error) {
       logger.error('Error creating notification', { error });
     }
@@ -354,6 +395,72 @@ export class NotificationService {
     } catch (error) {
       logger.error('Error checking expiring decisions', { error });
     }
+  }
+
+  /**
+   * Check if a notification should be throttled
+   * Returns true if a similar notification was created in the last 24 hours
+   */
+  private static async checkThrottle(params: CreateNotificationParams): Promise<boolean> {
+    const db = getAdminDatabase();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    let throttleQuery = db
+      .from('notifications')
+      .select('id')
+      .eq('type', params.type) // Same notification type
+      .gte('created_at', oneDayAgo)
+      .eq('is_dismissed', false)
+      .limit(1);
+
+    // Add resource-specific filter
+    if (params.decisionId) {
+      throttleQuery = throttleQuery.eq('decision_id', params.decisionId);
+    } else if (params.assumptionId) {
+      throttleQuery = throttleQuery.eq('assumption_id', params.assumptionId);
+    }
+
+    const { data: existing } = await throttleQuery.maybeSingle();
+    return !!existing;
+  }
+
+  /**
+   * Determine if notification needs immediate email (vs. morning briefing)
+   */
+  private static isCritical(params: CreateNotificationParams): boolean {
+    // Always send immediate email for CRITICAL severity
+    if (params.severity === 'CRITICAL') {
+      return true;
+    }
+
+    // Health critically degraded (< 40%)
+    if (params.type === 'HEALTH_DEGRADED' && 
+        params.metadata?.healthSignal !== undefined &&
+        params.metadata.healthSignal < 40) {
+      return true;
+    }
+
+    // Lifecycle invalidated
+    if (params.type === 'LIFECYCLE_CHANGED' && 
+        params.metadata?.newLifecycle === 'INVALIDATED') {
+      return true;
+    }
+
+    // Expiring very soon (≤ 7 days)
+    if (params.type === 'NEEDS_REVIEW' && 
+        params.metadata?.daysUntilExpiry !== undefined &&
+        params.metadata.daysUntilExpiry <= 7) {
+      return true;
+    }
+
+    // Assumption broken with active decisions
+    if (params.type === 'ASSUMPTION_BROKEN' && 
+        params.metadata?.reason !== 'all_decisions_retired') {
+      return true;
+    }
+
+    // Everything else queues for morning briefing
+    return false;
   }
 
   /**
