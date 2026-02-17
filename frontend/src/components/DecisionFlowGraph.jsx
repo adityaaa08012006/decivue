@@ -1,8 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
 import { Brain, Shield, AlertTriangle, CheckCircle, Lock, Pause } from 'lucide-react';
 
-const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', onHover }) => {
+const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', onHover, shouldAnimate = true }) => {
   const [isHovered, setIsHovered] = React.useState(false);
   const radius = size === 'large' ? 12 : 8;
   const innerRadius = size === 'large' ? 7 : 5;
@@ -23,10 +23,10 @@ const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', o
         strokeWidth="2"
         opacity="0.15"
         initial={{ scale: 1, opacity: 0.15 }}
-        animate={{ 
+        animate={shouldAnimate ? { 
           scale: isHovered ? [1.5, 2, 1.5] : [1, 1.4, 1], 
           opacity: isHovered ? [0.3, 0.5, 0.3] : [0.15, 0.3, 0.15] 
-        }}
+        } : { scale: 1, opacity: 0.15 }}
         transition={{ duration: isHovered ? 1.5 : 3, repeat: Infinity, delay }}
       />
       
@@ -40,10 +40,10 @@ const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', o
         strokeWidth="1.5"
         opacity="0.1"
         initial={{ scale: 1, opacity: 0.1 }}
-        animate={{ 
+        animate={shouldAnimate ? { 
           scale: [1, 1.6, 1], 
           opacity: [0.1, 0.25, 0.1] 
-        }}
+        } : { scale: 1, opacity: 0.1 }}
         transition={{ duration: 4, repeat: Infinity, delay: delay + 0.5 }}
       />
       
@@ -55,7 +55,7 @@ const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', o
         fill={`${color}20`} 
         stroke={`${color}50`} 
         strokeWidth="1.5"
-        animate={isHovered ? { scale: [1, 1.1, 1] } : {}}
+        animate={shouldAnimate && isHovered ? { scale: [1, 1.1, 1] } : {}}
         transition={{ duration: 0.6, repeat: isHovered ? Infinity : 0 }}
       />
       
@@ -66,12 +66,13 @@ const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', o
         r={innerRadius} 
         fill={color}
         filter={isHovered ? "drop-shadow(0 0 12px rgba(147, 197, 253, 0.6))" : "drop-shadow(0 2px 4px rgba(0,0,0,0.08))"}
-        animate={isHovered ? { scale: [1, 1.15, 1] } : {}}
-        transition={{ duration: 0.8, repeat: isHovered ? Infinity : 0 }}
+        initial={{ scale: 0 }}
+        animate={shouldAnimate ? (isHovered ? { scale: [1, 1.15, 1] } : { scale: 1 }) : { scale: 0 }}
+        transition={{ duration: 0.8, repeat: isHovered ? Infinity : 0, delay: shouldAnimate ? 0 : 0 }}
       />
       
       {/* Hover star burst effect */}
-      {isHovered && (
+      {isHovered && shouldAnimate && (
         <>
           {[0, 60, 120, 180, 240, 300].map((angle, i) => (
             <motion.line
@@ -94,7 +95,7 @@ const DecisionNode = ({ cx, cy, color = '#3b82f6', delay = 0, size = 'medium', o
   );
 };
 
-const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', delay = 0, containerWidth, containerHeight }) => {
+const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', delay = 0, containerWidth, containerHeight, shouldAnimate = true }) => {
   const [isHovered, setIsHovered] = React.useState(false);
   
   const colorMap = {
@@ -123,7 +124,7 @@ const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', 
       {showConnector && (
         <motion.div
           initial={{ opacity: 0, scaleY: 0 }}
-          animate={{ opacity: isHovered ? 0.6 : 0.3, scaleY: 1 }}
+          animate={shouldAnimate ? { opacity: isHovered ? 0.6 : 0.3, scaleY: 1 } : { opacity: 0, scaleY: 0 }}
           transition={{ delay: delay + 0.2, duration: 0.4, ease: "easeOut" }}
           className="absolute z-10"
           style={{
@@ -141,7 +142,7 @@ const EventLabel = ({ labelX, labelY, nodeX, nodeY, text, icon, color = 'blue', 
       {/* Glassmorphism Label Pill */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
         whileHover={{ scale: 1.05, y: -2 }}
         transition={{ delay, duration: 0.5, ease: "easeOut" }}
         onMouseEnter={() => setIsHovered(true)}
@@ -220,9 +221,13 @@ const getCurvyPath = (points) => {
   return path;
 };
 
-export const DecisionFlowGraph = () => {
+export const DecisionFlowGraph = ({ animateOnScroll = false }) => {
   const width = 1800;
   const height = 500;
+  
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const shouldAnimate = animateOnScroll ? isInView : true;
   
   // Define milestone points spanning full width edge-to-edge with dramatic, elegant curves
   const milestonePoints = [
@@ -311,7 +316,7 @@ export const DecisionFlowGraph = () => {
   ];
 
   return (
-    <div className="w-full relative overflow-visible py-8">
+    <div className="w-full relative overflow-visible py-8" ref={ref}>
       
       {/* Animated Gradient Mesh Background */}
       <div className="absolute inset-0 overflow-hidden rounded-3xl" style={{ zIndex: 0 }}>
@@ -339,7 +344,7 @@ export const DecisionFlowGraph = () => {
               className="text-sm font-medium text-gray-400 tracking-wide"
               style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
               initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
             >
               {date.text}
@@ -382,7 +387,7 @@ export const DecisionFlowGraph = () => {
               d={pathD}
               fill="none"
               stroke="#F1F5F9"
-              strokeWidth="5"
+              strokeWidth="10"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -392,12 +397,12 @@ export const DecisionFlowGraph = () => {
               d={pathD}
               fill="none"
               stroke="url(#lightLineGradient)"
-              strokeWidth="6"
+              strokeWidth="12"
               strokeLinecap="round"
               strokeLinejoin="round"
               filter="url(#glow)"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
+              animate={shouldAnimate ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
               transition={{ duration: 2.5, ease: "easeInOut" }}
             />
 
@@ -418,6 +423,7 @@ export const DecisionFlowGraph = () => {
                   color={nodeColors[event.color] || nodeColors.blue}
                   delay={event.delay}
                   size={event.size}
+                  shouldAnimate={shouldAnimate}
                 />
               );
             })}
@@ -430,7 +436,7 @@ export const DecisionFlowGraph = () => {
                 fill={i === 0 ? "#93C5FD" : "url(#particleGradient)"}
                 filter="drop-shadow(0 0 8px rgba(147, 197, 253, 0.8))"
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 1, 1, 0] }}
+                animate={shouldAnimate ? { opacity: [0, 1, 1, 0] } : { opacity: 0 }}
                 transition={{ 
                   delay: startDelay, 
                   duration: 6,
@@ -439,12 +445,14 @@ export const DecisionFlowGraph = () => {
                   repeatDelay: 1
                 }}
               >
-                <motion.animateMotion
-                  dur={`${6 + i}s`}
-                  repeatCount="indefinite"
-                  path={pathD}
-                  begin={`${startDelay}s`}
-                />
+                {shouldAnimate && (
+                  <motion.animateMotion
+                    dur={`${6 + i}s`}
+                    repeatCount="indefinite"
+                    path={pathD}
+                    begin={`${startDelay}s`}
+                  />
+                )}
               </motion.circle>
             ))}
             
@@ -456,7 +464,7 @@ export const DecisionFlowGraph = () => {
                 fill="#C4B5FD"
                 filter="drop-shadow(0 0 6px rgba(196, 181, 253, 0.7))"
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.8, 0.8, 0] }}
+                animate={shouldAnimate ? { opacity: [0, 0.8, 0.8, 0] } : { opacity: 0 }}
                 transition={{ 
                   delay: startDelay, 
                   duration: 7,
@@ -465,15 +473,17 @@ export const DecisionFlowGraph = () => {
                   repeatDelay: 2
                 }}
               >
-                <motion.animateMotion
-                  dur="8s"
-                  repeatCount="indefinite"
-                  path={pathD}
-                  begin={`${startDelay}s`}
-                  keyPoints="1;0"
-                  keyTimes="0;1"
-                  calcMode="linear"
-                />
+                {shouldAnimate && (
+                  <motion.animateMotion
+                    dur="8s"
+                    repeatCount="indefinite"
+                    path={pathD}
+                    begin={`${startDelay}s`}
+                    keyPoints="1;0"
+                    keyTimes="0;1"
+                    calcMode="linear"
+                  />
+                )}
               </motion.circle>
             ))}
           </svg>
@@ -492,6 +502,7 @@ export const DecisionFlowGraph = () => {
               delay={event.delay + 0.6}
               containerWidth={width}
               containerHeight={height}
+              shouldAnimate={shouldAnimate}
             />
           ))}
         </div>
@@ -507,7 +518,7 @@ export const DecisionFlowGraph = () => {
               key={badge.label}
               className={`px-5 py-2 rounded-full ${badge.bg} border ${badge.border} ${badge.text} text-sm font-medium`}
               initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
               whileHover={{ 
                 scale: 1.05,
                 boxShadow: `0 4px 20px ${badge.glow}`,

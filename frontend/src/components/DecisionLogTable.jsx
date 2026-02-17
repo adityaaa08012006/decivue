@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { CheckCircle, Eye, Clock, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -281,21 +282,27 @@ const DecisionLogTable = ({ onNavigate }) => {
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {decisions.map((decision) => (
-                <tr
+            <tbody className="divide-y divide-neutral-gray-200 dark:divide-neutral-gray-700">
+              {decisions.map((decision, index) => (
+                <motion.tr
                   key={decision.id}
+                  custom={index}
+                  initial="hidden"
+                  animate="visible"
+                  variants={rowVariants}
                   onClick={() => handleView(decision.id)}
-                  className="border-b border-neutral-gray-200 dark:border-neutral-gray-700 last:border-b-0 hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-700 transition-colors cursor-pointer"
+                  className="hover:bg-neutral-gray-50 dark:hover:bg-neutral-gray-700 transition-colors cursor-pointer"
                 >
                   <td className="py-4 px-4">
-                    <span className="text-sm text-neutral-black dark:text-white bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded">
+                    <span className="text-sm font-medium text-neutral-black dark:text-white bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded inline-block">
                       {decision.title}
                     </span>
                   </td>
                   <td className="py-4 px-4">{getStatusBadge(mapLifecycleToStatus(decision.lifecycle))}</td>
                   <td className="py-4 px-4">
-                    <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">{decision.description || 'No description'}</span>
+                    <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300 block max-w-xs truncate">
+                      {decision.description || 'No description'}
+                    </span>
                   </td>
                   <td className="py-4 px-4">
                     <span className="text-sm text-neutral-gray-700 dark:text-neutral-gray-300">
@@ -307,7 +314,7 @@ const DecisionLogTable = ({ onNavigate }) => {
                       {new Date(decision.lastReviewedAt).toLocaleDateString()}
                     </span>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>

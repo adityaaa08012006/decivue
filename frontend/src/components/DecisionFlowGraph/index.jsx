@@ -20,7 +20,7 @@ import {
   generateSwimlaneLanes,
   enrichDecisionsWithSwimLaneData,
 } from "../../utils/swimlaneLayout";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X, HelpCircle } from "lucide-react";
 
 /**
  * Cache utilities for persisting node positions
@@ -158,6 +158,11 @@ const DecisionFlowGraph = () => {
   const [currentDataHash, setCurrentDataHash] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAutoLayouting, setIsAutoLayouting] = useState(false); // Track if we're in auto-layout mode
+  const [showInstructions, setShowInstructions] = useState(() => {
+    // Load preference from localStorage (default: true for first-time users)
+    const saved = localStorage.getItem('decisionFlow_showInstructions');
+    return saved === null ? true : saved === 'true';
+  });
 
   // Define custom node types
   const nodeTypes = useMemo(
@@ -715,28 +720,47 @@ const DecisionFlowGraph = () => {
         </div>
       )}
 
-      {/* Refresh Button & Cache Controls */}
+      {/* Control Panel */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        {/* Refresh Button */}
         <button
           onClick={fetchGraphData}
           disabled={isLayouting}
-          className="p-2 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+          className="w-12 h-9 bg-white/95 backdrop-blur-sm hover:bg-gray-50 rounded-lg shadow-md border border-gray-200 transition-all disabled:opacity-50 flex items-center justify-center"
           title="Refresh Graph"
         >
           <RefreshCw
             className={`w-5 h-5 text-gray-700 ${isLayouting ? "animate-spin" : ""}`}
           />
         </button>
+        
+        {/* Reset Layout Button */}
         <button
           onClick={() => {
             clearPositionCache();
             fetchGraphData();
           }}
-          className="px-3 py-1 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors text-xs text-gray-600"
+          className="w-12 h-9 bg-white/95 backdrop-blur-sm hover:bg-gray-50 rounded-lg shadow-md border border-gray-200 transition-all flex items-center justify-center"
           title="Reset Layout (clears cached positions)"
         >
-          Reset Layout
+          <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
         </button>
+        
+        {/* Help Button */}
+        {!showInstructions && (
+          <button
+            onClick={() => {
+              setShowInstructions(true);
+              localStorage.setItem('decisionFlow_showInstructions', 'true');
+            }}
+            className="w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md transition-all hover:shadow-lg flex items-center justify-center"
+            title="Show Instructions"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       <ReactFlow
@@ -797,24 +821,54 @@ const DecisionFlowGraph = () => {
       )}
 
       {/* Instruction overlay */}
-      <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg max-w-sm z-10">
-        <p className="text-sm text-gray-700 mb-2 font-semibold">
-          💡 How to use:
-        </p>
-        <ul className="text-xs text-gray-600 space-y-1">
-          <li>
-            • Click a <strong>decision</strong> to see its assumptions
-          </li>
-          <li>
-            • Click an <strong>org assumption</strong> to highlight connected
-            decisions
-          </li>
-          <li>• <strong>Drag nodes</strong> to customize layout (auto-saved)</li>
-          <li>• Solid arrows = decision dependencies</li>
-          <li>• Dotted lines = org assumption links</li>
-          <li>• Decisions auto-organized by category into swimlanes</li>
-        </ul>
-      </div>
+      {showInstructions && (
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-md border border-gray-200 max-w-sm z-10 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-blue-600" />
+              <p className="text-sm text-gray-800 font-semibold">
+                How to use
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowInstructions(false);
+                localStorage.setItem('decisionFlow_showInstructions', 'false');
+              }}
+              className="text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded p-1 transition-all"
+              title="Close instructions"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <ul className="text-xs text-gray-700 space-y-2 px-4 py-3">
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 mt-0.5">•</span>
+              <span>Click a <strong className="text-gray-900">decision</strong> to see its assumptions</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-purple-500 mt-0.5">•</span>
+              <span>Click an <strong className="text-gray-900">org assumption</strong> to highlight connected decisions</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">•</span>
+              <span><strong className="text-gray-900">Drag nodes</strong> to customize layout (auto-saved)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">→</span>
+              <span>Solid arrows = decision dependencies</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5">⋯</span>
+              <span>Dotted lines = org assumption links</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-orange-500 mt-0.5">▦</span>
+              <span>Decisions auto-organized by category into swimlanes</span>
+            </li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

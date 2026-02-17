@@ -83,9 +83,19 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
         
         <div className="relative z-10 max-w-6xl w-full mx-auto grid lg:grid-cols-2 gap-10 items-center">
           {/* Left Content */}
-          <div className={`space-y-6 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="space-y-6"
+          >
             {/* Brand Integration */}
-            <div className="flex items-center gap-4 mb-2">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-4 mb-2"
+            >
               <img 
                 src="/assets/Main logo.png" 
                 alt="Decivue Logo" 
@@ -94,54 +104,92 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
               <div className="text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight">
                 Decivue
               </div>
-            </div>
+            </motion.div>
             
-            <div className="inline-block">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="inline-block"
+            >
               <div className="text-[#1d4ed8] font-semibold text-xs tracking-wider uppercase flex items-center gap-2">
                 <div className="w-7 h-[1px] bg-[#1d4ed8]" />
                 Decision Intelligence Platform
               </div>
-            </div>
+            </motion.div>
             
-            <h1 className="text-4xl lg:text-5xl font-bold leading-[1.15] tracking-tight text-gray-900">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-4xl lg:text-5xl font-bold leading-[1.15] tracking-tight text-gray-900"
+            >
               Stronger Decisions.
               <br />
               <span className="text-gray-800">Smarter Organizations.</span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-lg text-gray-600 leading-relaxed max-w-xl">
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-lg text-gray-600 leading-relaxed max-w-xl"
+            >
               Decivue is the intelligent platform that helps teams make adaptive, data-driven decisions with clarity. Monitor decision health, track assumptions, and adapt before problems escalate.
-            </p>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button 
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-col sm:flex-row gap-4 pt-4"
+            >
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onGetStarted}
-                className="group relative px-7 py-3.5 bg-[#1d4ed8] text-white font-semibold rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-blue-glow hover:scale-[1.02]"
+                className="group relative px-7 py-3.5 bg-[#1d4ed8] text-white font-semibold rounded-2xl overflow-hidden shadow-lg hover:shadow-blue-500/30 transition-shadow"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Get Started — It's Free
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-[#1d4ed8] to-[#3b82f6] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
+              </motion.button>
               
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.05, backgroundColor: "rgba(249, 250, 251, 1)" }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onSeeDemo}
-                className="px-7 py-3.5 bg-white backdrop-blur-sm text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all duration-300"
+                className="px-7 py-3.5 bg-white/80 backdrop-blur-sm text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:border-gray-300 shadow-sm transition-colors"
               >
                 See How It Works
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
             
-            <div className="pt-8 text-xs text-gray-500">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="pt-8 text-xs text-gray-500"
+            >
               Start making clearer decisions in minutes.<br />
               No credit card required.
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           
           {/* Right - Dashboard Preview */}
-          <div className={`relative transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <div className="relative">
+          <motion.div 
+            initial={{ opacity: 0, x: 50, rotateY: -10 }}
+            animate={{ opacity: 1, x: 0, rotateY: 0 }}
+            transition={{ duration: 1, delay: 0.2, type: "spring" }}
+            className="perspective-1000"
+          >
+            <motion.div 
+              whileHover={{ rotateY: -5, rotateX: 5, scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="relative"
+            >
               {/* Dashboard Mock */}
               <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-gray-200 shadow-2xl">
                 <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-200">
@@ -185,8 +233,8 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
                   />
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
       
@@ -220,7 +268,7 @@ const LandingPage = ({ onGetStarted, onSeeDemo, onLogin }) => {
           </div>
           
           <div className="max-w-5xl mx-auto">
-            <DecisionFlowGraph />
+            <DecisionFlowGraph animateOnScroll={true} />
           </div>
         </div>
       </section>

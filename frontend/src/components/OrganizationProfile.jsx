@@ -8,6 +8,7 @@ const OrganizationProfile = () => {
     const [loading, setLoading] = useState(true);
     const [orgName, setOrgName] = useState('');
     const [orgCode, setOrgCode] = useState('');
+    const [orgDescription, setOrgDescription] = useState('');
     const [constraints, setConstraints] = useState([]);
     
     // Edit mode states
@@ -38,6 +39,7 @@ const OrganizationProfile = () => {
             // Get org name and code from user context
             setOrgName(user?.organizations?.name || profileData.name || '');
             setOrgCode(user?.organizations?.org_code || 'ORG-CODE');
+            setOrgDescription(user?.organizations?.description || 'No description provided.');
             setConstraints(constraintsData || []);
         } catch (error) {
             console.error("Failed to load data:", error);
@@ -150,19 +152,14 @@ const OrganizationProfile = () => {
                     <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 md:p-8 shadow-lg dark:shadow-2xl">
                         <div className="border-l-4 border-blue-600 dark:border-blue-400 pl-6">
                             <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-white">
-                                {orgName || 'Organization'}<br />Name
+                                {orgName || 'Organization'}
                             </h1>
-                            <button className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-1 rounded-full text-sm mt-2 mb-4 hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
+                            <div className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-1 rounded-full text-sm mt-2 mb-4 w-fit hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
                                 {orgCode}
-                            </button>
-                            <p className="text-gray-400 dark:text-neutral-gray-500 text-sm uppercase tracking-wide mb-2">
-                                Description of organization
-                            </p>
-                            <div className="space-y-1">
-                                <div className="h-px bg-gray-200 dark:bg-neutral-gray-700 w-full"></div>
-                                <div className="h-px bg-gray-200 dark:bg-neutral-gray-700 w-full"></div>
-                                <div className="h-px bg-gray-200 dark:bg-neutral-gray-700 w-full"></div>
                             </div>
+                            <p className="text-gray-600 dark:text-neutral-gray-300 text-base leading-relaxed mb-2">
+                                {orgDescription || "No description provided."}
+                            </p>
                         </div>
                     </div>
 

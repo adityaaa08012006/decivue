@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import api from '../services/api';
 
-const HorizontalProgressCard = ({ title, value, total, status }) => {
+const HorizontalProgressCard = ({ title, value, total, status, index }) => {
   const percentage = total > 0 ? (value / total) * 100 : 0;
   
   const statusColors = {
@@ -26,12 +27,28 @@ const HorizontalProgressCard = ({ title, value, total, status }) => {
   const colors = statusColors[status] || statusColors.success;
 
   return (
-    <div className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 shadow-sm border border-neutral-gray-200 dark:border-neutral-gray-700">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+      className="bg-white dark:bg-neutral-gray-800 rounded-2xl p-6 shadow-sm hover:shadow-lg border border-neutral-gray-200 dark:border-neutral-gray-700 transition-shadow cursor-pointer"
+    >
       {/* Progress Bar */}
-      <div className="flex gap-2 mb-4">
-        <div className={`h-2 rounded-full ${colors.filled}`} style={{ width: `${percentage}%` }}></div>
+      <motion.div 
+        className="flex gap-2 mb-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: index * 0.1 + 0.3 }}
+      >
+        <motion.div 
+          className={`h-2 rounded-full ${colors.filled}`} 
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ delay: index * 0.1 + 0.5, duration: 0.8, ease: "easeOut" }}
+        ></motion.div>
         <div className={`h-2 rounded-full ${colors.empty} flex-1`}></div>
-      </div>
+      </motion.div>
       
       {/* Label */}
       <div className="text-sm font-medium text-neutral-gray-600 dark:text-neutral-gray-400 mb-2">
@@ -42,7 +59,7 @@ const HorizontalProgressCard = ({ title, value, total, status }) => {
       <div className={`text-4xl font-bold ${colors.text}`}>
         {value}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -115,9 +132,10 @@ const DecisionHealthOverview = () => {
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {healthData.map((item) => (
+        {healthData.map((item, index) => (
           <HorizontalProgressCard
             key={item.id}
+            index={index}
             title={item.title}
             value={item.value}
             total={item.total}

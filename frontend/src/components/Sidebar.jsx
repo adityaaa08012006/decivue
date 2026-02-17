@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
   TrendingUp,
@@ -31,7 +32,9 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       console.error("Failed to fetch unread count:", error);
     }
   };
-
+  
+  // Combine all items to find the active one for layoutId context, although logic is per-item
+  
   const menuItems = [
     {
       id: "dashboard",
@@ -39,7 +42,7 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
       icon: "dashboard",
       active: currentView === "dashboard",
     },
-    { id: "team", label: "Your Team", icon: "users", active: false },
+    { id: "team", label: "Your Team", icon: "users", active: currentView === "team" },
   ];
 
   const analyticsItems = [
@@ -124,25 +127,39 @@ const Sidebar = ({ currentView, onNavigate, refreshKey, user, onLogout }) => {
   const MenuItem = ({ item }) => (
     <div
       onClick={() => onNavigate && onNavigate(item.id)}
-      className={`flex items-center justify-between px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
-        item.active
-          ? "bg-primary-blue/90 backdrop-blur-sm text-white shadow-md"
-          : "text-neutral-gray-700 dark:text-neutral-gray-200 hover:bg-white/40 dark:hover:bg-gray-800/40 hover:backdrop-blur-md"
+      className={`relative flex items-center justify-between px-3 py-1.5 rounded-lg cursor-pointer transition-colors ${
+        !item.active
+          ? "text-neutral-gray-700 hover:bg-black/5 dark:text-neutral-gray-200 dark:hover:bg-white/5"
+          : "text-white"
       }`}
     >
-      <div className="flex items-center gap-2">
+      {item.active && (
+        <motion.div
+          layoutId="sidebar-active"
+          className="absolute inset-0 bg-primary-blue rounded-lg shadow-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+      )}
+      
+      <div className="relative z-10 flex items-center gap-2">
         <div className={item.active ? "text-white" : "text-neutral-gray-600 dark:text-neutral-gray-400"}>
           {getIcon(item.icon)}
         </div>
         <span className="text-sm font-medium">{item.label}</span>
       </div>
+      
       {item.badge && (
-        <span className="bg-primary-red text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-          {item.badge}
-        </span>
+        <div className="relative z-10">
+          <span className="bg-primary-red text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+            {item.badge}
+          </span>
+        </div>
       )}
       {item.avatars && (
-        <div className="flex -space-x-2">
+        <div className="relative z-10 flex -space-x-2">
           <div className="w-6 h-6 rounded-full bg-neutral-gray-300 border-2 border-white" />
           <div className="w-6 h-6 rounded-full bg-neutral-gray-400 border-2 border-white" />
           <div className="w-6 h-6 rounded-full bg-neutral-gray-500 border-2 border-white" />

@@ -128,10 +128,10 @@ export default function RegisterPage({ onNavigateToLogin }) {
 
       {/* Main Content */}
       <div className="w-full flex items-center justify-center px-4 relative z-10">
-        <div className="max-w-[1000px] w-full h-[calc(100vh-48px)] bg-white border border-[rgba(102,102,102,0.15)] rounded-3xl overflow-hidden shadow-sm">
+        <div className="max-w-[1000px] w-full h-[calc(100vh-48px)] bg-white/40 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
           <div className="grid lg:grid-cols-2 gap-0 h-full">
             {/* Left Column - Form */}
-            <div className="p-6 lg:p-8 overflow-y-auto">
+            <div className="p-6 lg:p-8 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               <h1 className="text-[24px] font-semibold text-[#111] mb-1">
                 {mode === 'create' ? 'Create Organization' : 'Join Team'}
               </h1>

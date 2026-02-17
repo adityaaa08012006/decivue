@@ -7,8 +7,10 @@ import {
   ChevronDown,
   Upload,
 } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import PageTransition from "./components/PageTransition";
 import LandingPage from './components/LandingPage';
 import OrganizationTypeSelector from './components/OrganizationTypeSelector';
 import TemplatePreview from './components/TemplatePreview';
@@ -295,12 +297,13 @@ function AppContent() {
 
       {/* Main Content */}
       <div className="flex-1 h-screen flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
-          {currentView === "dashboard" && (
-            <div className="p-8">
-              {/* Header with Add Decision Input and Time Simulation */}
-              <div className="mb-8 flex items-center gap-4">
-                <div className="flex-1 max-w-2xl">
+        <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+          <AnimatePresence mode="wait">
+            {currentView === "dashboard" && (
+              <PageTransition key="dashboard" className="p-8">
+                {/* Header with Add Decision Input and Time Simulation */}
+                <div className="mb-8 flex items-center gap-4">
+                  <div className="flex-1 max-w-2xl">
                   <button
                     onClick={() => setShowAddDecisionModal(true)}
                     className="w-full flex items-center gap-3 px-6 py-3 bg-white dark:bg-neutral-gray-800 border-2 border-neutral-gray-300 dark:border-neutral-gray-700 rounded-xl hover:border-primary-blue dark:hover:border-primary-blue transition-colors text-left group"
@@ -440,28 +443,62 @@ function AppContent() {
                 key={`log-${refreshKey}`}
                 onNavigate={handleNavigate}
               />
-            </div>
-          )}
+              </PageTransition>
+            )}
 
-          {currentView === "monitoring" && (
-            <DecisionMonitoring
-              key={`monitoring-${refreshKey}`}
-              onAddDecision={() => setShowAddDecisionModal(true)}
-            />
-          )}
-          {currentView === "assumptions" && <AssumptionsPage />}
-          {currentView === "decision-conflicts" && <DecisionConflictsPage />}
-          {currentView === "notifications" && (
-            <NotificationsPage
-              onNotificationAction={handleNotificationAction}
-            />
-          )}
-          {currentView === "profile" && <OrganizationProfile />}
-          {currentView === "flow" && (
-            <DecisionFlowGraph key={`flow-${refreshKey}`} />
-          )}
-          {currentView === "team" && <TeamPage />}
-          {currentView === "settings" && <SettingsPage />}
+            {currentView === "monitoring" && (
+              <PageTransition key="monitoring">
+                <DecisionMonitoring
+                  key={`monitoring-${refreshKey}`}
+                  onAddDecision={() => setShowAddDecisionModal(true)}
+                />
+              </PageTransition>
+            )}
+            
+            {currentView === "assumptions" && (
+              <PageTransition key="assumptions">
+                <AssumptionsPage />
+              </PageTransition>
+            )}
+            
+            {currentView === "decision-conflicts" && (
+              <PageTransition key="decision-conflicts">
+                <DecisionConflictsPage />
+              </PageTransition>
+            )}
+            
+            {currentView === "notifications" && (
+              <PageTransition key="notifications">
+                <NotificationsPage
+                  onNotificationAction={handleNotificationAction}
+                />
+              </PageTransition>
+            )}
+            
+            {currentView === "profile" && (
+              <PageTransition key="profile">
+                <OrganizationProfile />
+              </PageTransition>
+            )}
+            
+            {currentView === "flow" && (
+              <PageTransition key="flow">
+                <DecisionFlowGraph key={`flow-${refreshKey}`} />
+              </PageTransition>
+            )}
+            
+            {currentView === "team" && (
+              <PageTransition key="team">
+                <TeamPage />
+              </PageTransition>
+            )}
+            
+            {currentView === "settings" && (
+              <PageTransition key="settings">
+                <SettingsPage />
+              </PageTransition>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
