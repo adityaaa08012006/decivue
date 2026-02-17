@@ -37,18 +37,20 @@ export class NotificationService {
     try {
       const db = getAdminDatabase();
 
-      // Apply smart throttling (skip for CRITICAL severity)
-      if (params.severity !== 'CRITICAL') {
-        const isThrottled = await this.checkThrottle(params);
-        if (isThrottled) {
-          logger.info('Throttling notification - duplicate within 24h', {
-            type: params.type,
-            decisionId: params.decisionId,
-            assumptionId: params.assumptionId,
-            severity: params.severity
-          });
-          return; // Skip creating this notification
-        }
+      // Apply smart throttling:
+      // - Critical: check 24h window (urgent issues should break through)
+      // - Non-critical: check 7-day window (reduce UI clutter)
+      const throttleWindow = params.severity === 'CRITICAL' ? 24 : 168; // hours
+      const isThrottled = await this.checkThrottle(params, throttleWindow);
+      if (isThrottled) {
+        logger.debug('Throttling notification - duplicate within window', {
+          type: params.type,
+          decisionId: params.decisionId,
+          assumptionId: params.assumptionId,
+          severity: params.severity,
+          throttleHours: throttleWindow
+        });
+        return; // Skip creating this notification
       }
 
       // If organizationId not provided, fetch it from decision or assumption
@@ -184,12 +186,15 @@ export class NotificationService {
 
   /**
    * Check for degraded decision health and create notifications
+   * Only notifies on threshold crossings to reduce spam:
+   * - CRITICAL: health < 40%
+   * - WARNING: health 40-65%
    */
   static async checkDegradedHealth(): Promise<void> {
     try {
       const db = getAdminDatabase();
 
-      // Get decisions with poor health
+      // Only get decisions with significantly degraded health
       const { data: decisions, error } = await db
         .from('decisions')
         .select('id, title, health_signal, lifecycle')
@@ -200,24 +205,43 @@ export class NotificationService {
 
       if (decisions) {
         for (const decision of decisions) {
-          // Check if we already have a recent notification for this decision
-          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-          const { data: existing } = await db
+          // Get most recent health notification for this decision
+          const { data: recentNotifications } = await db
             .from('notifications')
-            .select('id')
+            .select('metadata, created_at')
             .eq('type', 'HEALTH_DEGRADED')
             .eq('decision_id', decision.id)
-            .gte('created_at', oneDayAgo)
-            .single();
+            .eq('is_dismissed', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          if (!existing) {
-            const severity: NotificationSeverity = decision.health_signal < 40 ? 'CRITICAL' : 'WARNING';
+          // Determine if we should notify based on threshold crossing
+          let shouldNotify = false;
+          let severity: NotificationSeverity = 'WARNING';
 
+          if (decision.health_signal < 40) {
+            severity = 'CRITICAL';
+            // Notify if no previous notification OR last was above 40%
+            shouldNotify = !recentNotifications || 
+                          (recentNotifications.metadata?.healthSignal >= 40);
+          } else if (decision.health_signal < 65) {
+            severity = 'WARNING';
+            // Notify if no previous notification OR it's been 7+ days
+            if (!recentNotifications) {
+              shouldNotify = true;
+            } else {
+              const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+              shouldNotify = new Date(recentNotifications.created_at) < sevenDaysAgo;
+            }
+          }
+
+          if (shouldNotify) {
             await this.create({
               type: 'HEALTH_DEGRADED',
               severity,
-              title: 'Decision Health Degraded',
-              message: `"${decision.title}" has degraded to ${decision.health_signal}% health`,
+              title: `Decision Health ${severity === 'CRITICAL' ? 'Critical' : 'Degraded'}`,
+              message: `"${decision.title}" has ${severity === 'CRITICAL' ? 'critically degraded to' : 'health of'} ${decision.health_signal}%`,
               decisionId: decision.id,
               metadata: {
                 healthSignal: decision.health_signal,
@@ -235,6 +259,8 @@ export class NotificationService {
 
   /**
    * Check for decisions needing review
+   * Only notifies once per decision when it crosses 30-day threshold
+   * Avoids repeated notifications for the same stale decision
    */
   static async checkNeedsReview(): Promise<void> {
     try {
@@ -253,23 +279,26 @@ export class NotificationService {
 
       if (decisions) {
         for (const decision of decisions) {
-          // Check if we already have a notification
+          const daysSinceReview = Math.floor(
+            (Date.now() - new Date(decision.last_reviewed_at).getTime()) / (24 * 60 * 60 * 1000)
+          );
+
+          // Check if we already notified about this (look back 30 days)
+          const thirtyDaysAgoCheck = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
           const { data: existing } = await db
             .from('notifications')
             .select('id')
             .eq('type', 'NEEDS_REVIEW')
             .eq('decision_id', decision.id)
             .eq('is_dismissed', false)
-            .single();
+            .not('message', 'like', '%expiring%') // Exclude expiry notifications
+            .gte('created_at', thirtyDaysAgoCheck)
+            .maybeSingle();
 
           if (!existing) {
-            const daysSinceReview = Math.floor(
-              (Date.now() - new Date(decision.last_reviewed_at).getTime()) / (24 * 60 * 60 * 1000)
-            );
-
             await this.create({
               type: 'NEEDS_REVIEW',
-              severity: daysSinceReview > 60 ? 'WARNING' : 'INFO',
+              severity: daysSinceReview > 90 ? 'WARNING' : 'INFO',
               title: 'Decision Needs Review',
               message: `"${decision.title}" hasn't been reviewed in ${daysSinceReview} days`,
               decisionId: decision.id,
@@ -326,17 +355,15 @@ export class NotificationService {
 
   /**
    * Check for decisions approaching expiry date
+   * Notifies at specific intervals: 30 days, 14 days, 7 days, 3 days, 1 day
    */
   static async checkExpiringDecisions(): Promise<void> {
     try {
       const db = getAdminDatabase();
-
-      // Calculate dates
       const now = new Date();
-      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Get decisions expiring within 30 days
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data: decisions, error } = await db
         .from('decisions')
         .select('id, title, expiry_date, lifecycle')
@@ -349,28 +376,44 @@ export class NotificationService {
 
       if (decisions) {
         for (const decision of decisions) {
-          // Check if we already have a notification for this expiry
-          const { data: existing } = await db
+          const expiryDate = new Date(decision.expiry_date);
+          const daysUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+
+          // Determine if we should notify based on expiry thresholds
+          let shouldNotify = false;
+          let severity: NotificationSeverity = 'INFO';
+
+          // Get the most recent expiry notification
+          const { data: recentNotification } = await db
             .from('notifications')
-            .select('id')
+            .select('metadata, created_at')
             .eq('type', 'NEEDS_REVIEW')
             .eq('decision_id', decision.id)
             .eq('is_dismissed', false)
             .like('message', '%expiring%')
-            .single();
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          if (!existing) {
-            const expiryDate = new Date(decision.expiry_date);
-            const daysUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+          // Notification thresholds and logic
+          if (daysUntilExpiry <= 1) {
+            severity = 'CRITICAL';
+            shouldNotify = !recentNotification || recentNotification.metadata?.daysUntilExpiry > 1;
+          } else if (daysUntilExpiry <= 3) {
+            severity = 'CRITICAL';
+            shouldNotify = !recentNotification || recentNotification.metadata?.daysUntilExpiry > 3;
+          } else if (daysUntilExpiry <= 7) {
+            severity = 'CRITICAL';
+            shouldNotify = !recentNotification || recentNotification.metadata?.daysUntilExpiry > 7;
+          } else if (daysUntilExpiry <= 14) {
+            severity = 'WARNING';
+            shouldNotify = !recentNotification || recentNotification.metadata?.daysUntilExpiry > 14;
+          } else if (daysUntilExpiry <= 30) {
+            severity = 'INFO';
+            shouldNotify = !recentNotification || recentNotification.metadata?.daysUntilExpiry > 30;
+          }
 
-            // Determine severity based on days until expiry
-            let severity: NotificationSeverity = 'INFO';
-            if (daysUntilExpiry <= 7) {
-              severity = 'CRITICAL';
-            } else if (daysUntilExpiry <= 14) {
-              severity = 'WARNING';
-            }
-
+          if (shouldNotify) {
             const expiryDateFormatted = expiryDate.toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
@@ -380,7 +423,7 @@ export class NotificationService {
             await this.create({
               type: 'NEEDS_REVIEW',
               severity,
-              title: `Decision Expiring Soon`,
+              title: `Decision Expiring ${daysUntilExpiry <= 3 ? 'Urgently' : 'Soon'}`,
               message: `"${decision.title}" is expiring in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} on ${expiryDateFormatted}`,
               decisionId: decision.id,
               metadata: {
@@ -399,17 +442,17 @@ export class NotificationService {
 
   /**
    * Check if a notification should be throttled
-   * Returns true if a similar notification was created in the last 24 hours
+   * Returns true if a similar notification was created recently
    */
-  private static async checkThrottle(params: CreateNotificationParams): Promise<boolean> {
+  private static async checkThrottle(params: CreateNotificationParams, throttleHours: number = 24): Promise<boolean> {
     const db = getAdminDatabase();
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const throttleDate = new Date(Date.now() - throttleHours * 60 * 60 * 1000).toISOString();
 
     let throttleQuery = db
       .from('notifications')
       .select('id')
       .eq('type', params.type) // Same notification type
-      .gte('created_at', oneDayAgo)
+      .gte('created_at', throttleDate)
       .eq('is_dismissed', false)
       .limit(1);
 

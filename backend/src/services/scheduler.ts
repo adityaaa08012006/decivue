@@ -5,6 +5,7 @@
 
 import cron from 'node-cron';
 import { NotificationService } from './notification-service';
+import { MorningBriefingService } from './morning-briefing-service';
 import { logger } from '@utils/logger';
 
 export class NotificationScheduler {
@@ -15,17 +16,18 @@ export class NotificationScheduler {
    */
   start(): void {
     // Get cron schedule from environment or use default (every 6 hours)
-    const cronSchedule = process.env.NOTIFICATION_CHECK_CRON || '0 */6 * * *';
+    const checkSchedule = process.env.NOTIFICATION_CHECK_CRON || '0 */6 * * *';
+    // Morning briefing schedule (default 8 AM UTC)
+    const briefingSchedule = process.env.MORNING_BRIEFING_CRON || '0 8 * * *';
 
     // Validate cron expression
-    if (!cron.validate(cronSchedule)) {
-      logger.error('Invalid NOTIFICATION_CHECK_CRON expression', { cronSchedule });
-      logger.info('Using default schedule: 0 */6 * * * (every 6 hours)');
+    if (!cron.validate(checkSchedule)) {
+      logger.error('Invalid NOTIFICATION_CHECK_CRON expression', { checkSchedule });
     }
 
-    // Schedule the notification checks
-    const task = cron.schedule(
-      cronSchedule,
+    // 1. Schedule the regular notification checks
+    const checkTask = cron.schedule(
+      checkSchedule,
       async () => {
         try {
           logger.info('Running scheduled notification checks');
@@ -37,15 +39,31 @@ export class NotificationScheduler {
           });
         }
       },
-      {
-        scheduled: true,
-        timezone: 'UTC' // Use UTC for consistency
-      }
+      { scheduled: true, timezone: 'UTC' }
     );
+    this.tasks.push(checkTask);
 
-    this.tasks.push(task);
+    // 2. Schedule the morning briefing
+    const briefingTask = cron.schedule(
+      briefingSchedule,
+      async () => {
+        try {
+          logger.info('Running morning briefing task');
+          await MorningBriefingService.sendBriefings();
+          logger.info('Morning briefing task completed');
+        } catch (error: any) {
+          logger.error('Error running morning briefing', {
+            error: error?.message || error
+          });
+        }
+      },
+      { scheduled: true, timezone: 'UTC' }
+    );
+    this.tasks.push(briefingTask);
+
     logger.info('Notification scheduler started', {
-      schedule: cronSchedule,
+      checkSchedule,
+      briefingSchedule,
       timezone: 'UTC'
     });
   }
